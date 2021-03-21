@@ -1,2 +1,2 @@
 
-add_library(argparse-c SHARED argparse-c.c)
+add_library(argparse-c SHARED argparse-c.c help.c)
