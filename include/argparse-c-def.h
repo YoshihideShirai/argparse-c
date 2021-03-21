@@ -1,5 +1,8 @@
 #include <stdbool.h>
 
+#ifndef __ARGPARSE_C_DEF_H__
+#define __ARGPARSE_C_DEF_H__
+
 typedef enum {
   ARGPARSE_ARGTYPE_NONE = 0,
   ARGPARSE_ARGTYPE_INT32,
@@ -30,3 +33,5 @@ typedef struct argparse_t {
   bool is_help_set;
   struct argparse_arg_list_t *arg_list;
 } argparse_t;
+
+#endif
