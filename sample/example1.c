@@ -1,14 +1,15 @@
 #include "argparse-c.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 int example1_main(int argc, char *argv[]) {
   struct {
-    char *const text;
+    char *text;
     int32_t integer;
-    char *const arg1;
-    char *const arg2;
-  } args;
+    char *arg1;
+    char *arg2;
+  } args = { NULL };
   argparse_t *argparse = argparse_init("example1 command.");
 
   argparse_arg_t *text_option = argparse_arg_new_char(&args.text);
@@ -38,6 +39,11 @@ int example1_main(int argc, char *argv[]) {
   argparse_exec(argparse, argc, argv);
 
   argparse_destroy(argparse);
+
+  printf("args.text = %s\n",args.text);
+  printf("args.integer = %d\n",args.integer);
+  printf("args.arg1 = %s\n",args.arg1);
+  printf("args.arg2 = %s\n",args.arg2);
 
   return 0;
 }

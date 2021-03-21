@@ -16,14 +16,15 @@ typedef struct argparse_key_list_t {
 
 typedef struct argparse_arg_t {
   argparse_argtype_t type;
+  void *valptr;
   bool required;
   const char *help;
   bool print_usage;
   bool print_help;
   struct argparse_key_list_t *key_list;
   struct {
-    const char *key;
-    const char *val;
+    char *key;
+    char *val;
   } parsed;
 } argparse_arg_t;
 

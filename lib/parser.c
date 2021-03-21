@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,7 +65,7 @@ static int arg_has_invalid_option(argparse_t *ap, int argc, char *argv[]) {
           if (next == NULL || argv_is_option_key(next)) {
             parse_error(ap, argc, argv, "error: %s needs to have val.\n", *p);
           } else {
-            arg->parsed.key = *(p + 1);
+            arg->parsed.val = *(p + 1);
             p++;
           }
         }
@@ -80,7 +81,7 @@ static int arg_has_invalid_option(argparse_t *ap, int argc, char *argv[]) {
     if (arg) {
       arg->parsed.val = *p;
     } else {
-        break;
+      break;
     }
   }
   return 0;
@@ -98,8 +99,58 @@ static int arg_is_lacked_required(argparse_t *ap, int argc, char *argv[]) {
   return 0;
 }
 
-int argparse_parse(argparse_t *ap, int argc, char *argv[]) {
-    arg_has_invalid_option(ap, argc, argv);
-    arg_is_lacked_required(ap, argc, argv);
+static int arg_validate_vals_int32(argparse_t *ap, int argc, char *argv[],
+                                   argparse_arg_list_t *p_arg) {
+  char *end = NULL;
+  *((int32_t *)p_arg->data->valptr) =
+      (int32_t)strtol(p_arg->data->parsed.val, &end, 10);
+  if ('\0' != *end) {
+    parse_error(ap, argc, argv,
+                "error: %s is required integer val. (val=%s).\n",
+                p_arg->data->parsed.key, p_arg->data->parsed.val);
+  }
+  return 0;
+}
+
+static int arg_validate_vals(argparse_t *ap, int argc, char *argv[]) {
+  struct argparse_arg_list_t *p = ap->arg_list;
+  while (p != NULL) {
+    if (p->data->parsed.val) {
+      switch (p->data->type) {
+      case ARGPARSE_ARGTYPE_INT32:
+        arg_validate_vals_int32(ap,argc,argv,p);
+        break;
+      case ARGPARSE_ARGTYPE_CHAR:
+        *((char **)p->data->valptr) = p->data->parsed.val;
+      default:
+        break;
+      }
+    }
+    p = p->next;
+  }
+  return 0;
+}
+
+static bool arg_is_help(argparse_t *ap, int argc, char *argv[]) {
+  if(argc < 2){
     return 0;
+  }
+  if (!strcmp(argv[1], "-h")) {
+    return 1;
+  }
+  if (!strcmp(argv[1], "--help")) {
+    return 1;
+  }
+  return 0;
+}
+
+int argparse_parse(argparse_t *ap, int argc, char *argv[]) {
+  if (arg_is_help(ap, argc, argv)) {
+    argparse_help(ap, argc, argv);
+    exit(1);
+  }
+  arg_has_invalid_option(ap, argc, argv);
+  arg_is_lacked_required(ap, argc, argv);
+  arg_validate_vals(ap, argc, argv);
+  return 0;
 }

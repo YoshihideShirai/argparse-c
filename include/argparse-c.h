@@ -12,7 +12,7 @@ extern void argparse_exec(argparse_t *ap, int argc, char *argv[]);
 extern void argparse_destroy(argparse_t *ap);
 
 extern argparse_arg_t *argparse_arg_new_noval(bool *is_set);
-extern argparse_arg_t *argparse_arg_new_char(char *const *str);
+extern argparse_arg_t *argparse_arg_new_char(char **str);
 extern argparse_arg_t *argparse_arg_new_int32(int32_t *integer);
 
 extern void argparse_arg_set_required(argparse_arg_t *apa, bool required);

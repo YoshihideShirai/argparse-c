@@ -48,18 +48,21 @@ static argparse_arg_t *argparse_arg_new(void) {
 argparse_arg_t *argparse_arg_new_noval(bool *is_set) {
   argparse_arg_t *arg = argparse_arg_new();
   arg->type = ARGPARSE_ARGTYPE_NONE;
+  arg->valptr = is_set;
   return arg;
 }
 
-argparse_arg_t *argparse_arg_new_char(char *const *str) {
+argparse_arg_t *argparse_arg_new_char(char **str) {
   argparse_arg_t *arg = argparse_arg_new();
   arg->type = ARGPARSE_ARGTYPE_CHAR;
+  arg->valptr = str;
   return arg;
 }
 
 argparse_arg_t *argparse_arg_new_int32(int32_t *integer) {
   argparse_arg_t *arg = argparse_arg_new();
   arg->type = ARGPARSE_ARGTYPE_INT32;
+  arg->valptr = integer;
   return arg;
 }
 
