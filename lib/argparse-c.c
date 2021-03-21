@@ -33,7 +33,7 @@ void argparse_add_arg(argparse_t *ap, struct argparse_arg_t *apa) {
 }
 
 void argparse_exec(argparse_t *ap, int argc, char *argv[]) {
-  argparse_help(ap, argc, argv);
+  argparse_parse(ap, argc, argv);
 }
 
 void argparse_destroy(argparse_t *ap) {}

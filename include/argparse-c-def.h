@@ -21,6 +21,10 @@ typedef struct argparse_arg_t {
   bool print_usage;
   bool print_help;
   struct argparse_key_list_t *key_list;
+  struct {
+    const char *key;
+    const char *val;
+  } parsed;
 } argparse_arg_t;
 
 typedef struct argparse_arg_list_t {

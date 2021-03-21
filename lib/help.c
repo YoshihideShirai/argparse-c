@@ -71,7 +71,7 @@ static void argparse_print_usage_arg(argparse_arg_t *arg) {
   free(metaval);
 }
 
-static void argparse_usage(argparse_t *ap, int argc, char *argv[]) {
+void argparse_usage(argparse_t *ap, int argc, char *argv[]) {
   struct argparse_arg_list_t *p = ap->arg_list;
   printf("usage: %s", argv[0]);
   while (p != NULL) {
