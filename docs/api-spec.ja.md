@@ -78,6 +78,18 @@
   - 現在は1階層のサブコマンドのみ対応
   - パース成功時、選択されたサブコマンド名は namespace の `"subcommand"` に格納されます
 
+### `ap_mutually_exclusive_group *ap_mutually_exclusive_group_new(ap_parser *parser, bool required, ap_error *err)`
+相互排他グループを生成します。
+
+- `required`: グループ内のいずれか1つを必須にするか
+- 戻り値: グループ（失敗時はNULL）
+
+### `int ap_mutually_exclusive_group_add_argument(ap_mutually_exclusive_group *group, const char *name_or_flags, ap_arg_options options, ap_error *err)`
+相互排他グループに optional 引数を追加します。
+
+- positional 引数は追加できません
+- 同じグループ内で複数指定するとパースエラーになります
+
 ### `void ap_parser_free(ap_parser *parser)`
 パーサ本体を解放します。
 

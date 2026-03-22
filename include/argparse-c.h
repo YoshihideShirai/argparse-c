@@ -39,6 +39,7 @@ typedef enum {
   AP_ERR_INVALID_CHOICE,
   AP_ERR_INVALID_INT32,
   AP_ERR_UNEXPECTED_POSITIONAL,
+  AP_ERR_MUTUALLY_EXCLUSIVE,
 } ap_error_code;
 
 typedef struct {
@@ -66,14 +67,21 @@ typedef struct {
 
 typedef struct ap_parser ap_parser;
 typedef struct ap_namespace ap_namespace;
+typedef struct ap_mutually_exclusive_group ap_mutually_exclusive_group;
 
 ap_parser *ap_parser_new(const char *prog, const char *description);
 ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
                              const char *description, ap_error *err);
+ap_mutually_exclusive_group *
+ap_mutually_exclusive_group_new(ap_parser *parser, bool required, ap_error *err);
 void ap_parser_free(ap_parser *parser);
 
 int ap_add_argument(ap_parser *parser, const char *name_or_flags,
                     ap_arg_options options, ap_error *err);
+int ap_mutually_exclusive_group_add_argument(ap_mutually_exclusive_group *group,
+                                             const char *name_or_flags,
+                                             ap_arg_options options,
+                                             ap_error *err);
 
 int ap_parse_args(ap_parser *parser, int argc, char **argv, ap_namespace **out_ns,
                   ap_error *err);

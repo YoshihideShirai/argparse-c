@@ -32,6 +32,7 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 ### Argument Model
 - optional / positional arguments
 - single-level subcommands
+- mutually exclusive groups
 - types: `string`, `int32`, `bool`
 - actions: `store`, `store_true`, `store_false`
 - options: `required`, `default_value`, `choices`, `metavar`, `help`, `nargs(?/*/+)`

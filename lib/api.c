@@ -36,6 +36,36 @@ static int ensure_subcommands_capacity(ap_parser *parser) {
   return 0;
 }
 
+static int ensure_mutex_groups_capacity(ap_parser *parser) {
+  if (parser->mutex_groups_count < parser->mutex_groups_cap) {
+    return 0;
+  }
+  int next_cap = parser->mutex_groups_cap == 0 ? 4 : parser->mutex_groups_cap * 2;
+  ap_mutually_exclusive_group *next =
+      realloc(parser->mutex_groups,
+              sizeof(ap_mutually_exclusive_group) * (size_t)next_cap);
+  if (!next) {
+    return -1;
+  }
+  parser->mutex_groups = next;
+  parser->mutex_groups_cap = next_cap;
+  return 0;
+}
+
+static int ensure_group_members_capacity(ap_mutually_exclusive_group *group) {
+  if (group->count < group->cap) {
+    return 0;
+  }
+  int next_cap = group->cap == 0 ? 4 : group->cap * 2;
+  int *next = realloc(group->def_indices, sizeof(int) * (size_t)next_cap);
+  if (!next) {
+    return -1;
+  }
+  group->def_indices = next;
+  group->cap = next_cap;
+  return 0;
+}
+
 static void arg_def_free(ap_arg_def *def) {
   int i;
   if (!def) {
@@ -485,6 +515,73 @@ ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
   return def.parser;
 }
 
+ap_mutually_exclusive_group *
+ap_mutually_exclusive_group_new(ap_parser *parser, bool required,
+                                ap_error *err) {
+  ap_mutually_exclusive_group *group;
+
+  if (!parser) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "",
+                 "parser is required");
+    return NULL;
+  }
+  if (ensure_mutex_groups_capacity(parser) != 0) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+    return NULL;
+  }
+
+  group = &parser->mutex_groups[parser->mutex_groups_count++];
+  memset(group, 0, sizeof(*group));
+  group->parser = parser;
+  group->required = required;
+  return group;
+}
+
+int ap_mutually_exclusive_group_add_argument(ap_mutually_exclusive_group *group,
+                                             const char *name_or_flags,
+                                             ap_arg_options options,
+                                             ap_error *err) {
+  ap_parser *parser;
+  int new_index;
+  int i;
+
+  if (!group || !group->parser) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "",
+                 "group and parser are required");
+    return -1;
+  }
+
+  parser = group->parser;
+  new_index = parser->defs_count;
+  if (ap_add_argument(parser, name_or_flags, options, err) != 0) {
+    return -1;
+  }
+
+  if (!parser->defs[new_index].is_optional) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, name_or_flags,
+                 "mutually exclusive groups support only optional arguments");
+    arg_def_free(&parser->defs[new_index]);
+    for (i = new_index; i + 1 < parser->defs_count; i++) {
+      parser->defs[i] = parser->defs[i + 1];
+    }
+    parser->defs_count--;
+    return -1;
+  }
+
+  if (ensure_group_members_capacity(group) != 0) {
+    arg_def_free(&parser->defs[new_index]);
+    for (i = new_index; i + 1 < parser->defs_count; i++) {
+      parser->defs[i] = parser->defs[i + 1];
+    }
+    parser->defs_count--;
+    ap_error_set(err, AP_ERR_NO_MEMORY, name_or_flags, "out of memory");
+    return -1;
+  }
+
+  group->def_indices[group->count++] = new_index;
+  return 0;
+}
+
 static const ap_ns_entry *find_entry(const ap_namespace *ns, const char *dest) {
   int i;
   if (!ns || !dest) {
@@ -884,6 +981,10 @@ void ap_parser_free(ap_parser *parser) {
     ap_parser_free(parser->subcommands[i].parser);
   }
   free(parser->subcommands);
+  for (i = 0; i < parser->mutex_groups_count; i++) {
+    free(parser->mutex_groups[i].def_indices);
+  }
+  free(parser->mutex_groups);
   free(parser->prog);
   free(parser->description);
   free(parser->command_name);

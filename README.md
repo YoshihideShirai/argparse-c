@@ -11,6 +11,7 @@
 - `required`, `default_value`, `choices`
 - `nargs`: one, `?`, `*`, `+`
 - Subcommands
+- Mutually exclusive groups
 - Built-in `-h/--help`
 - Non-exit error flow (`ap_parse_args` returns error codes)
 - Error text helper: `ap_format_error(parser, &err)`

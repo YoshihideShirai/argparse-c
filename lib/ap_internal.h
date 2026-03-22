@@ -33,6 +33,14 @@ typedef struct ap_subcommand_def {
   struct ap_parser *parser;
 } ap_subcommand_def;
 
+struct ap_mutually_exclusive_group {
+  struct ap_parser *parser;
+  bool required;
+  int *def_indices;
+  int count;
+  int cap;
+};
+
 struct ap_parser {
   char *prog;
   char *description;
@@ -44,6 +52,9 @@ struct ap_parser {
   ap_subcommand_def *subcommands;
   int subcommands_count;
   int subcommands_cap;
+  struct ap_mutually_exclusive_group *mutex_groups;
+  int mutex_groups_count;
+  int mutex_groups_cap;
 };
 
 typedef enum {

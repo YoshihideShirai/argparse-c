@@ -96,5 +96,46 @@ int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
       return -1;
     }
   }
+
+  for (i = 0; i < parser->mutex_groups_count; i++) {
+    const ap_mutually_exclusive_group *group = &parser->mutex_groups[i];
+    int selected_count = 0;
+    const ap_arg_def *selected_def = NULL;
+    int j;
+
+    for (j = 0; j < group->count; j++) {
+      int def_index = group->def_indices[j];
+      const ap_arg_def *def = &parser->defs[def_index];
+      const ap_parsed_arg *p = &parsed[def_index];
+      bool selected = false;
+
+      if (def->opts.action == AP_ACTION_STORE_TRUE ||
+          def->opts.action == AP_ACTION_STORE_FALSE) {
+        selected = p->seen;
+      } else {
+        selected = p->seen || has_value(p);
+      }
+
+      if (selected) {
+        selected_count++;
+        if (!selected_def) {
+          selected_def = def;
+        }
+      }
+    }
+
+    if (selected_count > 1) {
+      ap_error_set(err, AP_ERR_MUTUALLY_EXCLUSIVE,
+                   selected_def ? selected_def->dest : "",
+                   "arguments in a mutually exclusive group cannot be used together");
+      return -1;
+    }
+
+    if (group->required && selected_count == 0) {
+      ap_error_set(err, AP_ERR_MISSING_REQUIRED, "mutually_exclusive_group",
+                   "one argument from a mutually exclusive group is required");
+      return -1;
+    }
+  }
   return 0;
 }

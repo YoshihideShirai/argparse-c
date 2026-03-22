@@ -299,6 +299,7 @@ char *ap_help_build(const ap_parser *parser) {
   bool has_positionals = false;
   bool has_optionals = false;
   bool has_subcommands = false;
+  bool has_mutex_groups = false;
 
   if (!parser) {
     return NULL;
@@ -334,6 +335,7 @@ char *ap_help_build(const ap_parser *parser) {
     }
   }
   has_subcommands = parser->subcommands_count > 0;
+  has_mutex_groups = parser->mutex_groups_count > 0;
 
   if (has_positionals) {
     if (ap_sb_appendf(&sb, "\npositional arguments:\n") != 0) {
@@ -375,6 +377,45 @@ char *ap_help_build(const ap_parser *parser) {
           ap_sb_appendf(&sb, "\n    %s", parser->subcommands[i].help) != 0) {
         ap_sb_free(&sb);
         return NULL;
+      }
+      if (ap_sb_appendf(&sb, "\n") != 0) {
+        ap_sb_free(&sb);
+        return NULL;
+      }
+    }
+  }
+
+  if (has_mutex_groups) {
+    if (ap_sb_appendf(&sb, "\nmutually exclusive groups:\n") != 0) {
+      ap_sb_free(&sb);
+      return NULL;
+    }
+    for (i = 0; i < parser->mutex_groups_count; i++) {
+      int j;
+      const ap_mutually_exclusive_group *group = &parser->mutex_groups[i];
+      if (ap_sb_appendf(&sb, "  group %d", i + 1) != 0) {
+        ap_sb_free(&sb);
+        return NULL;
+      }
+      if (group->required &&
+          ap_sb_appendf(&sb, " (required)") != 0) {
+        ap_sb_free(&sb);
+        return NULL;
+      }
+      if (ap_sb_appendf(&sb, "\n    ") != 0) {
+        ap_sb_free(&sb);
+        return NULL;
+      }
+      for (j = 0; j < group->count; j++) {
+        const ap_arg_def *def = &parser->defs[group->def_indices[j]];
+        if (j > 0 && ap_sb_appendf(&sb, " | ") != 0) {
+          ap_sb_free(&sb);
+          return NULL;
+        }
+        if (ap_sb_appendf(&sb, "%s", def->flags[0]) != 0) {
+          ap_sb_free(&sb);
+          return NULL;
+        }
       }
       if (ap_sb_appendf(&sb, "\n") != 0) {
         ap_sb_free(&sb);

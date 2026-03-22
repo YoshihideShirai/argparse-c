@@ -78,6 +78,18 @@ Adds a child parser for a subcommand.
   - only a single subcommand level is supported right now
   - on success, the selected subcommand name is stored in namespace key `"subcommand"`
 
+### `ap_mutually_exclusive_group *ap_mutually_exclusive_group_new(ap_parser *parser, bool required, ap_error *err)`
+Creates a mutually exclusive group.
+
+- `required`: whether one member of the group must be provided
+- Returns: group on success, `NULL` on failure
+
+### `int ap_mutually_exclusive_group_add_argument(ap_mutually_exclusive_group *group, const char *name_or_flags, ap_arg_options options, ap_error *err)`
+Adds an optional argument to a mutually exclusive group.
+
+- positional arguments are rejected
+- specifying multiple arguments from the same group is a parse error
+
 ### `void ap_parser_free(ap_parser *parser)`
 Frees the parser.
 

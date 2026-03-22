@@ -564,4 +564,88 @@ TEST(ArgparseC, MissingSubcommandFails) {
   ap_parser_free(p);
 }
 
+TEST(ArgparseC, MutuallyExclusiveGroupRejectsConflictingOptions) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_mutually_exclusive_group *group = NULL;
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options quiet = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--verbose", (char *)"--quiet", NULL};
+
+  CHECK(p != NULL);
+  group = ap_mutually_exclusive_group_new(p, false, &err);
+  CHECK(group != NULL);
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  quiet.type = AP_TYPE_BOOL;
+  quiet.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_mutually_exclusive_group_add_argument(group, "--verbose",
+                                                          verbose, &err));
+  LONGS_EQUAL(0, ap_mutually_exclusive_group_add_argument(group, "--quiet",
+                                                          quiet, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_MUTUALLY_EXCLUSIVE, err.code);
+
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, RequiredMutuallyExclusiveGroupRequiresOneOption) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_mutually_exclusive_group *group = NULL;
+  ap_arg_options json = ap_arg_options_default();
+  ap_arg_options yaml = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  group = ap_mutually_exclusive_group_new(p, true, &err);
+  CHECK(group != NULL);
+  json.type = AP_TYPE_BOOL;
+  json.action = AP_ACTION_STORE_TRUE;
+  yaml.type = AP_TYPE_BOOL;
+  yaml.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_mutually_exclusive_group_add_argument(group, "--json", json,
+                                                          &err));
+  LONGS_EQUAL(0, ap_mutually_exclusive_group_add_argument(group, "--yaml", yaml,
+                                                          &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, HelpListsMutuallyExclusiveGroups) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_mutually_exclusive_group *group = NULL;
+  ap_arg_options json = ap_arg_options_default();
+  ap_arg_options yaml = ap_arg_options_default();
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  group = ap_mutually_exclusive_group_new(p, true, &err);
+  CHECK(group != NULL);
+  json.type = AP_TYPE_BOOL;
+  json.action = AP_ACTION_STORE_TRUE;
+  yaml.type = AP_TYPE_BOOL;
+  yaml.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_mutually_exclusive_group_add_argument(group, "--json", json,
+                                                          &err));
+  LONGS_EQUAL(0, ap_mutually_exclusive_group_add_argument(group, "--yaml", yaml,
+                                                          &err));
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "mutually exclusive groups:") != NULL);
+  CHECK(strstr(help, "--json | --yaml") != NULL);
+  CHECK(strstr(help, "(required)") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
 int main(int ac, char **av) { return CommandLineTestRunner::RunAllTests(ac, av); }
