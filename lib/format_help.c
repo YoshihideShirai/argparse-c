@@ -1,0 +1,260 @@
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "ap_internal.h"
+
+void ap_sb_init(ap_string_builder *sb) {
+  sb->data = NULL;
+  sb->len = 0;
+  sb->cap = 0;
+}
+
+void ap_sb_free(ap_string_builder *sb) {
+  if (!sb) {
+    return;
+  }
+  free(sb->data);
+  sb->data = NULL;
+  sb->len = 0;
+  sb->cap = 0;
+}
+
+int ap_sb_appendf(ap_string_builder *sb, const char *fmt, ...) {
+  va_list ap;
+  va_list ap_copy;
+  int needed;
+  size_t required;
+  char *next;
+
+  if (!sb || !fmt) {
+    return -1;
+  }
+
+  va_start(ap, fmt);
+  va_copy(ap_copy, ap);
+  needed = vsnprintf(NULL, 0, fmt, ap);
+  va_end(ap);
+
+  if (needed < 0) {
+    va_end(ap_copy);
+    return -1;
+  }
+
+  required = sb->len + (size_t)needed + 1;
+  if (required > sb->cap) {
+    size_t next_cap = sb->cap == 0 ? 128 : sb->cap;
+    while (next_cap < required) {
+      next_cap *= 2;
+    }
+    next = realloc(sb->data, next_cap);
+    if (!next) {
+      va_end(ap_copy);
+      return -1;
+    }
+    sb->data = next;
+    sb->cap = next_cap;
+  }
+
+  vsnprintf(sb->data + sb->len, sb->cap - sb->len, fmt, ap_copy);
+  va_end(ap_copy);
+  sb->len += (size_t)needed;
+  return 0;
+}
+
+static const char *metavar_for(const ap_arg_def *def) {
+  static char fallback[64];
+  size_t i;
+  if (def->opts.metavar && def->opts.metavar[0] != '\0') {
+    return def->opts.metavar;
+  }
+  for (i = 0; i < sizeof(fallback) - 1 && def->dest[i] != '\0'; i++) {
+    char c = def->dest[i];
+    if (c >= 'a' && c <= 'z') {
+      fallback[i] = (char)(c - 'a' + 'A');
+    } else if (c == '_') {
+      fallback[i] = '-';
+    } else {
+      fallback[i] = c;
+    }
+  }
+  fallback[i] = '\0';
+  return fallback;
+}
+
+static int append_optional_usage(ap_string_builder *sb, const ap_arg_def *def) {
+  const char *mv = metavar_for(def);
+
+  if (def->opts.action == AP_ACTION_STORE_TRUE ||
+      def->opts.action == AP_ACTION_STORE_FALSE) {
+    return ap_sb_appendf(sb, def->opts.required ? " %s" : " [%s]",
+                         def->flags[0]);
+  }
+
+  switch (def->opts.nargs) {
+  case AP_NARGS_ONE:
+    return ap_sb_appendf(sb, def->opts.required ? " %s %s" : " [%s %s]",
+                         def->flags[0], mv);
+  case AP_NARGS_OPTIONAL:
+    return ap_sb_appendf(sb, def->opts.required ? " %s [%s]" : " [%s [%s]]",
+                         def->flags[0], mv);
+  case AP_NARGS_ZERO_OR_MORE:
+    return ap_sb_appendf(sb, def->opts.required ? " %s [%s ...]"
+                                           : " [%s [%s ...]]",
+                         def->flags[0], mv);
+  case AP_NARGS_ONE_OR_MORE:
+    return ap_sb_appendf(sb, def->opts.required ? " %s %s [%s ...]"
+                                           : " [%s %s [%s ...]]",
+                         def->flags[0], mv, mv);
+  }
+  return 0;
+}
+
+static int append_positional_usage(ap_string_builder *sb, const ap_arg_def *def) {
+  const char *mv = metavar_for(def);
+  switch (def->opts.nargs) {
+  case AP_NARGS_ONE:
+    return ap_sb_appendf(sb, " %s", mv);
+  case AP_NARGS_OPTIONAL:
+    return ap_sb_appendf(sb, " [%s]", mv);
+  case AP_NARGS_ZERO_OR_MORE:
+    return ap_sb_appendf(sb, " [%s ...]", mv);
+  case AP_NARGS_ONE_OR_MORE:
+    return ap_sb_appendf(sb, " %s [%s ...]", mv, mv);
+  }
+  return 0;
+}
+
+static int append_help_line(ap_string_builder *sb, const ap_arg_def *def) {
+  int i;
+  if (def->is_optional) {
+    if (ap_sb_appendf(sb, "  ") != 0) {
+      return -1;
+    }
+    for (i = 0; i < def->flags_count; i++) {
+      if (i > 0 && ap_sb_appendf(sb, ", ") != 0) {
+        return -1;
+      }
+      if (ap_sb_appendf(sb, "%s", def->flags[i]) != 0) {
+        return -1;
+      }
+    }
+    if (def->opts.action == AP_ACTION_STORE &&
+        ap_sb_appendf(sb, " %s", metavar_for(def)) != 0) {
+      return -1;
+    }
+    if (def->opts.help && ap_sb_appendf(sb, "\n    %s", def->opts.help) != 0) {
+      return -1;
+    }
+    return ap_sb_appendf(sb, "\n");
+  }
+
+  if (ap_sb_appendf(sb, "  %s", metavar_for(def)) != 0) {
+    return -1;
+  }
+  if (def->opts.help && ap_sb_appendf(sb, "\n    %s", def->opts.help) != 0) {
+    return -1;
+  }
+  return ap_sb_appendf(sb, "\n");
+}
+
+char *ap_usage_build(const ap_parser *parser) {
+  ap_string_builder sb;
+  int i;
+
+  if (!parser) {
+    return NULL;
+  }
+
+  ap_sb_init(&sb);
+  if (ap_sb_appendf(&sb, "usage: %s", parser->prog) != 0) {
+    ap_sb_free(&sb);
+    return NULL;
+  }
+
+  for (i = 0; i < parser->defs_count; i++) {
+    const ap_arg_def *def = &parser->defs[i];
+    int rc = def->is_optional ? append_optional_usage(&sb, def)
+                              : append_positional_usage(&sb, def);
+    if (rc != 0) {
+      ap_sb_free(&sb);
+      return NULL;
+    }
+  }
+
+  if (ap_sb_appendf(&sb, "\n") != 0) {
+    ap_sb_free(&sb);
+    return NULL;
+  }
+  return sb.data;
+}
+
+char *ap_help_build(const ap_parser *parser) {
+  ap_string_builder sb;
+  int i;
+  bool has_positionals = false;
+  bool has_optionals = false;
+
+  if (!parser) {
+    return NULL;
+  }
+
+  ap_sb_init(&sb);
+
+  {
+    char *usage = ap_usage_build(parser);
+    if (!usage) {
+      ap_sb_free(&sb);
+      return NULL;
+    }
+    if (ap_sb_appendf(&sb, "%s", usage) != 0) {
+      free(usage);
+      ap_sb_free(&sb);
+      return NULL;
+    }
+    free(usage);
+  }
+
+  if (parser->description[0] != '\0' &&
+      ap_sb_appendf(&sb, "\n%s\n", parser->description) != 0) {
+    ap_sb_free(&sb);
+    return NULL;
+  }
+
+  for (i = 0; i < parser->defs_count; i++) {
+    if (parser->defs[i].is_optional) {
+      has_optionals = true;
+    } else {
+      has_positionals = true;
+    }
+  }
+
+  if (has_positionals) {
+    if (ap_sb_appendf(&sb, "\npositional arguments:\n") != 0) {
+      ap_sb_free(&sb);
+      return NULL;
+    }
+    for (i = 0; i < parser->defs_count; i++) {
+      if (!parser->defs[i].is_optional && append_help_line(&sb, &parser->defs[i]) != 0) {
+        ap_sb_free(&sb);
+        return NULL;
+      }
+    }
+  }
+
+  if (has_optionals) {
+    if (ap_sb_appendf(&sb, "\noptional arguments:\n") != 0) {
+      ap_sb_free(&sb);
+      return NULL;
+    }
+    for (i = 0; i < parser->defs_count; i++) {
+      if (parser->defs[i].is_optional && append_help_line(&sb, &parser->defs[i]) != 0) {
+        ap_sb_free(&sb);
+        return NULL;
+      }
+    }
+  }
+
+  return sb.data;
+}

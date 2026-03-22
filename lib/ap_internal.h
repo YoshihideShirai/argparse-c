@@ -1,0 +1,91 @@
+#ifndef AP_INTERNAL_H
+#define AP_INTERNAL_H
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "argparse-c.h"
+
+typedef struct {
+  char *data;
+  size_t len;
+  size_t cap;
+} ap_string_builder;
+
+typedef struct {
+  char **items;
+  int count;
+  int cap;
+} ap_strvec;
+
+typedef struct {
+  bool is_optional;
+  char *dest;
+  char **flags;
+  int flags_count;
+  ap_arg_options opts;
+} ap_arg_def;
+
+struct ap_parser {
+  char *prog;
+  char *description;
+  ap_arg_def *defs;
+  int defs_count;
+  int defs_cap;
+};
+
+typedef enum {
+  AP_NS_VALUE_STRING = 0,
+  AP_NS_VALUE_INT32,
+  AP_NS_VALUE_BOOL,
+} ap_ns_value_type;
+
+typedef struct {
+  char *dest;
+  ap_ns_value_type type;
+  int count;
+  union {
+    char **strings;
+    int32_t *ints;
+    bool boolean;
+  } as;
+} ap_ns_entry;
+
+struct ap_namespace {
+  ap_ns_entry *entries;
+  int count;
+};
+
+typedef struct {
+  bool seen;
+  ap_strvec values;
+} ap_parsed_arg;
+
+void ap_error_set(ap_error *err, ap_error_code code, const char *argument,
+                  const char *fmt, ...);
+
+char *ap_strdup(const char *s);
+char *ap_strndup(const char *s, size_t n);
+void ap_trim_inplace(char *s);
+bool ap_starts_with_dash(const char *s);
+
+int ap_strvec_push(ap_strvec *vec, char *item);
+void ap_strvec_free(ap_strvec *vec);
+
+void ap_sb_init(ap_string_builder *sb);
+void ap_sb_free(ap_string_builder *sb);
+int ap_sb_appendf(ap_string_builder *sb, const char *fmt, ...);
+
+int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
+                    ap_parsed_arg **out_parsed, ap_strvec *positionals,
+                    ap_error *err);
+int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
+                     ap_error *err);
+int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
+                       ap_namespace **out_ns, ap_error *err);
+
+char *ap_usage_build(const ap_parser *parser);
+char *ap_help_build(const ap_parser *parser);
+
+#endif

@@ -1,12 +1,58 @@
 # argparse-c
-argparse-c - A command line arguments parsing library in C
 
-## Examples
+`argparse-c` is a C99 command-line argument parsing library inspired by Python `argparse`.
 
-[example1](./sample/example1.c)
+## Features (MVP)
+
+- Optional and positional arguments
+- Types: `string`, `int32`, `bool` (`store_true` / `store_false`)
+- `required`, `default_value`, `choices`
+- `nargs`: one, `?`, `*`, `+`
+- Built-in `-h/--help`
+- Non-exit error flow (`ap_parse_args` returns error codes)
+
+## Quick Example
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "argparse-c.h"
+
+int main(int argc, char **argv) {
+  ap_error err = {0};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("demo", "demo parser");
+
+  ap_arg_options o = ap_arg_options_default();
+  o.required = true;
+  o.help = "input text";
+  ap_add_argument(p, "-t, --text", o, &err);
+
+  if (ap_parse_args(p, argc, argv, &ns, &err) != 0) {
+    fprintf(stderr, "error: %s\n", err.message);
+    ap_parser_free(p);
+    return 1;
+  }
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+  return 0;
+}
+```
+
+## Build
+
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+## Example Program
+
+See [sample/example1.c](./sample/example1.c).
 
 ## License
 
-Copyright (C) 2021 [Yoshihide Shirai](mailto:yoshihide.shirai@gmail.com).
-
-Licensed under the [MIT License](https://opensource.org/licenses/MIT).
+MIT License.

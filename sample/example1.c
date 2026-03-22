@@ -1,51 +1,98 @@
-#include "argparse-c.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-int example1_main(int argc, char *argv[]) {
-  struct {
-    char *text;
-    int32_t integer;
-    char *arg1;
-    char *arg2;
-  } args = { NULL };
-  argparse_t *argparse = argparse_init("example1 command.");
+#include "argparse-c.h"
 
-  argparse_arg_t *text_option = argparse_arg_new_char(&args.text);
-  argparse_arg_set_required(text_option, true);
-  argparse_arg_set_key(text_option, "-t");
-  argparse_arg_set_key(text_option, "--text");
-  argparse_arg_set_help(text_option, "text field.");
-  argparse_add_arg(argparse, text_option);
+int main(int argc, char **argv) {
+  ap_error err = {0};
+  ap_namespace *ns = NULL;
+  ap_parser *parser = ap_parser_new("example1", "example1 command.");
+  if (!parser) {
+    fprintf(stderr, "failed to initialize parser\n");
+    return 1;
+  }
 
-  argparse_arg_t *integer_option = argparse_arg_new_int32(&args.integer);
-  argparse_arg_set_key(integer_option, "-i");
-  argparse_arg_set_key(integer_option, "--integer");
-  argparse_arg_set_help(integer_option, "integer field.");
-  argparse_add_arg(argparse, integer_option);
+  ap_arg_options text_opts = ap_arg_options_default();
+  text_opts.required = true;
+  text_opts.help = "text field.";
+  if (ap_add_argument(parser, "-t, --text", text_opts, &err) != 0) {
+    fprintf(stderr, "%s\n", err.message);
+    ap_parser_free(parser);
+    return 1;
+  }
 
-  argparse_arg_t *arg1 = argparse_arg_new_char(&args.arg1);
-  argparse_arg_set_required(arg1, true);
-  argparse_arg_set_key(arg1, "arg1");
-  argparse_arg_set_help(arg1, "arg1 field.");
-  argparse_add_arg(argparse, arg1);
+  ap_arg_options integer_opts = ap_arg_options_default();
+  integer_opts.type = AP_TYPE_INT32;
+  integer_opts.help = "integer field.";
+  if (ap_add_argument(parser, "-i, --integer", integer_opts, &err) != 0) {
+    fprintf(stderr, "%s\n", err.message);
+    ap_parser_free(parser);
+    return 1;
+  }
 
-  argparse_arg_t *arg2 = argparse_arg_new_char(&args.arg2);
-  argparse_arg_set_key(arg2, "arg2");
-  argparse_arg_set_help(arg2, "arg2 field.");
-  argparse_add_arg(argparse, arg2);
+  ap_arg_options arg1_opts = ap_arg_options_default();
+  arg1_opts.required = true;
+  arg1_opts.help = "arg1 field.";
+  if (ap_add_argument(parser, "arg1", arg1_opts, &err) != 0) {
+    fprintf(stderr, "%s\n", err.message);
+    ap_parser_free(parser);
+    return 1;
+  }
 
-  argparse_exec(argparse, argc, argv);
+  ap_arg_options arg2_opts = ap_arg_options_default();
+  arg2_opts.nargs = AP_NARGS_OPTIONAL;
+  arg2_opts.help = "arg2 field.";
+  if (ap_add_argument(parser, "arg2", arg2_opts, &err) != 0) {
+    fprintf(stderr, "%s\n", err.message);
+    ap_parser_free(parser);
+    return 1;
+  }
 
-  argparse_destroy(argparse);
+  if (ap_parse_args(parser, argc, argv, &ns, &err) != 0) {
+    fprintf(stderr, "error: %s\n", err.message);
+    char *usage = ap_format_usage(parser);
+    if (usage) {
+      fprintf(stderr, "%s", usage);
+      free(usage);
+    }
+    ap_parser_free(parser);
+    return 1;
+  }
 
-  printf("args.text = %s\n",args.text);
-  printf("args.integer = %d\n",args.integer);
-  printf("args.arg1 = %s\n",args.arg1);
-  printf("args.arg2 = %s\n",args.arg2);
+  {
+    bool is_help = false;
+    if (ap_ns_get_bool(ns, "help", &is_help) && is_help) {
+      char *help = ap_format_help(parser);
+      if (help) {
+        printf("%s", help);
+        free(help);
+      }
+      ap_namespace_free(ns);
+      ap_parser_free(parser);
+      return 0;
+    }
+  }
 
+  {
+    const char *text = NULL;
+    const char *arg1 = NULL;
+    const char *arg2 = NULL;
+    int32_t integer = 0;
+
+    ap_ns_get_string(ns, "text", &text);
+    ap_ns_get_int32(ns, "integer", &integer);
+    ap_ns_get_string(ns, "arg1", &arg1);
+    ap_ns_get_string(ns, "arg2", &arg2);
+
+    printf("text=%s\n", text ? text : "(null)");
+    printf("integer=%d\n", integer);
+    printf("arg1=%s\n", arg1 ? arg1 : "(null)");
+    printf("arg2=%s\n", arg2 ? arg2 : "(null)");
+  }
+
+  ap_namespace_free(ns);
+  ap_parser_free(parser);
   return 0;
 }
-
-int main(int argc, char *argv[]) { return example1_main(argc, argv); }

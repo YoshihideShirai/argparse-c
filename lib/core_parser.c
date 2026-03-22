@@ -1,0 +1,285 @@
+#include <stdlib.h>
+#include <string.h>
+
+#include "ap_internal.h"
+
+static int find_flag_index(const ap_parser *parser, const char *token) {
+  int i;
+  int j;
+  for (i = 0; i < parser->defs_count; i++) {
+    const ap_arg_def *def = &parser->defs[i];
+    if (!def->is_optional) {
+      continue;
+    }
+    for (j = 0; j < def->flags_count; j++) {
+      if (strcmp(def->flags[j], token) == 0) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
+
+static int positional_min_required(const ap_arg_def *def) {
+  if (def->opts.action == AP_ACTION_STORE_TRUE ||
+      def->opts.action == AP_ACTION_STORE_FALSE) {
+    return 0;
+  }
+  switch (def->opts.nargs) {
+  case AP_NARGS_ONE:
+    return 1;
+  case AP_NARGS_ONE_OR_MORE:
+    return 1;
+  case AP_NARGS_OPTIONAL:
+  case AP_NARGS_ZERO_OR_MORE:
+  default:
+    return 0;
+  }
+}
+
+static int remaining_min_required(const ap_parser *parser,
+                                  const int *positional_defs,
+                                  int positional_count, int from_index) {
+  int min_required = 0;
+  int i;
+  for (i = from_index; i < positional_count; i++) {
+    min_required += positional_min_required(&parser->defs[positional_defs[i]]);
+  }
+  return min_required;
+}
+
+static int push_value(ap_parsed_arg *parsed, int def_index, const char *token,
+                      ap_error *err) {
+  char *copy = ap_strdup(token);
+  if (!copy) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+    return -1;
+  }
+  if (ap_strvec_push(&parsed[def_index].values, copy) != 0) {
+    free(copy);
+    ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+    return -1;
+  }
+  return 0;
+}
+
+static int consume_optional_values(const ap_parser *parser, int argc, char **argv,
+                                   int *idx, int def_index,
+                                   ap_parsed_arg *parsed, ap_error *err) {
+  const ap_arg_def *def = &parser->defs[def_index];
+  int start = *idx;
+
+  if (def->opts.action == AP_ACTION_STORE_TRUE ||
+      def->opts.action == AP_ACTION_STORE_FALSE) {
+    return 0;
+  }
+
+  if (def->opts.nargs == AP_NARGS_ONE) {
+    if (start + 1 >= argc) {
+      ap_error_set(err, AP_ERR_MISSING_VALUE, def->flags[0],
+                   "option '%s' requires a value", def->flags[0]);
+      return -1;
+    }
+    if (find_flag_index(parser, argv[start + 1]) >= 0) {
+      ap_error_set(err, AP_ERR_MISSING_VALUE, def->flags[0],
+                   "option '%s' requires a value", def->flags[0]);
+      return -1;
+    }
+    if (push_value(parsed, def_index, argv[start + 1], err) != 0) {
+      return -1;
+    }
+    *idx = start + 1;
+    return 0;
+  }
+
+  if (def->opts.nargs == AP_NARGS_OPTIONAL) {
+    if (start + 1 < argc) {
+      int next_flag_idx = find_flag_index(parser, argv[start + 1]);
+      if (next_flag_idx < 0) {
+        if (push_value(parsed, def_index, argv[start + 1], err) != 0) {
+          return -1;
+        }
+        *idx = start + 1;
+      }
+    }
+    return 0;
+  }
+
+  {
+    int j = start + 1;
+    int consumed = 0;
+    while (j < argc) {
+      if (strcmp(argv[j], "--") == 0) {
+        break;
+      }
+      if (find_flag_index(parser, argv[j]) >= 0) {
+        break;
+      }
+      if (push_value(parsed, def_index, argv[j], err) != 0) {
+        return -1;
+      }
+      consumed++;
+      j++;
+    }
+    if (def->opts.nargs == AP_NARGS_ONE_OR_MORE && consumed == 0) {
+      ap_error_set(err, AP_ERR_INVALID_NARGS, def->flags[0],
+                   "option '%s' requires at least one value", def->flags[0]);
+      return -1;
+    }
+    *idx = j - 1;
+    return 0;
+  }
+}
+
+int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
+                    ap_parsed_arg **out_parsed, ap_strvec *positionals,
+                    ap_error *err) {
+  ap_parsed_arg *parsed;
+  int positional_defs_count = 0;
+  int *positional_defs = NULL;
+  int i;
+  int positional_cursor = 0;
+  int token_index = 1;
+  bool positional_only = false;
+
+  parsed = calloc((size_t)parser->defs_count, sizeof(ap_parsed_arg));
+  if (!parsed) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+    return -1;
+  }
+
+  for (i = 0; i < parser->defs_count; i++) {
+    if (!parser->defs[i].is_optional) {
+      positional_defs_count++;
+    }
+  }
+
+  if (positional_defs_count > 0) {
+    positional_defs = malloc(sizeof(int) * (size_t)positional_defs_count);
+    if (!positional_defs) {
+      free(parsed);
+      ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+      return -1;
+    }
+    positional_defs_count = 0;
+    for (i = 0; i < parser->defs_count; i++) {
+      if (!parser->defs[i].is_optional) {
+        positional_defs[positional_defs_count++] = i;
+      }
+    }
+  }
+
+  while (token_index < argc) {
+    const char *token = argv[token_index];
+
+    if (!positional_only && strcmp(token, "--") == 0) {
+      positional_only = true;
+      token_index++;
+      continue;
+    }
+
+    if (!positional_only && ap_starts_with_dash(token)) {
+      int def_index = find_flag_index(parser, token);
+      if (def_index < 0) {
+        free(positional_defs);
+        free(parsed);
+        ap_error_set(err, AP_ERR_UNKNOWN_OPTION, token,
+                     "unknown option '%s'", token);
+        return -1;
+      }
+      if (parsed[def_index].seen) {
+        free(positional_defs);
+        free(parsed);
+        ap_error_set(err, AP_ERR_DUPLICATE_OPTION, token,
+                     "duplicate option '%s'", token);
+        return -1;
+      }
+      parsed[def_index].seen = true;
+      if (consume_optional_values(parser, argc, argv, &token_index, def_index,
+                                  parsed, err) != 0) {
+        int k;
+        for (k = 0; k < parser->defs_count; k++) {
+          ap_strvec_free(&parsed[k].values);
+        }
+        free(positional_defs);
+        free(parsed);
+        return -1;
+      }
+      token_index++;
+      continue;
+    }
+
+    if (ap_strvec_push(positionals, ap_strdup(token)) != 0) {
+      int k;
+      for (k = 0; k < parser->defs_count; k++) {
+        ap_strvec_free(&parsed[k].values);
+      }
+      free(positional_defs);
+      free(parsed);
+      ap_error_set(err, AP_ERR_NO_MEMORY, token, "out of memory");
+      return -1;
+    }
+    token_index++;
+  }
+
+  for (i = 0; i < positional_defs_count; i++) {
+    const ap_arg_def *def = &parser->defs[positional_defs[i]];
+    int values_left = positionals->count - positional_cursor;
+    int min_after = remaining_min_required(parser, positional_defs,
+                                           positional_defs_count, i + 1);
+    int take = 0;
+
+    switch (def->opts.nargs) {
+    case AP_NARGS_ONE:
+      take = values_left > 0 ? 1 : 0;
+      break;
+    case AP_NARGS_OPTIONAL:
+      take = values_left > min_after ? 1 : 0;
+      break;
+    case AP_NARGS_ZERO_OR_MORE:
+      take = values_left - min_after;
+      if (take < 0) {
+        take = 0;
+      }
+      break;
+    case AP_NARGS_ONE_OR_MORE:
+      take = values_left - min_after;
+      if (take < 1) {
+        ap_error_set(err, AP_ERR_INVALID_NARGS, def->dest,
+                     "argument '%s' requires at least one value", def->dest);
+        goto fail;
+      }
+      break;
+    }
+
+    while (take-- > 0 && positional_cursor < positionals->count) {
+      if (push_value(parsed, positional_defs[i],
+                     positionals->items[positional_cursor], err) != 0) {
+        goto fail;
+      }
+      positional_cursor++;
+    }
+  }
+
+  if (positional_cursor < positionals->count) {
+    ap_error_set(err, AP_ERR_UNEXPECTED_POSITIONAL,
+                 positionals->items[positional_cursor],
+                 "unexpected positional argument '%s'",
+                 positionals->items[positional_cursor]);
+    goto fail;
+  }
+
+  free(positional_defs);
+  *out_parsed = parsed;
+  return 0;
+
+fail: {
+  int k;
+  for (k = 0; k < parser->defs_count; k++) {
+    ap_strvec_free(&parsed[k].values);
+  }
+  free(positional_defs);
+  free(parsed);
+  return -1;
+}
+}
