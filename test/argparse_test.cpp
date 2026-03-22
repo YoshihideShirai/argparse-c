@@ -1236,6 +1236,188 @@ TEST(FormatUsageShowsRequiredBoolAndConstActions) {
   ap_parser_free(p);
 }
 
+
+TEST(RequiredStoreTrueOptionMustBePresent) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options force = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  force.type = AP_TYPE_BOOL;
+  force.action = AP_ACTION_STORE_TRUE;
+  force.required = true;
+  LONGS_EQUAL(0, ap_add_argument(p, "--force", force, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+  STRCMP_EQUAL("--force", err.argument);
+  STRCMP_EQUAL("option '--force' is required", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(RequiredStoreConstOptionMustBePresent) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options color = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  color.action = AP_ACTION_STORE_CONST;
+  color.const_value = "always";
+  color.required = true;
+  LONGS_EQUAL(0, ap_add_argument(p, "--color", color, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+  STRCMP_EQUAL("--color", err.argument);
+  STRCMP_EQUAL("option '--color' is required", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(ParseKnownArgsRequiresAllOutputPointers) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  int unknown_count = 0;
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(-1, ap_parse_known_args(p, 1, argv, &ns, NULL, &unknown_count, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("", err.argument);
+  STRCMP_EQUAL("parser, outputs and unknown outputs are required", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(FormatErrorUsesFallbackMessageWhenErrorMissing) {
+  ap_parser *p = ap_parser_new("prog", "desc");
+  char *text = NULL;
+
+  CHECK(p != NULL);
+  text = ap_format_error(p, NULL);
+  CHECK(text != NULL);
+  CHECK(strstr(text, "error: unknown error") != NULL);
+  CHECK(strstr(text, "usage: prog") != NULL);
+
+  free(text);
+  ap_parser_free(p);
+}
+
+TEST(FormatErrorReturnsNullWithoutParser) {
+  CHECK(ap_format_error(NULL, NULL) == NULL);
+}
+
+TEST(NullFreeHelpersAreNoOps) {
+  ap_parser_free(NULL);
+  ap_namespace_free(NULL);
+  ap_free_tokens(NULL, 0);
+  CHECK_TRUE(true);
+}
+
+TEST(NamespaceGetterFailurePathsReturnFalseOrNull) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options count = ap_arg_options_default();
+  ap_arg_options name = ap_arg_options_default();
+  bool bool_out = false;
+  int32_t int_out = 0;
+  const char *str_out = NULL;
+  char *argv[] = {(char *)"prog", (char *)"--verbose", (char *)"--count", (char *)"--name", (char *)"alice", NULL};
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  count.type = AP_TYPE_INT32;
+  count.action = AP_ACTION_COUNT;
+  LONGS_EQUAL(0, ap_add_argument(p, "--verbose", verbose, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--count", count, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--name", name, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 5, argv, &ns, &err));
+  LONGS_EQUAL(1, ap_ns_get_count(ns, "verbose"));
+  CHECK(!ap_ns_get_bool(ns, "name", &bool_out));
+  CHECK(!ap_ns_get_bool(ns, "verbose", NULL));
+  CHECK(!ap_ns_get_string(ns, "verbose", &str_out));
+  CHECK(!ap_ns_get_string(ns, "missing", &str_out));
+  CHECK(!ap_ns_get_int32(ns, "name", &int_out));
+  CHECK(!ap_ns_get_int32(ns, "count", NULL));
+  LONGS_EQUAL(-1, ap_ns_get_count(ns, "missing"));
+  CHECK(ap_ns_get_string_at(ns, "missing", 0) == NULL);
+  CHECK(ap_ns_get_string_at(ns, "name", 1) == NULL);
+  CHECK(!ap_ns_get_int32_at(ns, "count", -1, &int_out));
+  CHECK(!ap_ns_get_int32_at(ns, "count", 1, &int_out));
+  CHECK(!ap_ns_get_int32_at(ns, "count", 0, NULL));
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(FormatHelpShowsPositionalOneOrMoreAndActionFlags) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options quiet = ap_arg_options_default();
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options color = ap_arg_options_default();
+  ap_arg_options inputs = ap_arg_options_default();
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  quiet.type = AP_TYPE_BOOL;
+  quiet.action = AP_ACTION_STORE_FALSE;
+  quiet.help = "disable output";
+  verbose.type = AP_TYPE_INT32;
+  verbose.action = AP_ACTION_COUNT;
+  verbose.help = "increase verbosity";
+  color.action = AP_ACTION_STORE_CONST;
+  color.const_value = "always";
+  color.help = "force color";
+  inputs.nargs = AP_NARGS_ONE_OR_MORE;
+  inputs.action = AP_ACTION_APPEND;
+  inputs.help = "input files";
+  inputs.metavar = "INPUT";
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--quiet", quiet, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "-v, --verbose", verbose, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--color", color, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "inputs", inputs, &err));
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "--quiet") != NULL);
+  CHECK(strstr(help, "-v, --verbose") != NULL);
+  CHECK(strstr(help, "--color") != NULL);
+  CHECK(strstr(help, "INPUT [INPUT ...]") != NULL);
+  CHECK(strstr(help, "disable output") != NULL);
+  CHECK(strstr(help, "increase verbosity") != NULL);
+  CHECK(strstr(help, "force color") != NULL);
+  CHECK(strstr(help, "input files") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
+TEST(ApiGuardsRejectMissingParserPointers) {
+  ap_error err = {};
+
+  LONGS_EQUAL(-1, ap_add_argument(NULL, "--name", ap_arg_options_default(), &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("", err.argument);
+  STRCMP_EQUAL("parser and argument name are required", err.message);
+
+  CHECK(ap_add_mutually_exclusive_group(NULL, false, &err) == NULL);
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("", err.argument);
+  STRCMP_EQUAL("parser is required", err.message);
+}
+
 TEST(HelpOptionBypassesRequiredArguments) {
   ap_error err = {};
   ap_namespace *ns = NULL;
