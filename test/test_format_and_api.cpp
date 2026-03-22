@@ -247,6 +247,108 @@ TEST(FormatHelpShowsPositionalOneOrMoreAndActionFlags) {
   ap_parser_free(p);
 }
 
+TEST(ParserIntrospectionEnumeratesArgumentsAndFlags) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "top level parser");
+  ap_parser_info parser_info = {};
+  ap_arg_info help_info = {};
+  ap_arg_info output_info = {};
+  ap_arg_info input_info = {};
+  const char *modes[] = {"fast", "slow"};
+  ap_arg_options output = ap_arg_options_default();
+  ap_arg_options input = ap_arg_options_default();
+
+  CHECK(p != NULL);
+  output.help = "write output";
+  output.metavar = "FILE";
+  output.required = true;
+  output.choices.count = 2;
+  output.choices.items = modes;
+  output.type = AP_TYPE_STRING;
+  output.action = AP_ACTION_APPEND;
+  output.nargs = AP_NARGS_FIXED;
+  output.nargs_count = 2;
+  input.help = "input path";
+  input.metavar = "INPUT";
+  input.nargs = AP_NARGS_OPTIONAL;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "-o, --output", output, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "input", input, &err));
+
+  LONGS_EQUAL(0, ap_parser_get_info(p, &parser_info));
+  STRCMP_EQUAL("tool", parser_info.prog);
+  STRCMP_EQUAL("top level parser", parser_info.description);
+  LONGS_EQUAL(3, parser_info.argument_count);
+  LONGS_EQUAL(0, parser_info.subcommand_count);
+
+  LONGS_EQUAL(0, ap_parser_get_argument(p, 0, &help_info));
+  LONGS_EQUAL(AP_ARG_KIND_OPTIONAL, help_info.kind);
+  LONGS_EQUAL(2, help_info.flag_count);
+  STRCMP_EQUAL("-h", help_info.flags[0]);
+  STRCMP_EQUAL("--help", help_info.flags[1]);
+  LONGS_EQUAL(1, ap_arg_short_flag_count(&help_info));
+  LONGS_EQUAL(1, ap_arg_long_flag_count(&help_info));
+  STRCMP_EQUAL("-h", ap_arg_short_flag_at(&help_info, 0));
+  STRCMP_EQUAL("--help", ap_arg_long_flag_at(&help_info, 0));
+
+  LONGS_EQUAL(0, ap_parser_get_argument(p, 1, &output_info));
+  LONGS_EQUAL(AP_ARG_KIND_OPTIONAL, output_info.kind);
+  STRCMP_EQUAL("output", output_info.dest);
+  STRCMP_EQUAL("write output", output_info.help);
+  STRCMP_EQUAL("FILE", output_info.metavar);
+  CHECK_TRUE(output_info.required);
+  LONGS_EQUAL(AP_NARGS_FIXED, output_info.nargs);
+  LONGS_EQUAL(2, output_info.nargs_count);
+  LONGS_EQUAL(AP_TYPE_STRING, output_info.type);
+  LONGS_EQUAL(AP_ACTION_APPEND, output_info.action);
+  LONGS_EQUAL(2, output_info.choices.count);
+  STRCMP_EQUAL("fast", output_info.choices.items[0]);
+  STRCMP_EQUAL("slow", output_info.choices.items[1]);
+  LONGS_EQUAL(1, ap_arg_short_flag_count(&output_info));
+  LONGS_EQUAL(1, ap_arg_long_flag_count(&output_info));
+  STRCMP_EQUAL("-o", ap_arg_short_flag_at(&output_info, 0));
+  STRCMP_EQUAL("--output", ap_arg_long_flag_at(&output_info, 0));
+
+  LONGS_EQUAL(0, ap_parser_get_argument(p, 2, &input_info));
+  LONGS_EQUAL(AP_ARG_KIND_POSITIONAL, input_info.kind);
+  LONGS_EQUAL(1, input_info.flag_count);
+  STRCMP_EQUAL("input", input_info.flags[0]);
+  STRCMP_EQUAL("input", input_info.dest);
+  STRCMP_EQUAL("input path", input_info.help);
+  STRCMP_EQUAL("INPUT", input_info.metavar);
+  LONGS_EQUAL(0, ap_arg_short_flag_count(&input_info));
+  LONGS_EQUAL(0, ap_arg_long_flag_count(&input_info));
+  CHECK(ap_arg_short_flag_at(&input_info, 0) == NULL);
+  CHECK(ap_arg_long_flag_at(&input_info, 0) == NULL);
+
+  ap_parser_free(p);
+}
+
+TEST(ParserIntrospectionRejectsInvalidInputs) {
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_parser_info parser_info = {};
+  ap_arg_info arg_info = {};
+  ap_subcommand_info subcommand_info = {};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(-1, ap_parser_get_info(NULL, &parser_info));
+  LONGS_EQUAL(-1, ap_parser_get_info(p, NULL));
+  LONGS_EQUAL(-1, ap_parser_get_argument(NULL, 0, &arg_info));
+  LONGS_EQUAL(-1, ap_parser_get_argument(p, -1, &arg_info));
+  LONGS_EQUAL(-1, ap_parser_get_argument(p, 99, &arg_info));
+  LONGS_EQUAL(-1, ap_parser_get_argument(p, 0, NULL));
+  LONGS_EQUAL(-1, ap_parser_get_subcommand(NULL, 0, &subcommand_info));
+  LONGS_EQUAL(-1, ap_parser_get_subcommand(p, -1, &subcommand_info));
+  LONGS_EQUAL(-1, ap_parser_get_subcommand(p, 0, &subcommand_info));
+  LONGS_EQUAL(-1, ap_parser_get_subcommand(p, 0, NULL));
+  LONGS_EQUAL(0, ap_arg_short_flag_count(NULL));
+  LONGS_EQUAL(0, ap_arg_long_flag_count(NULL));
+  CHECK(ap_arg_short_flag_at(NULL, 0) == NULL);
+  CHECK(ap_arg_long_flag_at(NULL, 0) == NULL);
+
+  ap_parser_free(p);
+}
+
 TEST(ApiGuardsRejectMissingParserPointers) {
   ap_error err = {};
 

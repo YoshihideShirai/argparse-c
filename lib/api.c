@@ -183,6 +183,15 @@ bool ap_starts_with_dash(const char *s) {
   return s && s[0] == '-' && s[1] != '\0';
 }
 
+bool ap_is_long_flag(const char *flag) {
+  return flag && strncmp(flag, "--", 2) == 0 && flag[2] != '\0';
+}
+
+bool ap_is_short_flag(const char *flag) {
+  return flag && flag[0] == '-' && flag[1] != '-' && flag[1] != '\0' &&
+         flag[2] == '\0';
+}
+
 int ap_strvec_push(ap_strvec *vec, char *item) {
   char **next_items;
   int next_cap;
@@ -1028,6 +1037,114 @@ char *ap_format_usage(const ap_parser *parser) {
 }
 
 char *ap_format_help(const ap_parser *parser) { return ap_help_build(parser); }
+
+int ap_parser_get_info(const ap_parser *parser, ap_parser_info *out_info) {
+  if (!parser || !out_info) {
+    return -1;
+  }
+
+  out_info->prog = parser->prog;
+  out_info->description = parser->description;
+  out_info->argument_count = parser->defs_count;
+  out_info->subcommand_count = parser->subcommands_count;
+  return 0;
+}
+
+int ap_parser_get_argument(const ap_parser *parser, int index,
+                           ap_arg_info *out_info) {
+  const ap_arg_def *def;
+
+  if (!parser || !out_info || index < 0 || index >= parser->defs_count) {
+    return -1;
+  }
+
+  def = &parser->defs[index];
+  out_info->kind =
+      def->is_optional ? AP_ARG_KIND_OPTIONAL : AP_ARG_KIND_POSITIONAL;
+  out_info->flag_count = def->flags_count;
+  out_info->flags = (const char *const *)def->flags;
+  out_info->dest = def->dest;
+  out_info->help = def->opts.help;
+  out_info->metavar = def->opts.metavar;
+  out_info->choices = def->opts.choices;
+  out_info->required = def->opts.required;
+  out_info->nargs = def->opts.nargs;
+  out_info->nargs_count = def->opts.nargs_count;
+  out_info->type = def->opts.type;
+  out_info->action = def->opts.action;
+  return 0;
+}
+
+int ap_parser_get_subcommand(const ap_parser *parser, int index,
+                             ap_subcommand_info *out_info) {
+  const ap_subcommand_def *def;
+
+  if (!parser || !out_info || index < 0 || index >= parser->subcommands_count) {
+    return -1;
+  }
+
+  def = &parser->subcommands[index];
+  out_info->name = def->name;
+  out_info->description = def->help;
+  out_info->parser = def->parser;
+  return 0;
+}
+
+static int ap_arg_flag_count_by_kind(const ap_arg_info *info, bool long_flag) {
+  int i;
+  int count = 0;
+
+  if (!info || !info->flags || info->flag_count < 1) {
+    return 0;
+  }
+
+  for (i = 0; i < info->flag_count; i++) {
+    if (long_flag ? ap_is_long_flag(info->flags[i])
+                  : ap_is_short_flag(info->flags[i])) {
+      count++;
+    }
+  }
+  return count;
+}
+
+static const char *ap_arg_flag_at_by_kind(const ap_arg_info *info, int index,
+                                          bool long_flag) {
+  int i;
+  int current = 0;
+
+  if (!info || !info->flags || index < 0) {
+    return NULL;
+  }
+
+  for (i = 0; i < info->flag_count; i++) {
+    bool matches = long_flag ? ap_is_long_flag(info->flags[i])
+                             : ap_is_short_flag(info->flags[i]);
+    if (!matches) {
+      continue;
+    }
+    if (current == index) {
+      return info->flags[i];
+    }
+    current++;
+  }
+  return NULL;
+}
+
+int ap_arg_short_flag_count(const ap_arg_info *info) {
+  return ap_arg_flag_count_by_kind(info, false);
+}
+
+const char *ap_arg_short_flag_at(const ap_arg_info *info, int index) {
+  return ap_arg_flag_at_by_kind(info, index, false);
+}
+
+int ap_arg_long_flag_count(const ap_arg_info *info) {
+  return ap_arg_flag_count_by_kind(info, true);
+}
+
+const char *ap_arg_long_flag_at(const ap_arg_info *info, int index) {
+  return ap_arg_flag_at_by_kind(info, index, true);
+}
 
 char *ap_format_error(const ap_parser *parser, const ap_error *err) {
   char *usage = NULL;

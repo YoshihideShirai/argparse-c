@@ -74,6 +74,39 @@ typedef struct ap_parser ap_parser;
 typedef struct ap_mutually_exclusive_group ap_mutually_exclusive_group;
 typedef struct ap_namespace ap_namespace;
 
+typedef enum {
+  AP_ARG_KIND_POSITIONAL = 0,
+  AP_ARG_KIND_OPTIONAL,
+} ap_arg_kind;
+
+typedef struct {
+  const char *prog;
+  const char *description;
+  int argument_count;
+  int subcommand_count;
+} ap_parser_info;
+
+typedef struct {
+  ap_arg_kind kind;
+  int flag_count;
+  const char *const *flags;
+  const char *dest;
+  const char *help;
+  const char *metavar;
+  ap_choices choices;
+  bool required;
+  ap_nargs nargs;
+  int nargs_count;
+  ap_type type;
+  ap_action action;
+} ap_arg_info;
+
+typedef struct {
+  const char *name;
+  const char *description;
+  const ap_parser *parser;
+} ap_subcommand_info;
+
 ap_parser *ap_parser_new(const char *prog, const char *description);
 ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
                              const char *description, ap_error *err);
@@ -99,6 +132,16 @@ void ap_free_tokens(char **tokens, int count);
 char *ap_format_usage(const ap_parser *parser);
 char *ap_format_help(const ap_parser *parser);
 char *ap_format_error(const ap_parser *parser, const ap_error *err);
+
+int ap_parser_get_info(const ap_parser *parser, ap_parser_info *out_info);
+int ap_parser_get_argument(const ap_parser *parser, int index,
+                           ap_arg_info *out_info);
+int ap_parser_get_subcommand(const ap_parser *parser, int index,
+                             ap_subcommand_info *out_info);
+int ap_arg_short_flag_count(const ap_arg_info *info);
+const char *ap_arg_short_flag_at(const ap_arg_info *info, int index);
+int ap_arg_long_flag_count(const ap_arg_info *info);
+const char *ap_arg_long_flag_at(const ap_arg_info *info, int index);
 
 bool ap_ns_get_bool(const ap_namespace *ns, const char *dest, bool *out_value);
 bool ap_ns_get_string(const ap_namespace *ns, const char *dest,
