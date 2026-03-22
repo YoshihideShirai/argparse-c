@@ -80,3 +80,4 @@ ap_ns_get_string(ns, "text", &text);
 - [基本の使い方](guides/basic-usage.md)
 - [オプションと型](guides/options-and-types.md)
 - [nargs](guides/nargs.md)
+- [English Getting Started](../en/getting-started.md)

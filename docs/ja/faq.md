@@ -17,5 +17,5 @@
 
 ## API の詳しい仕様はどこですか？
 
-- 日本語: [API Reference（日本語）](api-spec.ja.md)
-- English: [API Reference（English）](api-spec.en.md)
+- 日本語: [API Reference（日本語）](../api-spec.ja.md)
+- English: [API Reference（English）](../api-spec.en.md)

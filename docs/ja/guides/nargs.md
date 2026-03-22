@@ -34,4 +34,4 @@ prog --files a.txt b.txt c.txt
 
 positional では、後続の required positional に必要な最小数を残すように割り当てられます。
 
-この仕様の詳細は [API Reference（日本語）](../api-spec.ja.md) も参照してください。
+この仕様の詳細は [API Reference（日本語）](../../api-spec.ja.md) も参照してください。
