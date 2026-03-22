@@ -127,7 +127,22 @@ static int append_positional_usage(ap_string_builder *sb, const ap_arg_def *def)
 }
 
 static int append_help_line(ap_string_builder *sb, const ap_arg_def *def) {
+  const char *mv = metavar_for(def);
+  bool has_meta = false;
   int i;
+
+  if (def->opts.action == AP_ACTION_STORE) {
+    if (def->opts.nargs == AP_NARGS_ONE) {
+      has_meta = true;
+    } else if (def->opts.nargs == AP_NARGS_OPTIONAL) {
+      has_meta = true;
+    } else if (def->opts.nargs == AP_NARGS_ZERO_OR_MORE) {
+      has_meta = true;
+    } else if (def->opts.nargs == AP_NARGS_ONE_OR_MORE) {
+      has_meta = true;
+    }
+  }
+
   if (def->is_optional) {
     if (ap_sb_appendf(sb, "  ") != 0) {
       return -1;
@@ -140,20 +155,102 @@ static int append_help_line(ap_string_builder *sb, const ap_arg_def *def) {
         return -1;
       }
     }
-    if (def->opts.action == AP_ACTION_STORE &&
-        ap_sb_appendf(sb, " %s", metavar_for(def)) != 0) {
-      return -1;
+    if (has_meta) {
+      switch (def->opts.nargs) {
+      case AP_NARGS_ONE:
+        if (ap_sb_appendf(sb, " %s", mv) != 0) {
+          return -1;
+        }
+        break;
+      case AP_NARGS_OPTIONAL:
+        if (ap_sb_appendf(sb, " [%s]", mv) != 0) {
+          return -1;
+        }
+        break;
+      case AP_NARGS_ZERO_OR_MORE:
+        if (ap_sb_appendf(sb, " [%s ...]", mv) != 0) {
+          return -1;
+        }
+        break;
+      case AP_NARGS_ONE_OR_MORE:
+        if (ap_sb_appendf(sb, " %s [%s ...]", mv, mv) != 0) {
+          return -1;
+        }
+        break;
+      }
     }
     if (def->opts.help && ap_sb_appendf(sb, "\n    %s", def->opts.help) != 0) {
+      return -1;
+    }
+    if (def->opts.choices.items && def->opts.choices.count > 0) {
+      if (ap_sb_appendf(sb, "\n    choices: ") != 0) {
+        return -1;
+      }
+      for (i = 0; i < def->opts.choices.count; i++) {
+        if (i > 0 && ap_sb_appendf(sb, ", ") != 0) {
+          return -1;
+        }
+        if (ap_sb_appendf(sb, "%s", def->opts.choices.items[i]) != 0) {
+          return -1;
+        }
+      }
+    }
+    if (def->opts.default_value &&
+        ap_sb_appendf(sb, "\n    default: %s", def->opts.default_value) != 0) {
+      return -1;
+    }
+    if (def->opts.required &&
+        ap_sb_appendf(sb, "\n    required: true") != 0) {
       return -1;
     }
     return ap_sb_appendf(sb, "\n");
   }
 
-  if (ap_sb_appendf(sb, "  %s", metavar_for(def)) != 0) {
+  if (ap_sb_appendf(sb, "  %s", mv) != 0) {
     return -1;
   }
+  if (has_meta) {
+    switch (def->opts.nargs) {
+    case AP_NARGS_ONE:
+      break;
+    case AP_NARGS_OPTIONAL:
+      if (ap_sb_appendf(sb, " [%s]", mv) != 0) {
+        return -1;
+      }
+      break;
+    case AP_NARGS_ZERO_OR_MORE:
+      if (ap_sb_appendf(sb, " [%s ...]", mv) != 0) {
+        return -1;
+      }
+      break;
+    case AP_NARGS_ONE_OR_MORE:
+      if (ap_sb_appendf(sb, " [%s ...]", mv) != 0) {
+        return -1;
+      }
+      break;
+    }
+  }
   if (def->opts.help && ap_sb_appendf(sb, "\n    %s", def->opts.help) != 0) {
+    return -1;
+  }
+  if (def->opts.choices.items && def->opts.choices.count > 0) {
+    if (ap_sb_appendf(sb, "\n    choices: ") != 0) {
+      return -1;
+    }
+    for (i = 0; i < def->opts.choices.count; i++) {
+      if (i > 0 && ap_sb_appendf(sb, ", ") != 0) {
+        return -1;
+      }
+      if (ap_sb_appendf(sb, "%s", def->opts.choices.items[i]) != 0) {
+        return -1;
+      }
+    }
+  }
+  if (def->opts.default_value &&
+      ap_sb_appendf(sb, "\n    default: %s", def->opts.default_value) != 0) {
+    return -1;
+  }
+  if (def->opts.required && ap_sb_appendf(sb, "\n    required: true") != 0) {
     return -1;
   }
   return ap_sb_appendf(sb, "\n");

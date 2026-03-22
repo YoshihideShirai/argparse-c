@@ -278,4 +278,36 @@ TEST(ArgparseC, StoreTrueRejectsInlineValue) {
   ap_parser_free(p);
 }
 
+TEST(ArgparseC, HelpShowsChoicesDefaultAndRequired) {
+  static const char *choices[] = {"fast", "slow"};
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  ap_arg_options files = ap_arg_options_default();
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  mode.required = true;
+  mode.default_value = "fast";
+  mode.choices.items = choices;
+  mode.choices.count = 2;
+  mode.help = "run mode";
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  files.nargs = AP_NARGS_ONE_OR_MORE;
+  files.help = "input files";
+  LONGS_EQUAL(0, ap_add_argument(p, "--files", files, &err));
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "--mode MODE") != NULL);
+  CHECK(strstr(help, "choices: fast, slow") != NULL);
+  CHECK(strstr(help, "default: fast") != NULL);
+  CHECK(strstr(help, "required: true") != NULL);
+  CHECK(strstr(help, "--files FILES [FILES ...]") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
 int main(int ac, char **av) { return CommandLineTestRunner::RunAllTests(ac, av); }
