@@ -15,3 +15,4 @@
 - Guides / ガイド
 - API Reference
 - FAQ
+- Coverage report / カバレッジレポート (`coverage/index.html`)

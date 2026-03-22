@@ -115,6 +115,14 @@ cmake -S . -B build \
   -DCMAKE_CXX_COMPILER=clang++
 cmake --build build
 ctest --test-dir build --output-on-failure
+
+# coverage (requires gcovr)
+cmake -S . -B build-coverage \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DAP_ENABLE_COVERAGE=ON
+cmake --build build-coverage
+cmake --build build-coverage --target coverage
 ```
 
 ## Documentation Site
@@ -127,6 +135,7 @@ A bilingual GitHub Pages site skeleton for MkDocs + Material for MkDocs is inclu
 - local preview: `mkdocs serve`
 - static build: `mkdocs build`
 - GitHub Pages deployment: `.github/workflows/pages.yml`
+- coverage HTML report is published under `coverage/index.html` on the Pages site
 
 ## Example Program
 
