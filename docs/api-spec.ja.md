@@ -68,6 +68,16 @@
 - 戻り値: 生成成功で非NULL、失敗でNULL
 - 備考: `-h/--help` は自動で追加されます
 
+### `ap_parser *ap_add_subcommand(ap_parser *parser, const char *name, const char *description, ap_error *err)`
+サブコマンド用の子パーサを追加します。
+
+- `name`: サブコマンド名
+- `description`: サブコマンドのhelp説明
+- 戻り値: 子パーサ（失敗時はNULL）
+- 備考:
+  - 現在は1階層のサブコマンドのみ対応
+  - パース成功時、選択されたサブコマンド名は namespace の `"subcommand"` に格納されます
+
 ### `void ap_parser_free(ap_parser *parser)`
 パーサ本体を解放します。
 

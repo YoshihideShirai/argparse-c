@@ -280,6 +280,12 @@ char *ap_usage_build(const ap_parser *parser) {
     }
   }
 
+  if (parser->subcommands_count > 0 &&
+      ap_sb_appendf(&sb, " <%s>", "subcommand") != 0) {
+    ap_sb_free(&sb);
+    return NULL;
+  }
+
   if (ap_sb_appendf(&sb, "\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
@@ -292,6 +298,7 @@ char *ap_help_build(const ap_parser *parser) {
   int i;
   bool has_positionals = false;
   bool has_optionals = false;
+  bool has_subcommands = false;
 
   if (!parser) {
     return NULL;
@@ -326,6 +333,7 @@ char *ap_help_build(const ap_parser *parser) {
       has_positionals = true;
     }
   }
+  has_subcommands = parser->subcommands_count > 0;
 
   if (has_positionals) {
     if (ap_sb_appendf(&sb, "\npositional arguments:\n") != 0) {
@@ -347,6 +355,28 @@ char *ap_help_build(const ap_parser *parser) {
     }
     for (i = 0; i < parser->defs_count; i++) {
       if (parser->defs[i].is_optional && append_help_line(&sb, &parser->defs[i]) != 0) {
+        ap_sb_free(&sb);
+        return NULL;
+      }
+    }
+  }
+
+  if (has_subcommands) {
+    if (ap_sb_appendf(&sb, "\nsubcommands:\n") != 0) {
+      ap_sb_free(&sb);
+      return NULL;
+    }
+    for (i = 0; i < parser->subcommands_count; i++) {
+      if (ap_sb_appendf(&sb, "  %s", parser->subcommands[i].name) != 0) {
+        ap_sb_free(&sb);
+        return NULL;
+      }
+      if (parser->subcommands[i].help[0] != '\0' &&
+          ap_sb_appendf(&sb, "\n    %s", parser->subcommands[i].help) != 0) {
+        ap_sb_free(&sb);
+        return NULL;
+      }
+      if (ap_sb_appendf(&sb, "\n") != 0) {
         ap_sb_free(&sb);
         return NULL;
       }

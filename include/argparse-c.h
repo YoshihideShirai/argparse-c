@@ -68,6 +68,8 @@ typedef struct ap_parser ap_parser;
 typedef struct ap_namespace ap_namespace;
 
 ap_parser *ap_parser_new(const char *prog, const char *description);
+ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
+                             const char *description, ap_error *err);
 void ap_parser_free(ap_parser *parser);
 
 int ap_add_argument(ap_parser *parser, const char *name_or_flags,

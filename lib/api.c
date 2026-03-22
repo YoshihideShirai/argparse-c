@@ -20,6 +20,22 @@ static int ensure_defs_capacity(ap_parser *parser) {
   return 0;
 }
 
+static int ensure_subcommands_capacity(ap_parser *parser) {
+  if (parser->subcommands_count < parser->subcommands_cap) {
+    return 0;
+  }
+  int next_cap = parser->subcommands_cap == 0 ? 4 : parser->subcommands_cap * 2;
+  ap_subcommand_def *next =
+      realloc(parser->subcommands,
+              sizeof(ap_subcommand_def) * (size_t)next_cap);
+  if (!next) {
+    return -1;
+  }
+  parser->subcommands = next;
+  parser->subcommands_cap = next_cap;
+  return 0;
+}
+
 static void arg_def_free(ap_arg_def *def) {
   int i;
   if (!def) {
@@ -262,22 +278,9 @@ ap_arg_options ap_arg_options_default(void) {
   return options;
 }
 
-ap_parser *ap_parser_new(const char *prog, const char *description) {
-  ap_parser *parser;
+static int add_builtin_help(ap_parser *parser) {
   ap_arg_options opts;
   ap_error ignored_err;
-
-  parser = calloc(1, sizeof(ap_parser));
-  if (!parser) {
-    return NULL;
-  }
-
-  parser->prog = ap_strdup(prog ? prog : "program");
-  parser->description = ap_strdup(description ? description : "");
-  if (!parser->prog || !parser->description) {
-    ap_parser_free(parser);
-    return NULL;
-  }
 
   opts = ap_arg_options_default();
   opts.type = AP_TYPE_BOOL;
@@ -285,12 +288,34 @@ ap_parser *ap_parser_new(const char *prog, const char *description) {
   opts.nargs = AP_NARGS_ONE;
   opts.help = "show this help message and exit";
   opts.dest = "help";
-  if (ap_add_argument(parser, "-h, --help", opts, &ignored_err) != 0) {
+  return ap_add_argument(parser, "-h, --help", opts, &ignored_err);
+}
+
+static ap_parser *parser_alloc(const char *prog, const char *description,
+                               const char *command_name, ap_parser *parent) {
+  ap_parser *parser = calloc(1, sizeof(ap_parser));
+  if (!parser) {
+    return NULL;
+  }
+
+  parser->prog = ap_strdup(prog ? prog : "program");
+  parser->description = ap_strdup(description ? description : "");
+  parser->command_name = ap_strdup(command_name ? command_name : "");
+  parser->parent = parent;
+  if (!parser->prog || !parser->description || !parser->command_name) {
     ap_parser_free(parser);
     return NULL;
   }
 
+  if (add_builtin_help(parser) != 0) {
+    ap_parser_free(parser);
+    return NULL;
+  }
   return parser;
+}
+
+ap_parser *ap_parser_new(const char *prog, const char *description) {
+  return parser_alloc(prog, description, "", NULL);
 }
 
 static int validate_options(const ap_arg_options *options, bool is_optional,
@@ -401,6 +426,65 @@ int ap_add_argument(ap_parser *parser, const char *name_or_flags,
   return 0;
 }
 
+ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
+                             const char *description, ap_error *err) {
+  ap_subcommand_def def;
+  char *prog = NULL;
+  size_t prog_len;
+  int i;
+
+  if (!parser || !name || name[0] == '\0' || ap_starts_with_dash(name) ||
+      strchr(name, ' ') != NULL) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, name ? name : "",
+                 "subcommand name must be a single non-flag token");
+    return NULL;
+  }
+  if (parser->parent) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, name,
+                 "nested subcommands are not supported");
+    return NULL;
+  }
+  for (i = 0; i < parser->subcommands_count; i++) {
+    if (strcmp(parser->subcommands[i].name, name) == 0) {
+      ap_error_set(err, AP_ERR_INVALID_DEFINITION, name,
+                   "subcommand '%s' already exists", name);
+      return NULL;
+    }
+  }
+
+  prog_len = strlen(parser->prog) + strlen(name) + 2;
+  prog = malloc(prog_len);
+  if (!prog) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    return NULL;
+  }
+  snprintf(prog, prog_len, "%s %s", parser->prog, name);
+
+  memset(&def, 0, sizeof(def));
+  def.name = ap_strdup(name);
+  def.help = ap_strdup(description ? description : "");
+  def.parser = parser_alloc(prog, description ? description : "", name, parser);
+  free(prog);
+  if (!def.name || !def.help || !def.parser) {
+    free(def.name);
+    free(def.help);
+    ap_parser_free(def.parser);
+    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    return NULL;
+  }
+
+  if (ensure_subcommands_capacity(parser) != 0) {
+    free(def.name);
+    free(def.help);
+    ap_parser_free(def.parser);
+    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    return NULL;
+  }
+
+  parser->subcommands[parser->subcommands_count++] = def;
+  return def.parser;
+}
+
 static const ap_ns_entry *find_entry(const ap_namespace *ns, const char *dest) {
   int i;
   if (!ns || !dest) {
@@ -425,11 +509,206 @@ static void free_parsed_args(const ap_parser *parser, ap_parsed_arg *parsed) {
   free(parsed);
 }
 
-int ap_parse_args(ap_parser *parser, int argc, char **argv, ap_namespace **out_ns,
-                  ap_error *err) {
+static int find_subcommand_arg_index(const ap_parser *parser, int argc,
+                                     char **argv, int *out_index,
+                                     int *out_subcommand_index) {
+  int i;
+  bool positional_only = false;
+
+  *out_index = -1;
+  *out_subcommand_index = -1;
+
+  for (i = 1; i < argc; i++) {
+    const char *token = argv[i];
+    int j;
+
+    if (!positional_only && strcmp(token, "--") == 0) {
+      positional_only = true;
+      continue;
+    }
+
+    if (!positional_only && ap_starts_with_dash(token)) {
+      const char *eq = strchr(token, '=');
+      for (j = 0; j < parser->defs_count; j++) {
+        const ap_arg_def *def = &parser->defs[j];
+        int k;
+        if (!def->is_optional) {
+          continue;
+        }
+        for (k = 0; k < def->flags_count; k++) {
+          size_t flag_len = strlen(def->flags[k]);
+          bool exact_match = strcmp(def->flags[k], token) == 0;
+          bool inline_match =
+              eq && strncmp(def->flags[k], token, flag_len) == 0 &&
+              token[flag_len] == '=';
+          if (!exact_match && !inline_match) {
+            continue;
+          }
+          if (!inline_match && def->opts.action == AP_ACTION_STORE &&
+              def->opts.nargs == AP_NARGS_ONE && i + 1 < argc) {
+            i++;
+          } else if (!inline_match &&
+                     def->opts.action == AP_ACTION_STORE &&
+                     def->opts.nargs == AP_NARGS_OPTIONAL && i + 1 < argc &&
+                     !ap_starts_with_dash(argv[i + 1])) {
+            i++;
+          } else if (!inline_match &&
+                     def->opts.action == AP_ACTION_STORE &&
+                     (def->opts.nargs == AP_NARGS_ZERO_OR_MORE ||
+                      def->opts.nargs == AP_NARGS_ONE_OR_MORE)) {
+            while (i + 1 < argc && strcmp(argv[i + 1], "--") != 0 &&
+                   !ap_starts_with_dash(argv[i + 1])) {
+              i++;
+            }
+          }
+          goto next_token;
+        }
+      }
+    }
+
+    for (j = 0; j < parser->subcommands_count; j++) {
+      if (strcmp(parser->subcommands[j].name, token) == 0) {
+        *out_index = i;
+        *out_subcommand_index = j;
+        return 0;
+      }
+    }
+    if (parser->subcommands_count > 0) {
+      return 0;
+    }
+
+  next_token:
+    continue;
+  }
+
+  return 0;
+}
+
+static int append_namespace_entries(ap_namespace *dst, const ap_namespace *src,
+                                    ap_error *err) {
+  ap_ns_entry *next;
+  int old_count;
+  int added_count = 0;
+  int i;
+
+  if (!src || src->count == 0) {
+    return 0;
+  }
+
+  old_count = dst->count;
+  next = realloc(dst->entries, sizeof(ap_ns_entry) * (size_t)(old_count + src->count));
+  if (!next) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+    return -1;
+  }
+  dst->entries = next;
+  memset(dst->entries + old_count, 0,
+         sizeof(ap_ns_entry) * (size_t)src->count);
+
+  for (i = 0; i < src->count; i++) {
+    ap_ns_entry *entry;
+    const ap_ns_entry *src_entry = &src->entries[i];
+    int j;
+
+    if (strcmp(src_entry->dest, "help") == 0) {
+      continue;
+    }
+
+    entry = &dst->entries[old_count + added_count];
+
+    for (j = 0; j < old_count + added_count; j++) {
+      if (strcmp(dst->entries[j].dest, src_entry->dest) == 0) {
+        ap_error_set(err, AP_ERR_INVALID_DEFINITION, src_entry->dest,
+                     "dest '%s' already exists", src_entry->dest);
+        return -1;
+      }
+    }
+
+    entry->dest = ap_strdup(src_entry->dest);
+    if (!entry->dest) {
+      ap_error_set(err, AP_ERR_NO_MEMORY, src_entry->dest, "out of memory");
+      return -1;
+    }
+    entry->type = src_entry->type;
+    entry->count = src_entry->count;
+    if (src_entry->type == AP_NS_VALUE_STRING && src_entry->count > 0) {
+      entry->as.strings = calloc((size_t)src_entry->count, sizeof(char *));
+      if (!entry->as.strings) {
+        ap_error_set(err, AP_ERR_NO_MEMORY, src_entry->dest, "out of memory");
+        return -1;
+      }
+      for (j = 0; j < src_entry->count; j++) {
+        entry->as.strings[j] = ap_strdup(src_entry->as.strings[j]);
+        if (!entry->as.strings[j]) {
+          ap_error_set(err, AP_ERR_NO_MEMORY, src_entry->dest, "out of memory");
+          return -1;
+        }
+      }
+    } else if (src_entry->type == AP_NS_VALUE_INT32 && src_entry->count > 0) {
+      entry->as.ints = calloc((size_t)src_entry->count, sizeof(int32_t));
+      if (!entry->as.ints) {
+        ap_error_set(err, AP_ERR_NO_MEMORY, src_entry->dest, "out of memory");
+        return -1;
+      }
+      memcpy(entry->as.ints, src_entry->as.ints,
+             sizeof(int32_t) * (size_t)src_entry->count);
+    } else if (src_entry->type == AP_NS_VALUE_BOOL) {
+      entry->as.boolean = src_entry->as.boolean;
+    }
+    added_count++;
+  }
+
+  dst->count = old_count + added_count;
+  return 0;
+}
+
+static int add_subcommand_entry(ap_namespace *ns, const char *name,
+                                ap_error *err) {
+  ap_ns_entry *next;
+  ap_ns_entry *entry;
+
+  next = realloc(ns->entries, sizeof(ap_ns_entry) * (size_t)(ns->count + 1));
+  if (!next) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    return -1;
+  }
+  ns->entries = next;
+  entry = &ns->entries[ns->count];
+  memset(entry, 0, sizeof(*entry));
+  entry->dest = ap_strdup("subcommand");
+  if (!entry->dest) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    return -1;
+  }
+  entry->type = AP_NS_VALUE_STRING;
+  entry->count = 1;
+  entry->as.strings = calloc(1, sizeof(char *));
+  if (!entry->as.strings) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    return -1;
+  }
+  entry->as.strings[0] = ap_strdup(name);
+  if (!entry->as.strings[0]) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    return -1;
+  }
+  ns->count++;
+  return 0;
+}
+
+static int parse_internal(ap_parser *parser, int argc, char **argv,
+                          bool allow_unknown, ap_namespace **out_ns,
+                          char ***out_unknown_args, int *out_unknown_count,
+                          ap_error *err) {
   ap_parsed_arg *parsed = NULL;
   ap_namespace *ns = NULL;
+  ap_namespace *sub_ns = NULL;
   ap_strvec positionals;
+  ap_strvec unknown_args;
+  char **sub_unknown_args = NULL;
+  int sub_unknown_count = 0;
+  int subcommand_arg_index = -1;
+  int subcommand_index = -1;
   int rc;
 
   if (!parser || !out_ns) {
@@ -439,9 +718,24 @@ int ap_parse_args(ap_parser *parser, int argc, char **argv, ap_namespace **out_n
   }
 
   memset(&positionals, 0, sizeof(positionals));
+  memset(&unknown_args, 0, sizeof(unknown_args));
   *out_ns = NULL;
+  if (out_unknown_args) {
+    *out_unknown_args = NULL;
+  }
+  if (out_unknown_count) {
+    *out_unknown_count = 0;
+  }
 
-  rc = ap_parser_parse(parser, argc, argv, false, &parsed, &positionals, NULL,
+  rc = find_subcommand_arg_index(parser, argc, argv, &subcommand_arg_index,
+                                 &subcommand_index);
+  if (rc != 0) {
+    goto done;
+  }
+
+  rc = ap_parser_parse(parser, subcommand_arg_index >= 0 ? subcommand_arg_index : argc,
+                       argv, allow_unknown, &parsed, &positionals,
+                       allow_unknown ? &unknown_args : NULL,
                        err);
   if (rc != 0) {
     goto done;
@@ -457,67 +751,85 @@ int ap_parse_args(ap_parser *parser, int argc, char **argv, ap_namespace **out_n
     goto done;
   }
 
-  *out_ns = ns;
-  ns = NULL;
-
-done:
-  free_parsed_args(parser, parsed);
-  ap_strvec_free(&positionals);
-  ap_namespace_free(ns);
-  return rc;
-}
-
-int ap_parse_known_args(ap_parser *parser, int argc, char **argv,
-                        ap_namespace **out_ns, char ***out_unknown_args,
-                        int *out_unknown_count, ap_error *err) {
-  ap_parsed_arg *parsed = NULL;
-  ap_namespace *ns = NULL;
-  ap_strvec positionals;
-  ap_strvec unknown_args;
-  int rc;
-
-  if (!parser || !out_ns || !out_unknown_args || !out_unknown_count) {
-    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "",
-                 "parser, outputs and unknown outputs are required");
-    return -1;
-  }
-
-  memset(&positionals, 0, sizeof(positionals));
-  memset(&unknown_args, 0, sizeof(unknown_args));
-  *out_ns = NULL;
-  *out_unknown_args = NULL;
-  *out_unknown_count = 0;
-
-  rc = ap_parser_parse(parser, argc, argv, true, &parsed, &positionals,
-                       &unknown_args, err);
-  if (rc != 0) {
-    goto done;
-  }
-
-  rc = ap_validate_args(parser, parsed, err);
-  if (rc != 0) {
-    goto done;
-  }
-
-  rc = ap_build_namespace(parser, parsed, &ns, err);
-  if (rc != 0) {
-    goto done;
+  if (subcommand_arg_index >= 0) {
+    ap_parser *subparser = parser->subcommands[subcommand_index].parser;
+    rc = parse_internal(subparser, argc - subcommand_arg_index,
+                        argv + subcommand_arg_index, allow_unknown, &sub_ns,
+                        allow_unknown ? &sub_unknown_args : NULL,
+                        allow_unknown ? &sub_unknown_count : NULL, err);
+    if (rc != 0) {
+      goto done;
+    }
+    rc = add_subcommand_entry(ns, parser->subcommands[subcommand_index].name, err);
+    if (rc != 0) {
+      goto done;
+    }
+    rc = append_namespace_entries(ns, sub_ns, err);
+    if (rc != 0) {
+      goto done;
+    }
+  } else if (parser->subcommands_count > 0 && !allow_unknown) {
+    bool help_requested = false;
+    int i;
+    for (i = 0; i < parser->defs_count; i++) {
+      if (strcmp(parser->defs[i].dest, "help") == 0 && parsed[i].seen) {
+        help_requested = true;
+        break;
+      }
+    }
+    if (!help_requested) {
+      ap_error_set(err, AP_ERR_MISSING_REQUIRED, "subcommand",
+                   "a subcommand is required");
+      rc = -1;
+      goto done;
+    }
   }
 
   *out_ns = ns;
   ns = NULL;
-  *out_unknown_args = unknown_args.items;
-  *out_unknown_count = unknown_args.count;
-  unknown_args.items = NULL;
-  unknown_args.count = 0;
-  unknown_args.cap = 0;
+  if (allow_unknown && out_unknown_args && out_unknown_count) {
+    int i;
+    for (i = 0; i < sub_unknown_count; i++) {
+      char *copy = ap_strdup(sub_unknown_args[i]);
+      if (!copy || ap_strvec_push(&unknown_args, copy) != 0) {
+        free(copy);
+        ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+        rc = -1;
+        goto done;
+      }
+    }
+    *out_unknown_args = unknown_args.items;
+    *out_unknown_count = unknown_args.count;
+    unknown_args.items = NULL;
+    unknown_args.count = 0;
+    unknown_args.cap = 0;
+  }
 
 done:
   free_parsed_args(parser, parsed);
   ap_strvec_free(&positionals);
   ap_strvec_free(&unknown_args);
+  ap_free_tokens(sub_unknown_args, sub_unknown_count);
+  ap_namespace_free(sub_ns);
   ap_namespace_free(ns);
   return rc;
+}
+
+int ap_parse_args(ap_parser *parser, int argc, char **argv, ap_namespace **out_ns,
+                  ap_error *err) {
+  return parse_internal(parser, argc, argv, false, out_ns, NULL, NULL, err);
+}
+
+int ap_parse_known_args(ap_parser *parser, int argc, char **argv,
+                        ap_namespace **out_ns, char ***out_unknown_args,
+                        int *out_unknown_count, ap_error *err) {
+  if (!parser || !out_ns || !out_unknown_args || !out_unknown_count) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "",
+                 "parser, outputs and unknown outputs are required");
+    return -1;
+  }
+  return parse_internal(parser, argc, argv, true, out_ns, out_unknown_args,
+                        out_unknown_count, err);
 }
 
 char *ap_format_usage(const ap_parser *parser) { return ap_usage_build(parser); }
@@ -566,8 +878,15 @@ void ap_parser_free(ap_parser *parser) {
     arg_def_free(&parser->defs[i]);
   }
   free(parser->defs);
+  for (i = 0; i < parser->subcommands_count; i++) {
+    free(parser->subcommands[i].name);
+    free(parser->subcommands[i].help);
+    ap_parser_free(parser->subcommands[i].parser);
+  }
+  free(parser->subcommands);
   free(parser->prog);
   free(parser->description);
+  free(parser->command_name);
   free(parser);
 }
 

@@ -31,6 +31,7 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 
 ### Argument Model
 - optional / positional arguments
+- single-level subcommands
 - types: `string`, `int32`, `bool`
 - actions: `store`, `store_true`, `store_false`
 - options: `required`, `default_value`, `choices`, `metavar`, `help`, `nargs(?/*/+)`
@@ -114,4 +115,4 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - `dest` 自動生成規則の厳密化（Python互換寄り）
 - error code/message の一貫性改善
 - `nargs` と unknown 回収の仕様明文化（README強化）
-- subparsers の設計着手（MVP外の次段階）
+- nested subcommands の設計着手（次段階）

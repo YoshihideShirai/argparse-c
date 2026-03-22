@@ -68,6 +68,16 @@ Creates a parser.
 - Returns: non-NULL on success, NULL on failure
 - Note: `-h/--help` is added automatically
 
+### `ap_parser *ap_add_subcommand(ap_parser *parser, const char *name, const char *description, ap_error *err)`
+Adds a child parser for a subcommand.
+
+- `name`: subcommand name
+- `description`: help description for the subcommand
+- Returns: child parser on success, `NULL` on failure
+- Notes:
+  - only a single subcommand level is supported right now
+  - on success, the selected subcommand name is stored in namespace key `"subcommand"`
+
 ### `void ap_parser_free(ap_parser *parser)`
 Frees the parser.
 

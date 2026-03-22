@@ -27,12 +27,23 @@ typedef struct {
   ap_arg_options opts;
 } ap_arg_def;
 
+typedef struct ap_subcommand_def {
+  char *name;
+  char *help;
+  struct ap_parser *parser;
+} ap_subcommand_def;
+
 struct ap_parser {
   char *prog;
   char *description;
+  char *command_name;
+  struct ap_parser *parent;
   ap_arg_def *defs;
   int defs_count;
   int defs_cap;
+  ap_subcommand_def *subcommands;
+  int subcommands_count;
+  int subcommands_cap;
 };
 
 typedef enum {

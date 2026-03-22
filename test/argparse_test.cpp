@@ -496,4 +496,72 @@ TEST(ArgparseC, ShortOptionClusterRejectsValueOption) {
   ap_parser_free(p);
 }
 
+TEST(ArgparseC, ParseSubcommandArguments) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *run = NULL;
+  ap_arg_options config = ap_arg_options_default();
+  ap_arg_options force = ap_arg_options_default();
+  const char *subcommand = NULL;
+  const char *config_value = NULL;
+  bool force_enabled = false;
+  char *argv[] = {(char *)"prog", (char *)"run", (char *)"--config",
+                  (char *)"prod.json", (char *)"--force", NULL};
+
+  CHECK(p != NULL);
+  run = ap_add_subcommand(p, "run", "run the job", &err);
+  CHECK(run != NULL);
+  force.type = AP_TYPE_BOOL;
+  force.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(run, "--config", config, &err));
+  LONGS_EQUAL(0, ap_add_argument(run, "--force", force, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 5, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "subcommand", &subcommand));
+  CHECK(ap_ns_get_string(ns, "config", &config_value));
+  CHECK(ap_ns_get_bool(ns, "force", &force_enabled));
+  STRCMP_EQUAL("run", subcommand);
+  STRCMP_EQUAL("prod.json", config_value);
+  CHECK_TRUE(force_enabled);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, HelpListsSubcommands) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *run = NULL;
+  char *help;
+
+  CHECK(p != NULL);
+  run = ap_add_subcommand(p, "run", "run the job", &err);
+  CHECK(run != NULL);
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "subcommands:") != NULL);
+  CHECK(strstr(help, "run") != NULL);
+  CHECK(strstr(help, "run the job") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, MissingSubcommandFails) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  CHECK(ap_add_subcommand(p, "run", "run the job", &err) != NULL);
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+
+  ap_parser_free(p);
+}
+
 int main(int ac, char **av) { return CommandLineTestRunner::RunAllTests(ac, av); }
