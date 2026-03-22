@@ -4,6 +4,7 @@ add_library(argparse-c SHARED
   core_validate.c
   core_convert.c
   format_help.c
+  format_manpage.c
   format_completion_bash.c
   format_completion_fish.c
 )
