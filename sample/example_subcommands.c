@@ -26,8 +26,8 @@ static int print_help_and_exit(ap_parser *parser, ap_namespace *ns) {
 int main(int argc, char **argv) {
   ap_error err = {0};
   ap_namespace *ns = NULL;
-  ap_parser *parser = ap_parser_new("example_subcommands",
-                                    "subcommand_path aware demo.");
+  ap_parser *parser =
+      ap_parser_new("example_subcommands", "subcommand_path aware demo.");
   ap_parser *config = NULL;
   ap_parser *set = NULL;
   ap_parser *get = NULL;

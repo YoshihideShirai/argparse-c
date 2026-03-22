@@ -27,44 +27,45 @@ struct Registrar {
 };
 
 [[noreturn]] void fail(const char *expr, const char *file, int line,
-                      const std::string &detail = "");
+                       const std::string &detail = "");
 
 ap_parser *new_base_parser(void);
 
-#define TEST(name)                                                              \
-  static void name();                                                           \
-  static Registrar name##_registrar(#name, &name);                              \
+#define TEST(name)                                                             \
+  static void name();                                                          \
+  static Registrar name##_registrar(#name, &name);                             \
   static void name()
 
-#define CHECK(condition)                                                        \
-  do {                                                                          \
-    if (!(condition)) {                                                         \
-      fail(#condition, __FILE__, __LINE__);                                     \
-    }                                                                           \
+#define CHECK(condition)                                                       \
+  do {                                                                         \
+    if (!(condition)) {                                                        \
+      fail(#condition, __FILE__, __LINE__);                                    \
+    }                                                                          \
   } while (0)
 
 #define CHECK_TRUE(condition) CHECK(condition)
 
-#define LONGS_EQUAL(expected, actual)                                           \
-  do {                                                                          \
-    auto expected_value = (expected);                                           \
-    auto actual_value = (actual);                                               \
-    if (expected_value != actual_value) {                                       \
-      std::ostringstream detail;                                                \
+#define LONGS_EQUAL(expected, actual)                                          \
+  do {                                                                         \
+    auto expected_value = (expected);                                          \
+    auto actual_value = (actual);                                              \
+    if (expected_value != actual_value) {                                      \
+      std::ostringstream detail;                                               \
       detail << "expected " << expected_value << ", got " << actual_value;     \
-      fail(#actual, __FILE__, __LINE__, detail.str());                          \
-    }                                                                           \
+      fail(#actual, __FILE__, __LINE__, detail.str());                         \
+    }                                                                          \
   } while (0)
 
-#define STRCMP_EQUAL(expected, actual)                                          \
-  do {                                                                          \
-    const char *expected_value = (expected);                                    \
-    const char *actual_value = (actual);                                        \
-    if (((expected_value) == NULL) != ((actual_value) == NULL) ||               \
-        ((expected_value) != NULL && strcmp(expected_value, actual_value) != 0)) { \
-      std::ostringstream detail;                                                \
-      detail << "expected '" << (expected_value ? expected_value : "(null)")    \
+#define STRCMP_EQUAL(expected, actual)                                         \
+  do {                                                                         \
+    const char *expected_value = (expected);                                   \
+    const char *actual_value = (actual);                                       \
+    if (((expected_value) == NULL) != ((actual_value) == NULL) ||              \
+        ((expected_value) != NULL &&                                           \
+         strcmp(expected_value, actual_value) != 0)) {                         \
+      std::ostringstream detail;                                               \
+      detail << "expected '" << (expected_value ? expected_value : "(null)")   \
              << "', got '" << (actual_value ? actual_value : "(null)") << "'"; \
-      fail(#actual, __FILE__, __LINE__, detail.str());                          \
-    }                                                                           \
+      fail(#actual, __FILE__, __LINE__, detail.str());                         \
+    }                                                                          \
   } while (0)

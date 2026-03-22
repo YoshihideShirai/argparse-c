@@ -103,15 +103,16 @@ static int append_optional_usage(ap_string_builder *sb, const ap_arg_def *def) {
     return ap_sb_appendf(sb, def->opts.required ? " %s [%s]" : " [%s [%s]]",
                          def->flags[0], mv);
   case AP_NARGS_ZERO_OR_MORE:
-    return ap_sb_appendf(sb, def->opts.required ? " %s [%s ...]"
-                                           : " [%s [%s ...]]",
+    return ap_sb_appendf(sb,
+                         def->opts.required ? " %s [%s ...]" : " [%s [%s ...]]",
                          def->flags[0], mv);
   case AP_NARGS_ONE_OR_MORE:
-    return ap_sb_appendf(sb, def->opts.required ? " %s %s [%s ...]"
-                                           : " [%s %s [%s ...]]",
-                         def->flags[0], mv, mv);
+    return ap_sb_appendf(
+        sb, def->opts.required ? " %s %s [%s ...]" : " [%s %s [%s ...]]",
+        def->flags[0], mv, mv);
   case AP_NARGS_FIXED:
-    if (ap_sb_appendf(sb, def->opts.required ? " %s" : " [%s", def->flags[0]) != 0) {
+    if (ap_sb_appendf(sb, def->opts.required ? " %s" : " [%s", def->flags[0]) !=
+        0) {
       return -1;
     }
     for (i = 0; i < def->opts.nargs_count; i++) {
@@ -124,7 +125,8 @@ static int append_optional_usage(ap_string_builder *sb, const ap_arg_def *def) {
   return 0;
 }
 
-static int append_positional_usage(ap_string_builder *sb, const ap_arg_def *def) {
+static int append_positional_usage(ap_string_builder *sb,
+                                   const ap_arg_def *def) {
   const char *mv = metavar_for(def);
   int i;
   switch (def->opts.nargs) {
@@ -152,7 +154,8 @@ static int append_help_line(ap_string_builder *sb, const ap_arg_def *def) {
   bool has_meta = false;
   int i;
 
-  if (def->opts.action == AP_ACTION_STORE || def->opts.action == AP_ACTION_APPEND) {
+  if (def->opts.action == AP_ACTION_STORE ||
+      def->opts.action == AP_ACTION_APPEND) {
     if (def->opts.nargs == AP_NARGS_ONE) {
       has_meta = true;
     } else if (def->opts.nargs == AP_NARGS_OPTIONAL) {
@@ -231,8 +234,7 @@ static int append_help_line(ap_string_builder *sb, const ap_arg_def *def) {
         ap_sb_appendf(sb, "\n    default: %s", def->opts.default_value) != 0) {
       return -1;
     }
-    if (def->opts.required &&
-        ap_sb_appendf(sb, "\n    required: true") != 0) {
+    if (def->opts.required && ap_sb_appendf(sb, "\n    required: true") != 0) {
       return -1;
     }
     return ap_sb_appendf(sb, "\n");
@@ -382,7 +384,8 @@ char *ap_help_build(const ap_parser *parser) {
       return NULL;
     }
     for (i = 0; i < parser->defs_count; i++) {
-      if (!parser->defs[i].is_optional && append_help_line(&sb, &parser->defs[i]) != 0) {
+      if (!parser->defs[i].is_optional &&
+          append_help_line(&sb, &parser->defs[i]) != 0) {
         ap_sb_free(&sb);
         return NULL;
       }
@@ -395,7 +398,8 @@ char *ap_help_build(const ap_parser *parser) {
       return NULL;
     }
     for (i = 0; i < parser->defs_count; i++) {
-      if (parser->defs[i].is_optional && append_help_line(&sb, &parser->defs[i]) != 0) {
+      if (parser->defs[i].is_optional &&
+          append_help_line(&sb, &parser->defs[i]) != 0) {
         ap_sb_free(&sb);
         return NULL;
       }

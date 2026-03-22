@@ -26,7 +26,8 @@ static int check_choices(const ap_arg_def *def, const ap_parsed_arg *parsed,
     if (!found) {
       ap_error_label_for_arg(def, label, sizeof(label));
       ap_error_set(err, AP_ERR_INVALID_CHOICE, ap_error_argument_name(def),
-                   "invalid choice '%s' for %s", parsed->values.items[i], label);
+                   "invalid choice '%s' for %s", parsed->values.items[i],
+                   label);
       return -1;
     }
   }
@@ -74,8 +75,8 @@ int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
       if (def->is_optional) {
         if (!p->seen) {
           ap_error_label_for_arg(def, label, sizeof(label));
-          ap_error_set(err, AP_ERR_MISSING_REQUIRED, ap_error_argument_name(def),
-                       "%s is required", label);
+          ap_error_set(err, AP_ERR_MISSING_REQUIRED,
+                       ap_error_argument_name(def), "%s is required", label);
           return -1;
         }
       } else if (!has_parsed_value) {
@@ -101,12 +102,12 @@ int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
       return -1;
     }
 
-    if (def->opts.nargs == AP_NARGS_FIXED &&
-        p->values.count > 0 &&
+    if (def->opts.nargs == AP_NARGS_FIXED && p->values.count > 0 &&
         p->values.count != def->opts.nargs_count) {
       ap_error_label_for_arg(def, label, sizeof(label));
       ap_error_set(err, AP_ERR_INVALID_NARGS, ap_error_argument_name(def),
-                   "%s requires exactly %d values", label, def->opts.nargs_count);
+                   "%s requires exactly %d values", label,
+                   def->opts.nargs_count);
       return -1;
     }
 

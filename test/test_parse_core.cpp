@@ -4,8 +4,13 @@ TEST(SuccessParse) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
-  char *argv[] = {(char *)"prog", (char *)"-t", (char *)"hello", (char *)"-n",
-                  (char *)"12", (char *)"file.txt", NULL};
+  char *argv[] = {(char *)"prog",
+                  (char *)"-t",
+                  (char *)"hello",
+                  (char *)"-n",
+                  (char *)"12",
+                  (char *)"file.txt",
+                  NULL};
   const char *text = NULL;
   const char *input = NULL;
   int32_t num = 0;
@@ -42,8 +47,8 @@ TEST(InvalidInt) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
-  char *argv[] = {(char *)"prog", (char *)"-t", (char *)"x", (char *)"-n",
-                  (char *)"abc", (char *)"file", NULL};
+  char *argv[] = {(char *)"prog", (char *)"-t",   (char *)"x", (char *)"-n",
+                  (char *)"abc",  (char *)"file", NULL};
 
   CHECK(p != NULL);
   LONGS_EQUAL(-1, ap_parse_args(p, 6, argv, &ns, &err));
@@ -81,7 +86,8 @@ TEST(NargsOneOrMore) {
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
   ap_arg_options files = ap_arg_options_default();
-  char *argv[] = {(char *)"prog", (char *)"--files", (char *)"a.txt", (char *)"b.txt", NULL};
+  char *argv[] = {(char *)"prog", (char *)"--files", (char *)"a.txt",
+                  (char *)"b.txt", NULL};
 
   CHECK(p != NULL);
   files.nargs = AP_NARGS_ONE_OR_MORE;
@@ -124,7 +130,8 @@ TEST(AutoDestPrefersLongFlagAndNormalizesHyphen) {
   const char *value = NULL;
 
   CHECK(p != NULL);
-  LONGS_EQUAL(0, ap_add_argument(p, "-d, --dry-run", ap_arg_options_default(), &err));
+  LONGS_EQUAL(
+      0, ap_add_argument(p, "-d, --dry-run", ap_arg_options_default(), &err));
 
   LONGS_EQUAL(0, ap_parse_args(p, 3, argv, &ns, &err));
   CHECK(ap_ns_get_string(ns, "dry_run", &value));
@@ -142,7 +149,8 @@ TEST(AutoDestNormalizesPositionalHyphen) {
   const char *value = NULL;
 
   CHECK(p != NULL);
-  LONGS_EQUAL(0, ap_add_argument(p, "input-file", ap_arg_options_default(), &err));
+  LONGS_EQUAL(0,
+              ap_add_argument(p, "input-file", ap_arg_options_default(), &err));
 
   LONGS_EQUAL(0, ap_parse_args(p, 2, argv, &ns, &err));
   CHECK(ap_ns_get_string(ns, "input_file", &value));
@@ -349,4 +357,3 @@ TEST(FormatErrorIncludesMessageAndUsage) {
   free(text);
   ap_parser_free(p);
 }
-

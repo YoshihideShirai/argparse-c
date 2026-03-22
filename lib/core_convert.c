@@ -65,8 +65,7 @@ static int copy_string_values(const ap_strvec *src, ap_ns_entry *dst,
 }
 
 static int copy_int_values(const ap_arg_def *def, const ap_strvec *src,
-                           ap_ns_entry *dst,
-                           ap_error *err) {
+                           ap_ns_entry *dst, ap_error *err) {
   int i;
   if (src->count == 0) {
     dst->as.ints = NULL;
@@ -90,8 +89,8 @@ static int copy_int_values(const ap_arg_def *def, const ap_strvec *src,
   return 0;
 }
 
-static int validate_choices_merged(const ap_arg_def *def, const ap_strvec *values,
-                                   ap_error *err) {
+static int validate_choices_merged(const ap_arg_def *def,
+                                   const ap_strvec *values, ap_error *err) {
   int i;
   int j;
   char label[96];

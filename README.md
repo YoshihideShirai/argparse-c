@@ -119,6 +119,10 @@ cmake -S . -B build \
 cmake --build build
 ctest --test-dir build --output-on-failure
 
+# formatting / static analysis (requires clang-format and clang-tidy)
+cmake --build build --target format
+cmake --build build --target tidy
+
 # coverage (requires gcovr; with clang the build uses `llvm-cov gcov` automatically)
 cmake -S . -B build-coverage \
   -DCMAKE_C_COMPILER=clang \

@@ -89,8 +89,8 @@ static int parse_short_cluster(const ap_parser *parser, const char *token,
                    short_flag);
       return -1;
     }
-    if (parsed[def_index].seen &&
-        !action_allows_multiple_occurrences(parser->defs[def_index].opts.action)) {
+    if (parsed[def_index].seen && !action_allows_multiple_occurrences(
+                                      parser->defs[def_index].opts.action)) {
       ap_error_set(err, AP_ERR_DUPLICATE_OPTION, short_flag,
                    "duplicate option '%s'", short_flag);
       return -1;
@@ -149,8 +149,8 @@ static int push_value(ap_parsed_arg *parsed, int def_index, const char *token,
   return 0;
 }
 
-static int consume_optional_values(const ap_parser *parser, int argc, char **argv,
-                                   int *idx, int def_index,
+static int consume_optional_values(const ap_parser *parser, int argc,
+                                   char **argv, int *idx, int def_index,
                                    const char *inline_value,
                                    ap_parsed_arg *parsed, ap_error *err) {
   const ap_arg_def *def = &parser->defs[def_index];
@@ -354,8 +354,7 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
       const char *inline_value = NULL;
       int def_index = -1;
       if (eq && eq != token) {
-        def_index =
-            find_flag_index_n(parser, token, (size_t)(eq - token));
+        def_index = find_flag_index_n(parser, token, (size_t)(eq - token));
         if (def_index >= 0) {
           inline_value = eq + 1;
         }
@@ -373,7 +372,8 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
             ap_error_set(err, AP_ERR_NO_MEMORY, token, "out of memory");
             return -1;
           }
-          if (token_index + 1 < argc && strcmp(argv[token_index + 1], "--") != 0 &&
+          if (token_index + 1 < argc &&
+              strcmp(argv[token_index + 1], "--") != 0 &&
               find_flag_index(parser, argv[token_index + 1]) < 0 &&
               !ap_starts_with_dash(argv[token_index + 1])) {
             char *next_copy = ap_strdup(argv[token_index + 1]);
@@ -392,12 +392,12 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
         }
         free(positional_defs);
         free(parsed);
-        ap_error_set(err, AP_ERR_UNKNOWN_OPTION, token,
-                     "unknown option '%s'", token);
+        ap_error_set(err, AP_ERR_UNKNOWN_OPTION, token, "unknown option '%s'",
+                     token);
         return -1;
       }
-      if (parsed[def_index].seen &&
-          !action_allows_multiple_occurrences(parser->defs[def_index].opts.action)) {
+      if (parsed[def_index].seen && !action_allows_multiple_occurrences(
+                                        parser->defs[def_index].opts.action)) {
         free(positional_defs);
         free(parsed);
         ap_error_set(err, AP_ERR_DUPLICATE_OPTION, token,

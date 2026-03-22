@@ -88,8 +88,8 @@ int ap_group_add_argument(ap_mutually_exclusive_group *group,
                           const char *name_or_flags, ap_arg_options options,
                           ap_error *err);
 
-int ap_parse_args(ap_parser *parser, int argc, char **argv, ap_namespace **out_ns,
-                  ap_error *err);
+int ap_parse_args(ap_parser *parser, int argc, char **argv,
+                  ap_namespace **out_ns, ap_error *err);
 int ap_parse_known_args(ap_parser *parser, int argc, char **argv,
                         ap_namespace **out_ns, char ***out_unknown_args,
                         int *out_unknown_count, ap_error *err);

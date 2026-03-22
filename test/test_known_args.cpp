@@ -6,14 +6,15 @@ TEST(ParseKnownArgsCollectsUnknownOptions) {
   ap_parser *p = new_base_parser();
   char **unknown = NULL;
   int unknown_count = 0;
-  char *argv[] = {(char *)"prog", (char *)"--bogus", (char *)"-t",
-                  (char *)"hello", (char *)"file.txt", (char *)"--x=1", NULL};
+  char *argv[] = {
+      (char *)"prog",     (char *)"--bogus", (char *)"-t", (char *)"hello",
+      (char *)"file.txt", (char *)"--x=1",   NULL};
   const char *text = NULL;
   const char *input = NULL;
 
   CHECK(p != NULL);
-  LONGS_EQUAL(0, ap_parse_known_args(p, 6, argv, &ns, &unknown, &unknown_count,
-                                     &err));
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 6, argv, &ns, &unknown, &unknown_count, &err));
   CHECK(ap_ns_get_string(ns, "text", &text));
   CHECK(ap_ns_get_string(ns, "input", &input));
   STRCMP_EQUAL("hello", text);
@@ -36,8 +37,8 @@ TEST(ParseKnownArgsStillValidatesRequired) {
   char *argv[] = {(char *)"prog", (char *)"--bogus", (char *)"file.txt", NULL};
 
   CHECK(p != NULL);
-  LONGS_EQUAL(-1, ap_parse_known_args(p, 3, argv, &ns, &unknown, &unknown_count,
-                                      &err));
+  LONGS_EQUAL(
+      -1, ap_parse_known_args(p, 3, argv, &ns, &unknown, &unknown_count, &err));
   LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
   STRCMP_EQUAL("-t", err.argument);
   STRCMP_EQUAL("option '-t' is required", err.message);
@@ -53,12 +54,17 @@ TEST(ParseKnownArgsCollectsUnknownOptionValueToken) {
   ap_parser *p = new_base_parser();
   char **unknown = NULL;
   int unknown_count = 0;
-  char *argv[] = {(char *)"prog", (char *)"--unknown", (char *)"uval",
-                  (char *)"-t", (char *)"hello", (char *)"file.txt", NULL};
+  char *argv[] = {(char *)"prog",
+                  (char *)"--unknown",
+                  (char *)"uval",
+                  (char *)"-t",
+                  (char *)"hello",
+                  (char *)"file.txt",
+                  NULL};
 
   CHECK(p != NULL);
-  LONGS_EQUAL(0, ap_parse_known_args(p, 6, argv, &ns, &unknown, &unknown_count,
-                                     &err));
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 6, argv, &ns, &unknown, &unknown_count, &err));
   LONGS_EQUAL(2, unknown_count);
   STRCMP_EQUAL("--unknown", unknown[0]);
   STRCMP_EQUAL("uval", unknown[1]);
@@ -74,14 +80,18 @@ TEST(ParseKnownArgsCollectsExtraPositionals) {
   ap_parser *p = new_base_parser();
   char **unknown = NULL;
   int unknown_count = 0;
-  char *argv[] = {(char *)"prog", (char *)"-t", (char *)"hello",
-                  (char *)"file.txt", (char *)"extra1", (char *)"extra2",
+  char *argv[] = {(char *)"prog",
+                  (char *)"-t",
+                  (char *)"hello",
+                  (char *)"file.txt",
+                  (char *)"extra1",
+                  (char *)"extra2",
                   NULL};
   const char *input = NULL;
 
   CHECK(p != NULL);
-  LONGS_EQUAL(0, ap_parse_known_args(p, 6, argv, &ns, &unknown, &unknown_count,
-                                     &err));
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 6, argv, &ns, &unknown, &unknown_count, &err));
   CHECK(ap_ns_get_string(ns, "input", &input));
   STRCMP_EQUAL("file.txt", input);
   LONGS_EQUAL(2, unknown_count);
@@ -99,14 +109,14 @@ TEST(ParseKnownArgsCollectsAfterDoubleDash) {
   ap_parser *p = new_base_parser();
   char **unknown = NULL;
   int unknown_count = 0;
-  char *argv[] = {(char *)"prog", (char *)"-t", (char *)"hello",
+  char *argv[] = {(char *)"prog",     (char *)"-t", (char *)"hello",
                   (char *)"file.txt", (char *)"--", (char *)"--passthrough",
-                  (char *)"value", NULL};
+                  (char *)"value",    NULL};
   const char *input = NULL;
 
   CHECK(p != NULL);
-  LONGS_EQUAL(0, ap_parse_known_args(p, 7, argv, &ns, &unknown, &unknown_count,
-                                     &err));
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 7, argv, &ns, &unknown, &unknown_count, &err));
   CHECK(ap_ns_get_string(ns, "input", &input));
   STRCMP_EQUAL("file.txt", input);
   LONGS_EQUAL(2, unknown_count);
@@ -177,12 +187,12 @@ TEST(ParseKnownArgsUnknownOptionDoesNotConsumeKnownOptionToken) {
   int unknown_count = 0;
   const char *text = NULL;
   const char *input = NULL;
-  char *argv[] = {(char *)"prog", (char *)"--unknown", (char *)"--text",
-                  (char *)"hello", (char *)"file.txt", NULL};
+  char *argv[] = {(char *)"prog",  (char *)"--unknown", (char *)"--text",
+                  (char *)"hello", (char *)"file.txt",  NULL};
 
   CHECK(p != NULL);
-  LONGS_EQUAL(0, ap_parse_known_args(p, 5, argv, &ns, &unknown, &unknown_count,
-                                     &err));
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 5, argv, &ns, &unknown, &unknown_count, &err));
   LONGS_EQUAL(1, unknown_count);
   STRCMP_EQUAL("--unknown", unknown[0]);
   CHECK(ap_ns_get_string(ns, "text", &text));
@@ -203,12 +213,12 @@ TEST(ParseKnownArgsUnknownInlineOptionRemainsSingleUnknownToken) {
   int unknown_count = 0;
   const char *text = NULL;
   const char *input = NULL;
-  char *argv[] = {(char *)"prog", (char *)"--unknown=value", (char *)"-t",
-                  (char *)"hello", (char *)"file.txt", NULL};
+  char *argv[] = {(char *)"prog",  (char *)"--unknown=value", (char *)"-t",
+                  (char *)"hello", (char *)"file.txt",        NULL};
 
   CHECK(p != NULL);
-  LONGS_EQUAL(0, ap_parse_known_args(p, 5, argv, &ns, &unknown, &unknown_count,
-                                     &err));
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 5, argv, &ns, &unknown, &unknown_count, &err));
   LONGS_EQUAL(1, unknown_count);
   STRCMP_EQUAL("--unknown=value", unknown[0]);
   CHECK(ap_ns_get_string(ns, "text", &text));
@@ -269,4 +279,3 @@ TEST(ShortOptionClusterRejectsValueOption) {
 
   ap_parser_free(p);
 }
-
