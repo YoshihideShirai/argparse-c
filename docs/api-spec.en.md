@@ -64,6 +64,13 @@ Options passed to `ap_add_argument`.
 
 Use `ap_arg_options_default()` first, then override needed fields.
 
+#### `dest` auto-generation rules
+- for optional arguments, the first long flag (for example `--dry-run`) is preferred
+- if no long flag exists, the first short flag (for example `-v`) is used
+- for positional arguments, the declared name is used
+- during auto-generation, `-` is converted to `_` (for example `dry-run` -> `dry_run`)
+- when `dest` is provided explicitly, it is kept as-is
+
 ## 3. Parser Lifecycle API
 
 ### `ap_parser *ap_parser_new(const char *prog, const char *description)`

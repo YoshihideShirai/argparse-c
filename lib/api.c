@@ -192,28 +192,7 @@ void ap_strvec_free(ap_strvec *vec) {
   vec->cap = 0;
 }
 
-static const char *pick_default_dest(const char *name_or_flags, bool is_optional,
-                                     char **flags, int flags_count) {
-  int i;
-  if (!is_optional) {
-    return name_or_flags;
-  }
-  for (i = 0; i < flags_count; i++) {
-    if (strncmp(flags[i], "--", 2) == 0) {
-      return flags[i] + 2;
-    }
-  }
-  if (flags_count > 0) {
-    const char *f = flags[0];
-    while (*f == '-') {
-      f++;
-    }
-    return f;
-  }
-  return name_or_flags;
-}
-
-static char *normalize_dest(const char *raw) {
+static char *normalize_auto_dest(const char *raw) {
   size_t i;
   char *dest = ap_strdup(raw);
   if (!dest) {
@@ -225,6 +204,36 @@ static char *normalize_dest(const char *raw) {
     }
   }
   return dest;
+}
+
+static char *pick_default_dest(bool is_optional, char **flags, int flags_count) {
+  const char *raw_dest = NULL;
+  int i;
+
+  if (!is_optional) {
+    if (flags_count < 1) {
+      return NULL;
+    }
+    raw_dest = flags[0];
+  } else {
+    for (i = 0; i < flags_count; i++) {
+      if (strncmp(flags[i], "--", 2) == 0 && flags[i][2] != '\0') {
+        raw_dest = flags[i] + 2;
+        break;
+      }
+    }
+    if (!raw_dest && flags_count > 0) {
+      raw_dest = flags[0];
+      while (*raw_dest == '-') {
+        raw_dest++;
+      }
+    }
+  }
+
+  if (!raw_dest || raw_dest[0] == '\0') {
+    return NULL;
+  }
+  return normalize_auto_dest(raw_dest);
 }
 
 static int split_flags(const char *name_or_flags, char ***out_flags,
@@ -409,7 +418,6 @@ static int validate_options(const ap_arg_options *options, bool is_optional,
 int ap_add_argument(ap_parser *parser, const char *name_or_flags,
                     ap_arg_options options, ap_error *err) {
   ap_arg_def def;
-  const char *raw_dest;
   int i;
 
   if (!parser || !name_or_flags || name_or_flags[0] == '\0') {
@@ -457,11 +465,9 @@ int ap_add_argument(ap_parser *parser, const char *name_or_flags,
     options.nargs_count = 1;
   }
 
-  raw_dest = options.dest
-                 ? options.dest
-                 : pick_default_dest(def.flags[0], def.is_optional, def.flags,
-                                     def.flags_count);
-  def.dest = normalize_dest(raw_dest);
+  def.dest = options.dest ? ap_strdup(options.dest)
+                          : pick_default_dest(def.is_optional, def.flags,
+                                              def.flags_count);
   if (!def.dest) {
     ap_error_set(err, AP_ERR_NO_MEMORY, name_or_flags, "out of memory");
     arg_def_free(&def);

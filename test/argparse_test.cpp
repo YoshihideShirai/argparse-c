@@ -155,6 +155,62 @@ TEST(ArgparseC, DefaultValue) {
   ap_parser_free(p);
 }
 
+TEST(ArgparseC, AutoDestPrefersLongFlagAndNormalizesHyphen) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  char *argv[] = {(char *)"prog", (char *)"--dry-run", (char *)"yes", NULL};
+  const char *value = NULL;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "-d, --dry-run", ap_arg_options_default(), &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "dry_run", &value));
+  STRCMP_EQUAL("yes", value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, AutoDestNormalizesPositionalHyphen) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  char *argv[] = {(char *)"prog", (char *)"report.txt", NULL};
+  const char *value = NULL;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "input-file", ap_arg_options_default(), &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 2, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "input_file", &value));
+  STRCMP_EQUAL("report.txt", value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, ExplicitDestIsNotNormalized) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options opts = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--dry-run", (char *)"yes", NULL};
+  const char *value = NULL;
+
+  CHECK(p != NULL);
+  opts.dest = "custom-key";
+  LONGS_EQUAL(0, ap_add_argument(p, "--dry-run", opts, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "custom-key", &value));
+  STRCMP_EQUAL("yes", value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
 TEST(ArgparseC, HelpGeneration) {
   ap_error err = {}; 
   ap_parser *p = ap_parser_new("prog", "desc");

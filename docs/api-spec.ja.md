@@ -64,6 +64,13 @@
 
 `ap_arg_options_default()` で初期化してから必要項目を上書きする使い方を推奨します。
 
+#### `dest` 自動生成ルール
+- optional 引数では、最初に見つかった long flag（例: `--dry-run`）を優先します
+- long flag が無い場合は、最初の short flag（例: `-v`）を使います
+- positional 引数では、宣言名そのものを使います
+- 自動生成時は `-` を `_` に変換します（例: `dry-run` -> `dry_run`）
+- `dest` を明示指定した場合、その値は変更されません
+
 ## 3. パーサ管理API
 
 ### `ap_parser *ap_parser_new(const char *prog, const char *description)`
