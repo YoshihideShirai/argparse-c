@@ -20,6 +20,32 @@
 - Known/unknown split parser: `ap_parse_known_args(...)`
   - For `ap_parse_known_args`, tokens after `--` are collected into unknown args.
 
+## `nargs` semantics
+
+- `AP_NARGS_ONE`
+  - optionals consume exactly one value
+  - positionals bind exactly one token
+- `AP_NARGS_OPTIONAL`
+  - optionals consume the next token only when it is not a known option
+  - positionals bind one token only when enough tokens remain for later required positionals
+- `AP_NARGS_ZERO_OR_MORE` / `AP_NARGS_ONE_OR_MORE`
+  - optionals keep consuming until `--` or the next known option
+  - positionals consume as many tokens as possible while leaving the minimum required tokens for later positional arguments
+- `AP_NARGS_FIXED`
+  - optionals require exactly `nargs_count` values
+  - positionals bind exactly `nargs_count` tokens
+
+## `ap_parse_known_args` contract
+
+- known arguments are parsed with the same rules as `ap_parse_args`
+- unknown tokens are appended to `out_unknown_args` in encounter order
+- collected unknowns include:
+  - unknown options
+  - the next token after an unknown option when it does not look like another option
+  - extra positional tokens left after positional binding
+  - all tokens after `--`
+- validation still runs for known arguments, so missing required arguments and invalid known values still fail
+
 ## Quick Example
 
 ```c

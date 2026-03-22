@@ -115,5 +115,5 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 ## 7. Next Phase Plan (Recommended)
 - `dest` 自動生成規則の追加テスト・ドキュメント強化
 - error code/message の一貫性改善（`err.argument` の規則と文言テンプレートを固定）
-- `nargs` と unknown 回収の仕様明文化（README強化）
+- `nargs` と unknown 回収の仕様明文化（README / API spec に binding ルールと出現順 unknown 回収を明記）
 - nested subcommands のヘルプ表現・namespace仕様の改善

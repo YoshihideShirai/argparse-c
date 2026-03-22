@@ -513,6 +513,109 @@ TEST(ArgparseC, ParseKnownArgsCollectsAfterDoubleDash) {
   ap_parser_free(p);
 }
 
+TEST(ArgparseC, OptionalNargsDoesNotConsumeFollowingKnownOption) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options verbose = ap_arg_options_default();
+  bool is_verbose = false;
+  char *argv[] = {(char *)"prog", (char *)"--maybe", (char *)"--verbose", NULL};
+
+  CHECK(p != NULL);
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--verbose", verbose, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv, &ns, &err));
+  LONGS_EQUAL(0, ap_ns_get_count(ns, "maybe"));
+  CHECK(ap_ns_get_bool(ns, "verbose", &is_verbose));
+  CHECK_TRUE(is_verbose);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, PositionalZeroOrMoreLeavesTokensForRequiredPositional) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options files = ap_arg_options_default();
+  const char *target = NULL;
+  char *argv[] = {(char *)"prog", (char *)"a.txt", (char *)"b.txt",
+                  (char *)"dest.out", NULL};
+
+  CHECK(p != NULL);
+  files.nargs = AP_NARGS_ZERO_OR_MORE;
+  files.action = AP_ACTION_APPEND;
+  LONGS_EQUAL(0, ap_add_argument(p, "files", files, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "target", ap_arg_options_default(), &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 4, argv, &ns, &err));
+  LONGS_EQUAL(2, ap_ns_get_count(ns, "files"));
+  STRCMP_EQUAL("a.txt", ap_ns_get_string_at(ns, "files", 0));
+  STRCMP_EQUAL("b.txt", ap_ns_get_string_at(ns, "files", 1));
+  CHECK(ap_ns_get_string(ns, "target", &target));
+  STRCMP_EQUAL("dest.out", target);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, ParseKnownArgsUnknownOptionDoesNotConsumeKnownOptionToken) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  const char *text = NULL;
+  const char *input = NULL;
+  char *argv[] = {(char *)"prog", (char *)"--unknown", (char *)"--text",
+                  (char *)"hello", (char *)"file.txt", NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parse_known_args(p, 5, argv, &ns, &unknown, &unknown_count,
+                                     &err));
+  LONGS_EQUAL(1, unknown_count);
+  STRCMP_EQUAL("--unknown", unknown[0]);
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("hello", text);
+  STRCMP_EQUAL("file.txt", input);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, ParseKnownArgsUnknownInlineOptionRemainsSingleUnknownToken) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  const char *text = NULL;
+  const char *input = NULL;
+  char *argv[] = {(char *)"prog", (char *)"--unknown=value", (char *)"-t",
+                  (char *)"hello", (char *)"file.txt", NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parse_known_args(p, 5, argv, &ns, &unknown, &unknown_count,
+                                     &err));
+  LONGS_EQUAL(1, unknown_count);
+  STRCMP_EQUAL("--unknown=value", unknown[0]);
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("hello", text);
+  STRCMP_EQUAL("file.txt", input);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
 TEST(ArgparseC, ShortOptionClusterForBoolFlags) {
   ap_error err = {};
   ap_namespace *ns = NULL;

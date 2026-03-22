@@ -132,6 +132,23 @@ Known/unknown split mode.
 - Known arguments are returned in `out_ns`
 - Free unknown tokens via `ap_free_tokens(out_unknown_args, out_unknown_count)`
 - Tokens after `--` are collected as unknown
+- Unknown tokens are appended in encounter order
+- Collected unknowns include:
+  - unknown options
+  - the next token after an unknown option when that token is not another option-like token
+  - extra positional tokens left after positional binding
+  - all tokens after `--`
+- Known arguments are still validated, so this API can still fail with missing required arguments or invalid values
+
+#### `nargs` behavior summary
+- optional arguments:
+  - `AP_NARGS_ONE`: requires exactly one value
+  - `AP_NARGS_OPTIONAL`: consumes the next token only when it is not a known option
+  - `AP_NARGS_ZERO_OR_MORE` / `AP_NARGS_ONE_OR_MORE`: stop before `--` or the next known option
+  - `AP_NARGS_FIXED`: requires exactly `nargs_count` values
+- positional arguments:
+  - binding proceeds left-to-right
+  - `AP_NARGS_OPTIONAL`, `AP_NARGS_ZERO_OR_MORE`, and `AP_NARGS_ONE_OR_MORE` leave enough tokens for the minimum required values of later positional arguments
 
 ## 6. Formatting API
 

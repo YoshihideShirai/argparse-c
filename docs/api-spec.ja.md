@@ -132,6 +132,23 @@ known/unknown 分離モードでパースします。
 - 既知引数は `out_ns` に格納
 - unknownは `ap_free_tokens(out_unknown_args, out_unknown_count)` で解放
 - `--` 以降のトークンは unknown 側へ回収
+- unknown は出現順で `out_unknown_args` に追加されます
+- unknown として回収されるもの:
+  - 未知オプション
+  - 未知オプションの直後にある、別のオプションらしくない値トークン
+  - positional 割り当て後に余ったトークン
+  - `--` 以降のすべてのトークン
+- known 側には通常どおり検証がかかるため、必須不足や既知引数の不正値では失敗します
+
+#### `nargs` の挙動まとめ
+- optional 引数:
+  - `AP_NARGS_ONE`: 値をちょうど1つ要求
+  - `AP_NARGS_OPTIONAL`: 次トークンが既知オプションでないときだけ消費
+  - `AP_NARGS_ZERO_OR_MORE` / `AP_NARGS_ONE_OR_MORE`: `--` または次の既知オプション直前まで消費
+  - `AP_NARGS_FIXED`: `nargs_count` 個ちょうど要求
+- positional 引数:
+  - 左から順に割り当てます
+  - `AP_NARGS_OPTIONAL` / `AP_NARGS_ZERO_OR_MORE` / `AP_NARGS_ONE_OR_MORE` は、後続 positional の最小必要数を残すように割り当てます
 
 ## 6. 出力整形API
 
