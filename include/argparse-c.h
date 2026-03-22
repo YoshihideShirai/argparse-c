@@ -75,7 +75,11 @@ int ap_add_argument(ap_parser *parser, const char *name_or_flags,
 
 int ap_parse_args(ap_parser *parser, int argc, char **argv, ap_namespace **out_ns,
                   ap_error *err);
+int ap_parse_known_args(ap_parser *parser, int argc, char **argv,
+                        ap_namespace **out_ns, char ***out_unknown_args,
+                        int *out_unknown_count, ap_error *err);
 void ap_namespace_free(ap_namespace *ns);
+void ap_free_tokens(char **tokens, int count);
 
 char *ap_format_usage(const ap_parser *parser);
 char *ap_format_help(const ap_parser *parser);

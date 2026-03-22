@@ -78,7 +78,8 @@ void ap_sb_free(ap_string_builder *sb);
 int ap_sb_appendf(ap_string_builder *sb, const char *fmt, ...);
 
 int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
-                    ap_parsed_arg **out_parsed, ap_strvec *positionals,
+                    bool allow_unknown, ap_parsed_arg **out_parsed,
+                    ap_strvec *positionals, ap_strvec *unknown_args,
                     ap_error *err);
 int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
                      ap_error *err);

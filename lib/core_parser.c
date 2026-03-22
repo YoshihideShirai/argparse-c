@@ -169,7 +169,8 @@ static int consume_optional_values(const ap_parser *parser, int argc, char **arg
 }
 
 int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
-                    ap_parsed_arg **out_parsed, ap_strvec *positionals,
+                    bool allow_unknown, ap_parsed_arg **out_parsed,
+                    ap_strvec *positionals, ap_strvec *unknown_args,
                     ap_error *err) {
   ap_parsed_arg *parsed;
   int positional_defs_count = 0;
@@ -229,6 +230,19 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
         def_index = find_flag_index(parser, token);
       }
       if (def_index < 0) {
+        if (allow_unknown) {
+          char *copy = ap_strdup(token);
+          if (!copy || !unknown_args ||
+              ap_strvec_push(unknown_args, copy) != 0) {
+            free(copy);
+            free(positional_defs);
+            free(parsed);
+            ap_error_set(err, AP_ERR_NO_MEMORY, token, "out of memory");
+            return -1;
+          }
+          token_index++;
+          continue;
+        }
         free(positional_defs);
         free(parsed);
         ap_error_set(err, AP_ERR_UNKNOWN_OPTION, token,

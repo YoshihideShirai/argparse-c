@@ -414,6 +414,17 @@ static const ap_ns_entry *find_entry(const ap_namespace *ns, const char *dest) {
   return NULL;
 }
 
+static void free_parsed_args(const ap_parser *parser, ap_parsed_arg *parsed) {
+  int i;
+  if (!parser || !parsed) {
+    return;
+  }
+  for (i = 0; i < parser->defs_count; i++) {
+    ap_strvec_free(&parsed[i].values);
+  }
+  free(parsed);
+}
+
 int ap_parse_args(ap_parser *parser, int argc, char **argv, ap_namespace **out_ns,
                   ap_error *err) {
   ap_parsed_arg *parsed = NULL;
@@ -430,7 +441,8 @@ int ap_parse_args(ap_parser *parser, int argc, char **argv, ap_namespace **out_n
   memset(&positionals, 0, sizeof(positionals));
   *out_ns = NULL;
 
-  rc = ap_parser_parse(parser, argc, argv, &parsed, &positionals, err);
+  rc = ap_parser_parse(parser, argc, argv, false, &parsed, &positionals, NULL,
+                       err);
   if (rc != 0) {
     goto done;
   }
@@ -449,14 +461,61 @@ int ap_parse_args(ap_parser *parser, int argc, char **argv, ap_namespace **out_n
   ns = NULL;
 
 done:
-  if (parsed) {
-    int i;
-    for (i = 0; i < parser->defs_count; i++) {
-      ap_strvec_free(&parsed[i].values);
-    }
-    free(parsed);
-  }
+  free_parsed_args(parser, parsed);
   ap_strvec_free(&positionals);
+  ap_namespace_free(ns);
+  return rc;
+}
+
+int ap_parse_known_args(ap_parser *parser, int argc, char **argv,
+                        ap_namespace **out_ns, char ***out_unknown_args,
+                        int *out_unknown_count, ap_error *err) {
+  ap_parsed_arg *parsed = NULL;
+  ap_namespace *ns = NULL;
+  ap_strvec positionals;
+  ap_strvec unknown_args;
+  int rc;
+
+  if (!parser || !out_ns || !out_unknown_args || !out_unknown_count) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "",
+                 "parser, outputs and unknown outputs are required");
+    return -1;
+  }
+
+  memset(&positionals, 0, sizeof(positionals));
+  memset(&unknown_args, 0, sizeof(unknown_args));
+  *out_ns = NULL;
+  *out_unknown_args = NULL;
+  *out_unknown_count = 0;
+
+  rc = ap_parser_parse(parser, argc, argv, true, &parsed, &positionals,
+                       &unknown_args, err);
+  if (rc != 0) {
+    goto done;
+  }
+
+  rc = ap_validate_args(parser, parsed, err);
+  if (rc != 0) {
+    goto done;
+  }
+
+  rc = ap_build_namespace(parser, parsed, &ns, err);
+  if (rc != 0) {
+    goto done;
+  }
+
+  *out_ns = ns;
+  ns = NULL;
+  *out_unknown_args = unknown_args.items;
+  *out_unknown_count = unknown_args.count;
+  unknown_args.items = NULL;
+  unknown_args.count = 0;
+  unknown_args.cap = 0;
+
+done:
+  free_parsed_args(parser, parsed);
+  ap_strvec_free(&positionals);
+  ap_strvec_free(&unknown_args);
   ap_namespace_free(ns);
   return rc;
 }
@@ -531,6 +590,17 @@ void ap_namespace_free(ap_namespace *ns) {
   }
   free(ns->entries);
   free(ns);
+}
+
+void ap_free_tokens(char **tokens, int count) {
+  int i;
+  if (!tokens) {
+    return;
+  }
+  for (i = 0; i < count; i++) {
+    free(tokens[i]);
+  }
+  free(tokens);
 }
 
 bool ap_ns_get_bool(const ap_namespace *ns, const char *dest, bool *out_value) {

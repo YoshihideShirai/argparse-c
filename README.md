@@ -12,6 +12,7 @@
 - Built-in `-h/--help`
 - Non-exit error flow (`ap_parse_args` returns error codes)
 - Error text helper: `ap_format_error(parser, &err)`
+- Known/unknown split parser: `ap_parse_known_args(...)`
 
 ## Quick Example
 
