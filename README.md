@@ -136,6 +136,7 @@ A bilingual GitHub Pages site skeleton for MkDocs + Material for MkDocs is inclu
 - local preview: `mkdocs serve`
 - static build: `mkdocs build`
 - GitHub Pages deployment: `.github/workflows/pages.yml`
+- coverage report: <https://yoshihideshirai.github.io/argparse-c/coverage/index.html>
 - coverage HTML report is published under `coverage/index.html` on the Pages site
 
 ## Example Program
