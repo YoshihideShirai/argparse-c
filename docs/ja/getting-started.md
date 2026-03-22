@@ -17,7 +17,7 @@ cmake -S . -B build \
 cmake --build build
 ctest --test-dir build --output-on-failure
 
-# coverage (gcovr が必要)
+# coverage (gcovr が必要。clang 使用時は `llvm-cov gcov` を自動利用します)
 cmake -S . -B build-coverage \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \

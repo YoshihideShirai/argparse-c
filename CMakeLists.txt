@@ -10,6 +10,11 @@ if(AP_ENABLE_COVERAGE)
 
   add_compile_options(-O0 -g --coverage)
   add_link_options(--coverage)
+
+  set(AP_GCOV_EXECUTABLE gcov)
+  if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+    set(AP_GCOV_EXECUTABLE "llvm-cov gcov")
+  endif()
 endif()
 
 include_directories(./include)
@@ -27,7 +32,8 @@ if(AP_ENABLE_COVERAGE AND Python3_Interpreter_FOUND)
     COMMAND ${Python3_EXECUTABLE} -m gcovr
       --root ${CMAKE_SOURCE_DIR}
       --filter ${CMAKE_SOURCE_DIR}
-      --exclude-directories ${CMAKE_BINARY_DIR}
+      --object-directory ${CMAKE_BINARY_DIR}
+      --gcov-executable ${AP_GCOV_EXECUTABLE}
       --exclude '.*/test/.*'
       --exclude '.*/sample/.*'
       --txt coverage.txt
