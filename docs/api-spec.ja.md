@@ -92,7 +92,10 @@
 - 戻り値: 子パーサ（失敗時はNULL）
 - 備考:
   - ネストしたサブコマンドを追加できます
-  - パース成功時、最終的に選択されたサブコマンド名は namespace の `"subcommand"` に格納されます
+  - パース成功時、最終的に選択された **leaf の** サブコマンド名が namespace の `"subcommand"` に格納されます
+  - 途中階層のサブコマンド名は別 namespace key として追加されません
+  - `"subcommand_path"` のような別キーは現在の公開 contract には含まれません
+  - ネストしたサブコマンド parser に対する `ap_format_help()` は、usage/help にフルコマンドパスを表示します
 
 ### `void ap_parser_free(ap_parser *parser)`
 パーサ本体を解放します。

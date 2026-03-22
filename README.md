@@ -78,6 +78,17 @@ return 0;
 
 ## Subcommands
 
+### Namespace / help contract
+
+- nested subcommands are supported
+- the namespace exposes only one built-in subcommand key: `"subcommand"`
+- `"subcommand"` always stores the **final selected leaf subcommand name**
+  - example: parsing `prog config set ...` stores `"set"`
+- intermediate subcommand names are **not** added as separate namespace entries
+- a separate `"subcommand_path"` key is **not** currently exposed
+- help for a nested subcommand uses the full command path
+  - example: `ap_format_help(set_parser)` starts with `usage: prog config set`
+
 ```c
 ap_error err = {0};
 ap_namespace *ns = NULL;

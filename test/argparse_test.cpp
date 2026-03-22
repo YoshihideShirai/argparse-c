@@ -727,6 +727,8 @@ TEST(ArgparseC, ParseNestedSubcommandArguments) {
   ap_arg_options global = ap_arg_options_default();
   ap_arg_options value = ap_arg_options_default();
   const char *subcommand = NULL;
+  const char *parent_subcommand = NULL;
+  const char *subcommand_path = NULL;
   const char *value_text = NULL;
   const char *key = NULL;
   bool is_global = false;
@@ -751,6 +753,8 @@ TEST(ArgparseC, ParseNestedSubcommandArguments) {
   CHECK(ap_ns_get_bool(ns, "global", &is_global));
   CHECK(ap_ns_get_string(ns, "value", &value_text));
   CHECK(ap_ns_get_string(ns, "key", &key));
+  CHECK(!ap_ns_get_string(ns, "config", &parent_subcommand));
+  CHECK(!ap_ns_get_string(ns, "subcommand_path", &subcommand_path));
   STRCMP_EQUAL("set", subcommand);
   CHECK_TRUE(is_global);
   STRCMP_EQUAL("blue", value_text);
