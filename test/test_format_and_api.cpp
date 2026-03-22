@@ -791,6 +791,69 @@ CHECK(strstr(script, "parser_flag_only_options='-h --help -v --verbose --force'"
   ap_parser_free(p);
 }
 
+TEST(ArgumentInfoExposesCompletionMetadata) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options cmd = ap_arg_options_default();
+  ap_arg_info info = {};
+
+  CHECK(p != NULL);
+  cmd.completion_kind = AP_COMPLETION_KIND_COMMAND;
+  cmd.completion_hint = "shell command";
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--exec", cmd, &err));
+  LONGS_EQUAL(0, ap_parser_get_argument(p, 1, &info));
+  LONGS_EQUAL(AP_COMPLETION_KIND_COMMAND, info.completion_kind);
+  STRCMP_EQUAL("shell command", info.completion_hint);
+
+  ap_parser_free(p);
+}
+
+TEST(FormatCompletionUsesStaticCompletionMetadata) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options input = ap_arg_options_default();
+  ap_arg_options dir = ap_arg_options_default();
+  ap_arg_options exec = ap_arg_options_default();
+  ap_arg_options mode = ap_arg_options_default();
+  const char *modes[] = {"fast", "slow"};
+  char *bash = NULL;
+  char *fish = NULL;
+
+  CHECK(p != NULL);
+  input.completion_kind = AP_COMPLETION_KIND_FILE;
+  input.completion_hint = "input file";
+  dir.completion_kind = AP_COMPLETION_KIND_DIRECTORY;
+  exec.completion_kind = AP_COMPLETION_KIND_COMMAND;
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+  mode.completion_kind = AP_COMPLETION_KIND_CHOICES;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--input", input, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--dir", dir, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--exec", exec, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  bash = ap_format_bash_completion(p);
+  fish = ap_format_fish_completion(p);
+  CHECK(bash != NULL);
+  CHECK(fish != NULL);
+  CHECK(strstr(bash, "root:--input) printf '%s\\n' 'file' ;;") != NULL);
+  CHECK(strstr(bash, "root:--dir) printf '%s\\n' 'directory' ;;") != NULL);
+  CHECK(strstr(bash, "root:--exec) printf '%s\\n' 'command' ;;") != NULL);
+  CHECK(strstr(bash, "compgen -f -- \"$cur\"") != NULL);
+  CHECK(strstr(bash, "compgen -d -- \"$cur\"") != NULL);
+  CHECK(strstr(bash, "compgen -c -- \"$cur\"") != NULL);
+  CHECK(strstr(fish, "-l input -d \"INPUT\" -r -F") != NULL);
+  CHECK(strstr(fish, "-l dir -d \"DIR\" -r -a '(__fish_complete_directories)'") != NULL);
+  CHECK(strstr(fish, "-l exec -d \"EXEC\" -r -a '(__fish_complete_command)'") != NULL);
+  CHECK(strstr(fish, "-l mode -d \"MODE\" -r -a '(__ap_prog_value_choices root:--mode)'") != NULL);
+
+  free(bash);
+  free(fish);
+  ap_parser_free(p);
+}
+
 TEST(FormatBashCompletionMarksValueModesAndFlagOnlyOptions) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("tool", "desc");

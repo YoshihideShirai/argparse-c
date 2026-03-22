@@ -56,6 +56,14 @@ typedef struct {
   const char **items;
 } ap_choices;
 
+typedef enum {
+  AP_COMPLETION_KIND_NONE = 0,
+  AP_COMPLETION_KIND_CHOICES,
+  AP_COMPLETION_KIND_FILE,
+  AP_COMPLETION_KIND_DIRECTORY,
+  AP_COMPLETION_KIND_COMMAND,
+} ap_completion_kind;
+
 typedef struct {
   ap_type type;
   ap_action action;
@@ -67,6 +75,8 @@ typedef struct {
   const char *default_value;
   const char *const_value;
   ap_choices choices;
+  ap_completion_kind completion_kind;
+  const char *completion_hint;
   const char *dest;
 } ap_arg_options;
 
@@ -94,6 +104,8 @@ typedef struct {
   const char *help;
   const char *metavar;
   ap_choices choices;
+  ap_completion_kind completion_kind;
+  const char *completion_hint;
   bool required;
   ap_nargs nargs;
   int nargs_count;
