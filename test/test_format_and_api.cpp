@@ -78,7 +78,6 @@ TEST(FormatUsageShowsRequiredBoolAndConstActions) {
   ap_parser_free(p);
 }
 
-
 TEST(RequiredStoreTrueOptionMustBePresent) {
   ap_error err = {};
   ap_namespace *ns = NULL;
@@ -129,7 +128,8 @@ TEST(ParseKnownArgsRequiresAllOutputPointers) {
   char *argv[] = {(char *)"prog", NULL};
 
   CHECK(p != NULL);
-  LONGS_EQUAL(-1, ap_parse_known_args(p, 1, argv, &ns, NULL, &unknown_count, &err));
+  LONGS_EQUAL(-1,
+              ap_parse_known_args(p, 1, argv, &ns, NULL, &unknown_count, &err));
   LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
   STRCMP_EQUAL("", err.argument);
   STRCMP_EQUAL("parser, outputs and unknown outputs are required", err.message);
@@ -172,7 +172,8 @@ TEST(NamespaceGetterFailurePathsReturnFalseOrNull) {
   bool bool_out = false;
   int32_t int_out = 0;
   const char *str_out = NULL;
-  char *argv[] = {(char *)"prog", (char *)"--verbose", (char *)"--count", (char *)"--name", (char *)"alice", NULL};
+  char *argv[] = {(char *)"prog",   (char *)"--verbose", (char *)"--count",
+                  (char *)"--name", (char *)"alice",     NULL};
 
   CHECK(p != NULL);
   verbose.type = AP_TYPE_BOOL;
@@ -249,7 +250,8 @@ TEST(FormatHelpShowsPositionalOneOrMoreAndActionFlags) {
 TEST(ApiGuardsRejectMissingParserPointers) {
   ap_error err = {};
 
-  LONGS_EQUAL(-1, ap_add_argument(NULL, "--name", ap_arg_options_default(), &err));
+  LONGS_EQUAL(-1,
+              ap_add_argument(NULL, "--name", ap_arg_options_default(), &err));
   LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
   STRCMP_EQUAL("", err.argument);
   STRCMP_EQUAL("parser and argument name are required", err.message);
@@ -395,8 +397,8 @@ TEST(AppendActionCollectsRepeatedOptionValues) {
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
   ap_arg_options include = ap_arg_options_default();
-  char *argv[] = {(char *)"prog", (char *)"--include", (char *)"a",
-                  (char *)"--include", (char *)"b", NULL};
+  char *argv[] = {(char *)"prog",      (char *)"--include", (char *)"a",
+                  (char *)"--include", (char *)"b",         NULL};
 
   CHECK(p != NULL);
   include.action = AP_ACTION_APPEND;
@@ -437,8 +439,8 @@ TEST(FixedNargsForOption) {
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
   ap_arg_options range = ap_arg_options_default();
-  char *argv[] = {(char *)"prog", (char *)"--range", (char *)"10",
-                  (char *)"20", NULL};
+  char *argv[] = {(char *)"prog", (char *)"--range", (char *)"10", (char *)"20",
+                  NULL};
   int32_t start = 0;
   int32_t end = 0;
 
@@ -505,7 +507,8 @@ TEST(RequiredMutuallyExclusiveGroupNeedsOneOption) {
   LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
   LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
   STRCMP_EQUAL("", err.argument);
-  STRCMP_EQUAL("one argument from a mutually exclusive group is required", err.message);
+  STRCMP_EQUAL("one argument from a mutually exclusive group is required",
+               err.message);
 
   ap_parser_free(p);
 }

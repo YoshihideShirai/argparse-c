@@ -11,7 +11,8 @@ static int ensure_defs_capacity(ap_parser *parser) {
     return 0;
   }
   int next_cap = parser->defs_cap == 0 ? 8 : parser->defs_cap * 2;
-  ap_arg_def *next = realloc(parser->defs, sizeof(ap_arg_def) * (size_t)next_cap);
+  ap_arg_def *next =
+      realloc(parser->defs, sizeof(ap_arg_def) * (size_t)next_cap);
   if (!next) {
     return -1;
   }
@@ -25,9 +26,8 @@ static int ensure_subcommands_capacity(ap_parser *parser) {
     return 0;
   }
   int next_cap = parser->subcommands_cap == 0 ? 4 : parser->subcommands_cap * 2;
-  ap_subcommand_def *next =
-      realloc(parser->subcommands,
-              sizeof(ap_subcommand_def) * (size_t)next_cap);
+  ap_subcommand_def *next = realloc(
+      parser->subcommands, sizeof(ap_subcommand_def) * (size_t)next_cap);
   if (!next) {
     return -1;
   }
@@ -40,10 +40,10 @@ static int ensure_mutex_groups_capacity(ap_parser *parser) {
   if (parser->mutex_groups_count < parser->mutex_groups_cap) {
     return 0;
   }
-  int next_cap = parser->mutex_groups_cap == 0 ? 4 : parser->mutex_groups_cap * 2;
-  ap_mutex_group_def *next =
-      realloc(parser->mutex_groups,
-              sizeof(ap_mutex_group_def) * (size_t)next_cap);
+  int next_cap =
+      parser->mutex_groups_cap == 0 ? 4 : parser->mutex_groups_cap * 2;
+  ap_mutex_group_def *next = realloc(
+      parser->mutex_groups, sizeof(ap_mutex_group_def) * (size_t)next_cap);
   if (!next) {
     return -1;
   }
@@ -229,7 +229,8 @@ static char *normalize_auto_dest(const char *raw) {
   return dest;
 }
 
-static char *pick_default_dest(bool is_optional, char **flags, int flags_count) {
+static char *pick_default_dest(bool is_optional, char **flags,
+                               int flags_count) {
   const char *raw_dest = NULL;
   int i;
 
@@ -412,8 +413,8 @@ static int validate_options(const ap_arg_options *options, bool is_optional,
     }
     return 0;
   }
-  if (options->action != AP_ACTION_STORE && options->action != AP_ACTION_APPEND &&
-      options->type == AP_TYPE_BOOL) {
+  if (options->action != AP_ACTION_STORE &&
+      options->action != AP_ACTION_APPEND && options->type == AP_TYPE_BOOL) {
     return 0;
   }
   if (options->nargs != AP_NARGS_ONE && options->nargs != AP_NARGS_OPTIONAL &&
@@ -524,8 +525,7 @@ ap_mutually_exclusive_group *ap_add_mutually_exclusive_group(ap_parser *parser,
   ap_mutex_group_def *def;
 
   if (!parser) {
-    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "",
-                 "parser is required");
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "", "parser is required");
     return NULL;
   }
   if (ensure_mutex_groups_capacity(parser) != 0) {
@@ -548,8 +548,7 @@ int ap_group_add_argument(ap_mutually_exclusive_group *group,
   int arg_index;
 
   if (!group || !group->parser) {
-    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "",
-                 "group is required");
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "", "group is required");
     return -1;
   }
   parser = group->parser;
@@ -558,7 +557,8 @@ int ap_group_add_argument(ap_mutually_exclusive_group *group,
     return -1;
   }
   parser->defs[arg_index].mutex_group_index = group->index;
-  if (mutex_group_push_arg(&parser->mutex_groups[group->index], arg_index) != 0) {
+  if (mutex_group_push_arg(&parser->mutex_groups[group->index], arg_index) !=
+      0) {
     ap_error_set(err, AP_ERR_NO_MEMORY, name_or_flags, "out of memory");
     return -1;
   }
@@ -672,9 +672,9 @@ static int find_subcommand_arg_index(const ap_parser *parser, int argc,
         for (k = 0; k < def->flags_count; k++) {
           size_t flag_len = strlen(def->flags[k]);
           bool exact_match = strcmp(def->flags[k], token) == 0;
-          bool inline_match =
-              eq && strncmp(def->flags[k], token, flag_len) == 0 &&
-              token[flag_len] == '=';
+          bool inline_match = eq &&
+                              strncmp(def->flags[k], token, flag_len) == 0 &&
+                              token[flag_len] == '=';
           if (!exact_match && !inline_match) {
             continue;
           }
@@ -739,14 +739,14 @@ static int append_namespace_entries(ap_namespace *dst, const ap_namespace *src,
   }
 
   old_count = dst->count;
-  next = realloc(dst->entries, sizeof(ap_ns_entry) * (size_t)(old_count + src->count));
+  next = realloc(dst->entries,
+                 sizeof(ap_ns_entry) * (size_t)(old_count + src->count));
   if (!next) {
     ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
     return -1;
   }
   dst->entries = next;
-  memset(dst->entries + old_count, 0,
-         sizeof(ap_ns_entry) * (size_t)src->count);
+  memset(dst->entries + old_count, 0, sizeof(ap_ns_entry) * (size_t)src->count);
 
   for (i = 0; i < src->count; i++) {
     ap_ns_entry *entry;
@@ -761,10 +761,17 @@ static int append_namespace_entries(ap_namespace *dst, const ap_namespace *src,
 
     for (j = 0; j < old_count + added_count; j++) {
       if (strcmp(dst->entries[j].dest, src_entry->dest) == 0) {
+        if (strcmp(src_entry->dest, "subcommand_path") == 0) {
+          entry = NULL;
+          break;
+        }
         ap_error_set(err, AP_ERR_INVALID_DEFINITION, src_entry->dest,
                      "dest '%s' already exists", src_entry->dest);
         return -1;
       }
+    }
+    if (!entry) {
+      continue;
     }
 
     entry->dest = ap_strdup(src_entry->dest);
@@ -805,38 +812,71 @@ static int append_namespace_entries(ap_namespace *dst, const ap_namespace *src,
   return 0;
 }
 
-static int add_subcommand_entry(ap_namespace *ns, const char *name,
-                                ap_error *err) {
+static int add_string_entry(ap_namespace *ns, const char *dest,
+                            const char *value, ap_error *err) {
   ap_ns_entry *next;
   ap_ns_entry *entry;
 
   next = realloc(ns->entries, sizeof(ap_ns_entry) * (size_t)(ns->count + 1));
   if (!next) {
-    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    ap_error_set(err, AP_ERR_NO_MEMORY, dest ? dest : "", "out of memory");
     return -1;
   }
   ns->entries = next;
   entry = &ns->entries[ns->count];
   memset(entry, 0, sizeof(*entry));
-  entry->dest = ap_strdup("subcommand");
+  entry->dest = ap_strdup(dest);
   if (!entry->dest) {
-    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    ap_error_set(err, AP_ERR_NO_MEMORY, dest ? dest : "", "out of memory");
     return -1;
   }
   entry->type = AP_NS_VALUE_STRING;
   entry->count = 1;
   entry->as.strings = calloc(1, sizeof(char *));
   if (!entry->as.strings) {
-    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    ap_error_set(err, AP_ERR_NO_MEMORY, dest ? dest : "", "out of memory");
     return -1;
   }
-  entry->as.strings[0] = ap_strdup(name);
+  entry->as.strings[0] = ap_strdup(value);
   if (!entry->as.strings[0]) {
-    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    ap_error_set(err, AP_ERR_NO_MEMORY, dest ? dest : "", "out of memory");
     return -1;
   }
   ns->count++;
   return 0;
+}
+
+static int add_subcommand_entry(ap_namespace *ns, const char *name,
+                                ap_error *err) {
+  return add_string_entry(ns, "subcommand", name, err);
+}
+
+static int add_subcommand_path_entry(ap_namespace *ns, const char *name,
+                                     const ap_namespace *sub_ns,
+                                     ap_error *err) {
+  const ap_ns_entry *sub_path_entry = find_entry(sub_ns, "subcommand_path");
+  const char *sub_path = sub_path_entry &&
+                                 sub_path_entry->type == AP_NS_VALUE_STRING &&
+                                 sub_path_entry->count > 0
+                             ? sub_path_entry->as.strings[0]
+                             : NULL;
+
+  if (sub_path && sub_path[0] != '\0') {
+    size_t path_len = strlen(name) + 1 + strlen(sub_path) + 1;
+    char *path = malloc(path_len);
+    int rc;
+
+    if (!path) {
+      ap_error_set(err, AP_ERR_NO_MEMORY, "subcommand_path", "out of memory");
+      return -1;
+    }
+    snprintf(path, path_len, "%s %s", name, sub_path);
+    rc = add_string_entry(ns, "subcommand_path", path, err);
+    free(path);
+    return rc;
+  }
+
+  return add_string_entry(ns, "subcommand_path", name, err);
 }
 
 static int parse_internal(ap_parser *parser, int argc, char **argv,
@@ -876,10 +916,10 @@ static int parse_internal(ap_parser *parser, int argc, char **argv,
     goto done;
   }
 
-  rc = ap_parser_parse(parser, subcommand_arg_index >= 0 ? subcommand_arg_index : argc,
+  rc = ap_parser_parse(parser,
+                       subcommand_arg_index >= 0 ? subcommand_arg_index : argc,
                        argv, allow_unknown, &parsed, &positionals,
-                       allow_unknown ? &unknown_args : NULL,
-                       err);
+                       allow_unknown ? &unknown_args : NULL, err);
   if (rc != 0) {
     goto done;
   }
@@ -909,6 +949,11 @@ static int parse_internal(ap_parser *parser, int argc, char **argv,
       if (rc != 0) {
         goto done;
       }
+    }
+    rc = add_subcommand_path_entry(
+        ns, parser->subcommands[subcommand_index].name, sub_ns, err);
+    if (rc != 0) {
+      goto done;
     }
     rc = append_namespace_entries(ns, sub_ns, err);
     if (rc != 0) {
@@ -961,8 +1006,8 @@ done:
   return rc;
 }
 
-int ap_parse_args(ap_parser *parser, int argc, char **argv, ap_namespace **out_ns,
-                  ap_error *err) {
+int ap_parse_args(ap_parser *parser, int argc, char **argv,
+                  ap_namespace **out_ns, ap_error *err) {
   return parse_internal(parser, argc, argv, false, out_ns, NULL, NULL, err);
 }
 
@@ -978,7 +1023,9 @@ int ap_parse_known_args(ap_parser *parser, int argc, char **argv,
                         out_unknown_count, err);
 }
 
-char *ap_format_usage(const ap_parser *parser) { return ap_usage_build(parser); }
+char *ap_format_usage(const ap_parser *parser) {
+  return ap_usage_build(parser);
+}
 
 char *ap_format_help(const ap_parser *parser) { return ap_help_build(parser); }
 

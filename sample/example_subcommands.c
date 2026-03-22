@@ -1,0 +1,134 @@
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "argparse-c.h"
+
+static int print_help_and_exit(ap_parser *parser, ap_namespace *ns) {
+  bool is_help = false;
+
+  if (!ap_ns_get_bool(ns, "help", &is_help) || !is_help) {
+    return 0;
+  }
+
+  {
+    char *help = ap_format_help(parser);
+    if (help) {
+      printf("%s", help);
+      free(help);
+    }
+  }
+
+  return 1;
+}
+
+int main(int argc, char **argv) {
+  ap_error err = {0};
+  ap_namespace *ns = NULL;
+  ap_parser *parser =
+      ap_parser_new("example_subcommands", "subcommand_path aware demo.");
+  ap_parser *config = NULL;
+  ap_parser *set = NULL;
+  ap_parser *get = NULL;
+
+  if (!parser) {
+    fprintf(stderr, "failed to initialize parser\n");
+    return 1;
+  }
+
+  config = ap_add_subcommand(parser, "config", "configuration commands", &err);
+  if (!config) {
+    fprintf(stderr, "%s\n", err.message);
+    ap_parser_free(parser);
+    return 1;
+  }
+
+  set = ap_add_subcommand(config, "set", "set a configuration value", &err);
+  if (!set) {
+    fprintf(stderr, "%s\n", err.message);
+    ap_parser_free(parser);
+    return 1;
+  }
+
+  get = ap_add_subcommand(config, "get", "show a configuration value", &err);
+  if (!get) {
+    fprintf(stderr, "%s\n", err.message);
+    ap_parser_free(parser);
+    return 1;
+  }
+
+  {
+    ap_arg_options global = ap_arg_options_default();
+    ap_arg_options value = ap_arg_options_default();
+
+    global.type = AP_TYPE_BOOL;
+    global.action = AP_ACTION_STORE_TRUE;
+    global.help = "write to the global config";
+    value.required = true;
+    value.help = "value to store";
+
+    if (ap_add_argument(set, "--global", global, &err) != 0 ||
+        ap_add_argument(set, "--value", value, &err) != 0 ||
+        ap_add_argument(set, "key", ap_arg_options_default(), &err) != 0) {
+      fprintf(stderr, "%s\n", err.message);
+      ap_parser_free(parser);
+      return 1;
+    }
+  }
+
+  {
+    if (ap_add_argument(get, "key", ap_arg_options_default(), &err) != 0) {
+      fprintf(stderr, "%s\n", err.message);
+      ap_parser_free(parser);
+      return 1;
+    }
+  }
+
+  if (ap_parse_args(parser, argc, argv, &ns, &err) != 0) {
+    char *error_text = ap_format_error(parser, &err);
+    if (error_text) {
+      fprintf(stderr, "%s", error_text);
+      free(error_text);
+    } else {
+      fprintf(stderr, "error: %s\n", err.message);
+    }
+    ap_parser_free(parser);
+    return 1;
+  }
+
+  if (print_help_and_exit(parser, ns)) {
+    ap_namespace_free(ns);
+    ap_parser_free(parser);
+    return 0;
+  }
+
+  {
+    const char *subcommand = NULL;
+    const char *subcommand_path = NULL;
+    const char *key = NULL;
+
+    ap_ns_get_string(ns, "subcommand", &subcommand);
+    ap_ns_get_string(ns, "subcommand_path", &subcommand_path);
+    ap_ns_get_string(ns, "key", &key);
+
+    printf("subcommand=%s\n", subcommand ? subcommand : "(null)");
+    printf("subcommand_path=%s\n",
+           subcommand_path ? subcommand_path : "(null)");
+    printf("key=%s\n", key ? key : "(null)");
+
+    if (subcommand && strcmp(subcommand, "set") == 0) {
+      const char *value = NULL;
+      bool is_global = false;
+
+      ap_ns_get_string(ns, "value", &value);
+      ap_ns_get_bool(ns, "global", &is_global);
+      printf("value=%s\n", value ? value : "(null)");
+      printf("global=%s\n", is_global ? "true" : "false");
+    }
+  }
+
+  ap_namespace_free(ns);
+  ap_parser_free(parser);
+  return 0;
+}

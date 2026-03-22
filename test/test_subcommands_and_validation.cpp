@@ -8,9 +8,10 @@ TEST(ParseSubcommandArguments) {
   ap_arg_options config = ap_arg_options_default();
   ap_arg_options force = ap_arg_options_default();
   const char *subcommand = NULL;
+  const char *subcommand_path = NULL;
   const char *config_value = NULL;
   bool force_enabled = false;
-  char *argv[] = {(char *)"prog", (char *)"run", (char *)"--config",
+  char *argv[] = {(char *)"prog",      (char *)"run",     (char *)"--config",
                   (char *)"prod.json", (char *)"--force", NULL};
 
   CHECK(p != NULL);
@@ -23,9 +24,11 @@ TEST(ParseSubcommandArguments) {
 
   LONGS_EQUAL(0, ap_parse_args(p, 5, argv, &ns, &err));
   CHECK(ap_ns_get_string(ns, "subcommand", &subcommand));
+  CHECK(ap_ns_get_string(ns, "subcommand_path", &subcommand_path));
   CHECK(ap_ns_get_string(ns, "config", &config_value));
   CHECK(ap_ns_get_bool(ns, "force", &force_enabled));
   STRCMP_EQUAL("run", subcommand);
+  STRCMP_EQUAL("run", subcommand_path);
   STRCMP_EQUAL("prod.json", config_value);
   CHECK_TRUE(force_enabled);
 
@@ -67,9 +70,9 @@ TEST(ParseNestedSubcommandArguments) {
   const char *value_text = NULL;
   const char *key = NULL;
   bool is_global = false;
-  char *argv[] = {(char *)"prog", (char *)"config", (char *)"set",
-                  (char *)"--global", (char *)"--value", (char *)"blue",
-                  (char *)"theme", NULL};
+  char *argv[] = {
+      (char *)"prog",    (char *)"config", (char *)"set",   (char *)"--global",
+      (char *)"--value", (char *)"blue",   (char *)"theme", NULL};
 
   CHECK(p != NULL);
   config = ap_add_subcommand(p, "config", "config commands", &err);
@@ -88,9 +91,10 @@ TEST(ParseNestedSubcommandArguments) {
   CHECK(ap_ns_get_bool(ns, "global", &is_global));
   CHECK(ap_ns_get_string(ns, "value", &value_text));
   CHECK(ap_ns_get_string(ns, "key", &key));
+  CHECK(ap_ns_get_string(ns, "subcommand_path", &subcommand_path));
   CHECK(!ap_ns_get_string(ns, "config", &parent_subcommand));
-  CHECK(!ap_ns_get_string(ns, "subcommand_path", &subcommand_path));
   STRCMP_EQUAL("set", subcommand);
+  STRCMP_EQUAL("config set", subcommand_path);
   CHECK_TRUE(is_global);
   STRCMP_EQUAL("blue", value_text);
   STRCMP_EQUAL("theme", key);
@@ -134,8 +138,6 @@ TEST(MissingSubcommandFails) {
 
   ap_parser_free(p);
 }
-
-
 
 TEST(CountRequiresInt32TypeDefinition) {
   ap_error err = {};
@@ -194,7 +196,8 @@ TEST(OptionalArgumentDeclarationRejectsNonFlagToken) {
   ap_parser *p = ap_parser_new("prog", "desc");
 
   CHECK(p != NULL);
-  LONGS_EQUAL(-1, ap_add_argument(p, "-v, verbose", ap_arg_options_default(), &err));
+  LONGS_EQUAL(
+      -1, ap_add_argument(p, "-v, verbose", ap_arg_options_default(), &err));
   LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
   STRCMP_EQUAL("verbose", err.argument);
   STRCMP_EQUAL("optional argument flags must start with '-'", err.message);
@@ -207,10 +210,12 @@ TEST(PositionalDeclarationRejectsMultipleTokens) {
   ap_parser *p = ap_parser_new("prog", "desc");
 
   CHECK(p != NULL);
-  LONGS_EQUAL(-1, ap_add_argument(p, "input, output", ap_arg_options_default(), &err));
+  LONGS_EQUAL(
+      -1, ap_add_argument(p, "input, output", ap_arg_options_default(), &err));
   LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
   STRCMP_EQUAL("input, output", err.argument);
-  STRCMP_EQUAL("positional argument must be a single non-flag token", err.message);
+  STRCMP_EQUAL("positional argument must be a single non-flag token",
+               err.message);
 
   ap_parser_free(p);
 }
@@ -245,7 +250,8 @@ TEST(InvalidSubcommandNameIsRejected) {
 TEST(GroupAddArgumentRequiresGroup) {
   ap_error err = {};
 
-  LONGS_EQUAL(-1, ap_group_add_argument(NULL, "--json", ap_arg_options_default(), &err));
+  LONGS_EQUAL(-1, ap_group_add_argument(NULL, "--json",
+                                        ap_arg_options_default(), &err));
   LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
   STRCMP_EQUAL("", err.argument);
   STRCMP_EQUAL("group is required", err.message);
@@ -371,7 +377,8 @@ TEST(DuplicateLongOptionFails) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
-  char *argv[] = {(char *)"prog", (char *)"--name", (char *)"a", (char *)"--name", (char *)"b", NULL};
+  char *argv[] = {(char *)"prog",   (char *)"--name", (char *)"a",
+                  (char *)"--name", (char *)"b",      NULL};
 
   CHECK(p != NULL);
   LONGS_EQUAL(0, ap_add_argument(p, "--name", ap_arg_options_default(), &err));
@@ -412,10 +419,12 @@ TEST(ParseKnownArgsTreatsUnknownClusterAsUnknownToken) {
   int unknown_count = 0;
   const char *text = NULL;
   const char *input = NULL;
-  char *argv[] = {(char *)"prog", (char *)"-xz", (char *)"-t", (char *)"hello", (char *)"file.txt", NULL};
+  char *argv[] = {(char *)"prog",  (char *)"-xz",      (char *)"-t",
+                  (char *)"hello", (char *)"file.txt", NULL};
 
   CHECK(p != NULL);
-  LONGS_EQUAL(0, ap_parse_known_args(p, 5, argv, &ns, &unknown, &unknown_count, &err));
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 5, argv, &ns, &unknown, &unknown_count, &err));
   LONGS_EQUAL(1, unknown_count);
   STRCMP_EQUAL("-xz", unknown[0]);
   CHECK(ap_ns_get_string(ns, "text", &text));

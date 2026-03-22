@@ -5,10 +5,12 @@ std::vector<TestCase> &registry() {
   return tests;
 }
 
-Registrar::Registrar(const char *name, void (*run)()) { registry().push_back({name, run}); }
+Registrar::Registrar(const char *name, void (*run)()) {
+  registry().push_back({name, run});
+}
 
 [[noreturn]] void fail(const char *expr, const char *file, int line,
-                      const std::string &detail) {
+                       const std::string &detail) {
   std::ostringstream oss;
   oss << file << ':' << line << ": assertion failed: " << expr;
   if (!detail.empty()) {

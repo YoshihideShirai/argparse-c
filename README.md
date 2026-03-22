@@ -85,7 +85,8 @@ return 0;
 - `"subcommand"` always stores the **final selected leaf subcommand name**
   - example: parsing `prog config set ...` stores `"set"`
 - intermediate subcommand names are **not** added as separate namespace entries
-- a separate `"subcommand_path"` key is **not** currently exposed
+- `"subcommand_path"` stores the full selected subcommand chain
+  - example: parsing `prog config set ...` stores `"config set"`
 - help for a nested subcommand uses the full command path
   - example: `ap_format_help(set_parser)` starts with `usage: prog config set`
 
@@ -101,8 +102,10 @@ ap_add_argument(run, "--config", config, &err);
 
 if (ap_parse_args(p, argc, argv, &ns, &err) == 0) {
   const char *subcommand = NULL;
+  const char *subcommand_path = NULL;
   const char *config_path = NULL;
   ap_ns_get_string(ns, "subcommand", &subcommand);
+  ap_ns_get_string(ns, "subcommand_path", &subcommand_path);
   ap_ns_get_string(ns, "config", &config_path);
 }
 ```
@@ -115,6 +118,10 @@ cmake -S . -B build \
   -DCMAKE_CXX_COMPILER=clang++
 cmake --build build
 ctest --test-dir build --output-on-failure
+
+# formatting / static analysis (requires clang-format and clang-tidy)
+cmake --build build --target format
+cmake --build build --target tidy
 
 # coverage (requires gcovr; with clang the build uses `llvm-cov gcov` automatically)
 cmake -S . -B build-coverage \
@@ -142,6 +149,9 @@ A bilingual GitHub Pages site skeleton for MkDocs + Material for MkDocs is inclu
 ## Example Program
 
 See [sample/example1.c](./sample/example1.c).
+
+For a nested subcommand example that prints both `subcommand` and
+`subcommand_path`, see [sample/example_subcommands.c](./sample/example_subcommands.c).
 
 ## API Specification
 
