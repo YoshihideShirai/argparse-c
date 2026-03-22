@@ -582,13 +582,10 @@ TEST(ArgparseC, ParseNestedSubcommandArguments) {
   CHECK(ap_ns_get_bool(ns, "global", &is_global));
   CHECK(ap_ns_get_string(ns, "value", &value_text));
   CHECK(ap_ns_get_string(ns, "key", &key));
-  LONGS_EQUAL(2, ap_ns_get_count(ns, "subcommand_path"));
-  STRCMP_EQUAL("config", subcommand);
+  STRCMP_EQUAL("set", subcommand);
   CHECK_TRUE(is_global);
   STRCMP_EQUAL("blue", value_text);
   STRCMP_EQUAL("theme", key);
-  STRCMP_EQUAL("config", ap_ns_get_string_at(ns, "subcommand_path", 0));
-  STRCMP_EQUAL("set", ap_ns_get_string_at(ns, "subcommand_path", 1));
 
   ap_namespace_free(ns);
   ap_parser_free(p);

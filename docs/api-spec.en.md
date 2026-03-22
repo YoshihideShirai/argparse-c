@@ -82,8 +82,7 @@ Adds a child parser for a subcommand.
 - Returns: child parser on success, `NULL` on failure
 - Notes:
   - nested subcommands are supported
-  - on success, the top-level selected subcommand name is stored in namespace key `"subcommand"`
-  - the full selected path is stored in order under namespace key `"subcommand_path"`
+  - on success, the final selected subcommand name is stored in namespace key `"subcommand"`
 
 ### `void ap_parser_free(ap_parser *parser)`
 Frees the parser.

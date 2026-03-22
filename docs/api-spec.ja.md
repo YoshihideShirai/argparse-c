@@ -82,8 +82,7 @@
 - 戻り値: 子パーサ（失敗時はNULL）
 - 備考:
   - ネストしたサブコマンドを追加できます
-  - パース成功時、最上位で選択されたサブコマンド名は namespace の `"subcommand"` に格納されます
-  - ネスト経路全体は namespace の `"subcommand_path"` に順序付きで格納されます
+  - パース成功時、最終的に選択されたサブコマンド名は namespace の `"subcommand"` に格納されます
 
 ### `void ap_parser_free(ap_parser *parser)`
 パーサ本体を解放します。
