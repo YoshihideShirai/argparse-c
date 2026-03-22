@@ -636,6 +636,72 @@ TEST(MissingRequiredPositionalUsesConsistentArgumentNameAndMessage) {
 }
 
 
+
+TEST(FormatFishCompletionIncludesSubcommandsOptionsAndChoices) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *config = NULL;
+  ap_parser *set = NULL;
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options output = ap_arg_options_default();
+  ap_arg_options force = ap_arg_options_default();
+  ap_arg_options mode = ap_arg_options_default();
+  ap_arg_options target = ap_arg_options_default();
+  const char *formats[] = {"json", "yaml"};
+  const char *modes[] = {"fast", "slow"};
+  char *script = NULL;
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_INT32;
+  verbose.action = AP_ACTION_COUNT;
+  verbose.help = "increase verbosity";
+  force.type = AP_TYPE_BOOL;
+  force.action = AP_ACTION_STORE_TRUE;
+  force.help = "force overwrite";
+  output.help = "output format";
+  output.choices.items = formats;
+  output.choices.count = 2;
+  mode.help = "mode for config";
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+  target.help = "set target";
+  target.metavar = "KEY";
+
+  LONGS_EQUAL(0, ap_add_argument(p, "-v, --verbose", verbose, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--output", output, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--force", force, &err));
+  config = ap_add_subcommand(p, "config", "config commands", &err);
+  CHECK(config != NULL);
+  LONGS_EQUAL(0, ap_add_argument(config, "--mode", mode, &err));
+  set = ap_add_subcommand(config, "set", "set values", &err);
+  CHECK(set != NULL);
+  LONGS_EQUAL(0, ap_add_argument(set, "--target", target, &err));
+
+  script = ap_format_fish_completion(p);
+  CHECK(script != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -f") != NULL);
+  CHECK(strstr(script, "function __ap_prog_parser_key") != NULL);
+  CHECK(strstr(script, "case \"root:config\"") != NULL);
+  CHECK(strstr(script, "set key \"root/config\"") != NULL);
+  CHECK(strstr(script, "case \"root/config:set\"") != NULL);
+  CHECK(strstr(script, "set key \"root/config/set\"") != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -f -a \"config\" -d \"config commands\"") != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -s h -l help -d \"show this help message and exit\"") != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -s v -l verbose -d \"increase verbosity\"") != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -l output -d \"output format\" -r -a '(__ap_prog_value_choices root:--output)'") != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -l force -d \"force overwrite\"") != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root/config' -l mode -d \"mode for config\" -r -a '(__ap_prog_value_choices root/config:--mode)'") != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root/config' -f -a \"set\" -d \"set values\"") != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root/config/set' -l target -d \"set target\" -r") != NULL);
+  CHECK(strstr(script, "case \"root:--output\"") != NULL);
+  CHECK(strstr(script, "\"json\" \"yaml\"") != NULL);
+  CHECK(strstr(script, "case \"root/config:--mode\"") != NULL);
+  CHECK(strstr(script, "\"fast\" \"slow\"") != NULL);
+
+  free(script);
+  ap_parser_free(p);
+}
+
 TEST(FormatBashCompletionIncludesRootSubcommandsAndChoices) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");

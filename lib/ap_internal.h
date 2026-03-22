@@ -119,6 +119,7 @@ int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
 char *ap_usage_build(const ap_parser *parser);
 char *ap_help_build(const ap_parser *parser);
 char *ap_bash_completion_build(const ap_parser *parser);
+char *ap_fish_completion_build(const ap_parser *parser);
 bool ap_is_long_flag(const char *flag);
 bool ap_is_short_flag(const char *flag);
 

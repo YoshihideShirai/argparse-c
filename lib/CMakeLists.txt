@@ -5,6 +5,7 @@ add_library(argparse-c SHARED
   core_convert.c
   format_help.c
   format_completion_bash.c
+  format_completion_fish.c
 )
 
 add_library(argparse-c::argparse-c ALIAS argparse-c)
