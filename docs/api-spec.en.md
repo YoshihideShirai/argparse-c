@@ -18,12 +18,16 @@ This document describes the public API defined in `include/argparse-c.h`.
 - `AP_ACTION_STORE`: store a value
 - `AP_ACTION_STORE_TRUE`: `true` when present, otherwise `false`
 - `AP_ACTION_STORE_FALSE`: `false` when present, otherwise `true`
+- `AP_ACTION_APPEND`: append values across repeated uses
+- `AP_ACTION_COUNT`: count how many times an option appears
+- `AP_ACTION_STORE_CONST`: store `const_value` when present
 
 ### `ap_nargs`
 - `AP_NARGS_ONE`: exactly one value (default)
 - `AP_NARGS_OPTIONAL`: zero or one value (`?`)
 - `AP_NARGS_ZERO_OR_MORE`: zero or more values (`*`)
 - `AP_NARGS_ONE_OR_MORE`: one or more values (`+`)
+- `AP_NARGS_FIXED`: exactly `nargs_count` values
 
 ### `ap_error_code`
 - `AP_ERR_NONE`
@@ -49,10 +53,12 @@ Options passed to `ap_add_argument`.
 - `type`: argument type
 - `action`: assignment behavior
 - `nargs`: value-count behavior
+- `nargs_count`: exact count used by `AP_NARGS_FIXED`
 - `required`: whether argument is required
 - `help`: help text
 - `metavar`: display name in usage/help
 - `default_value`: default when not provided (string form)
+- `const_value`: value stored by `AP_ACTION_STORE_CONST`
 - `choices`: allowed values (`ap_choices`)
 - `dest`: key used for lookup (auto-generated when omitted)
 
@@ -68,8 +74,26 @@ Creates a parser.
 - Returns: non-NULL on success, NULL on failure
 - Note: `-h/--help` is added automatically
 
+### `ap_parser *ap_add_subcommand(ap_parser *parser, const char *name, const char *description, ap_error *err)`
+Adds a child parser for a subcommand.
+
+- `name`: subcommand name
+- `description`: help description for the subcommand
+- Returns: child parser on success, `NULL` on failure
+- Notes:
+  - only a single subcommand level is supported right now
+  - on success, the selected subcommand name is stored in namespace key `"subcommand"`
+
 ### `void ap_parser_free(ap_parser *parser)`
 Frees the parser.
+
+### `ap_mutually_exclusive_group *ap_add_mutually_exclusive_group(ap_parser *parser, bool required, ap_error *err)`
+Adds a mutually exclusive group.
+
+- When `required=true`, at least one member argument must be present
+
+### `int ap_group_add_argument(ap_mutually_exclusive_group *group, const char *name_or_flags, ap_arg_options options, ap_error *err)`
+Adds an argument to a mutually exclusive group.
 
 ## 4. Argument Definition API
 

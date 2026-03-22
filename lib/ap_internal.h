@@ -25,14 +25,42 @@ typedef struct {
   char **flags;
   int flags_count;
   ap_arg_options opts;
+  int mutex_group_index;
 } ap_arg_def;
+
+typedef struct ap_subcommand_def {
+  char *name;
+  char *help;
+  struct ap_parser *parser;
+} ap_subcommand_def;
+
+struct ap_mutually_exclusive_group {
+  struct ap_parser *parser;
+  int index;
+};
+
+typedef struct {
+  bool required;
+  int *arg_indexes;
+  int arg_count;
+  int arg_cap;
+  struct ap_mutually_exclusive_group handle;
+} ap_mutex_group_def;
 
 struct ap_parser {
   char *prog;
   char *description;
+  char *command_name;
+  struct ap_parser *parent;
   ap_arg_def *defs;
   int defs_count;
   int defs_cap;
+  ap_mutex_group_def *mutex_groups;
+  int mutex_groups_count;
+  int mutex_groups_cap;
+  ap_subcommand_def *subcommands;
+  int subcommands_count;
+  int subcommands_cap;
 };
 
 typedef enum {

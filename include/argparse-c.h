@@ -18,6 +18,9 @@ typedef enum {
   AP_ACTION_STORE = 0,
   AP_ACTION_STORE_TRUE,
   AP_ACTION_STORE_FALSE,
+  AP_ACTION_APPEND,
+  AP_ACTION_COUNT,
+  AP_ACTION_STORE_CONST,
 } ap_action;
 
 typedef enum {
@@ -25,6 +28,7 @@ typedef enum {
   AP_NARGS_OPTIONAL,
   AP_NARGS_ZERO_OR_MORE,
   AP_NARGS_ONE_OR_MORE,
+  AP_NARGS_FIXED,
 } ap_nargs;
 
 typedef enum {
@@ -56,22 +60,33 @@ typedef struct {
   ap_type type;
   ap_action action;
   ap_nargs nargs;
+  int nargs_count;
   bool required;
   const char *help;
   const char *metavar;
   const char *default_value;
+  const char *const_value;
   ap_choices choices;
   const char *dest;
 } ap_arg_options;
 
 typedef struct ap_parser ap_parser;
+typedef struct ap_mutually_exclusive_group ap_mutually_exclusive_group;
 typedef struct ap_namespace ap_namespace;
 
 ap_parser *ap_parser_new(const char *prog, const char *description);
+ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
+                             const char *description, ap_error *err);
+ap_mutually_exclusive_group *ap_add_mutually_exclusive_group(ap_parser *parser,
+                                                             bool required,
+                                                             ap_error *err);
 void ap_parser_free(ap_parser *parser);
 
 int ap_add_argument(ap_parser *parser, const char *name_or_flags,
                     ap_arg_options options, ap_error *err);
+int ap_group_add_argument(ap_mutually_exclusive_group *group,
+                          const char *name_or_flags, ap_arg_options options,
+                          ap_error *err);
 
 int ap_parse_args(ap_parser *parser, int argc, char **argv, ap_namespace **out_ns,
                   ap_error *err);
