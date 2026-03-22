@@ -1,5 +1,47 @@
 #include "test_framework.h"
 
+
+TEST(FormatManpageIncludesOptionsAndNestedSubcommands) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "top level parser");
+  ap_parser *config = NULL;
+  ap_parser *set = NULL;
+  ap_arg_options mode = ap_arg_options_default();
+  const char *choices[] = {"fast", "slow"};
+  char *manpage = NULL;
+
+  CHECK(p != NULL);
+  mode.help = "select execution mode";
+  mode.metavar = "MODE";
+  mode.default_value = "fast";
+  mode.required = true;
+  mode.choices.items = choices;
+  mode.choices.count = 2;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "-m, --mode", mode, &err));
+  config = ap_add_subcommand(p, "config", "manage configuration", &err);
+  CHECK(config != NULL);
+  set = ap_add_subcommand(config, "set", "set a value", &err);
+  CHECK(set != NULL);
+
+  manpage = ap_format_manpage(p);
+  CHECK(manpage != NULL);
+  CHECK(strstr(manpage, ".SH NAME") != NULL);
+  CHECK(strstr(manpage, ".SH SYNOPSIS") != NULL);
+  CHECK(strstr(manpage, ".SH OPTIONS") != NULL);
+  CHECK(strstr(manpage, "\\-m, \\-\\-mode MODE") != NULL);
+  CHECK(strstr(manpage, "choices: fast, slow") != NULL);
+  CHECK(strstr(manpage, "default: fast") != NULL);
+  CHECK(strstr(manpage, "required: yes") != NULL);
+  CHECK(strstr(manpage, ".SH SUBCOMMANDS") != NULL);
+  CHECK(strstr(manpage, "config") != NULL);
+  CHECK(strstr(manpage, "set a value") != NULL);
+  CHECK(strstr(manpage, ".SH ERRORS") != NULL);
+
+  free(manpage);
+  ap_parser_free(p);
+}
+
 TEST(FormatHelpCoversOptionalAndPositionalNargsVariants) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");

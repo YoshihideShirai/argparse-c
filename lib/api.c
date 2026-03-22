@@ -1038,6 +1038,10 @@ char *ap_format_usage(const ap_parser *parser) {
 
 char *ap_format_help(const ap_parser *parser) { return ap_help_build(parser); }
 
+char *ap_format_manpage(const ap_parser *parser) {
+  return ap_manpage_build(parser);
+}
+
 char *ap_format_bash_completion(const ap_parser *parser) {
   return ap_bash_completion_build(parser);
 }

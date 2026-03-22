@@ -131,6 +131,7 @@ void ap_free_tokens(char **tokens, int count);
 
 char *ap_format_usage(const ap_parser *parser);
 char *ap_format_help(const ap_parser *parser);
+char *ap_format_manpage(const ap_parser *parser);
 char *ap_format_bash_completion(const ap_parser *parser);
 char *ap_format_fish_completion(const ap_parser *parser);
 char *ap_format_error(const ap_parser *parser, const ap_error *err);
