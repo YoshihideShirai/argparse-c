@@ -1,15 +1,84 @@
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "CppUTest/CommandLineTestRunner.h"
-#include "CppUTest/TestHarness.h"
+#include <exception>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 extern "C" {
 #include "argparse-c.h"
 }
 
+namespace {
+
+struct TestCase {
+  const char *name;
+  void (*run)();
+};
+
+std::vector<TestCase> &registry() {
+  static std::vector<TestCase> tests;
+  return tests;
+}
+
+struct Registrar {
+  Registrar(const char *name, void (*run)()) { registry().push_back({name, run}); }
+};
+
+[[noreturn]] void fail(const char *expr, const char *file, int line,
+                      const std::string &detail = "") {
+  std::ostringstream oss;
+  oss << file << ':' << line << ": assertion failed: " << expr;
+  if (!detail.empty()) {
+    oss << " (" << detail << ')';
+  }
+  throw std::runtime_error(oss.str());
+}
+
+#define TEST(name)                                                              \
+  static void name();                                                           \
+  static Registrar name##_registrar(#name, &name);                              \
+  static void name()
+
+#define CHECK(condition)                                                        \
+  do {                                                                          \
+    if (!(condition)) {                                                         \
+      fail(#condition, __FILE__, __LINE__);                                     \
+    }                                                                           \
+  } while (0)
+
+#define CHECK_TRUE(condition) CHECK(condition)
+
+#define LONGS_EQUAL(expected, actual)                                           \
+  do {                                                                          \
+    auto expected_value = (expected);                                           \
+    auto actual_value = (actual);                                               \
+    if (expected_value != actual_value) {                                       \
+      std::ostringstream detail;                                                \
+      detail << "expected " << expected_value << ", got " << actual_value;     \
+      fail(#actual, __FILE__, __LINE__, detail.str());                          \
+    }                                                                           \
+  } while (0)
+
+#define STRCMP_EQUAL(expected, actual)                                          \
+  do {                                                                          \
+    const char *expected_value = (expected);                                    \
+    const char *actual_value = (actual);                                        \
+    if (((expected_value) == NULL) != ((actual_value) == NULL) ||               \
+        ((expected_value) != NULL && strcmp(expected_value, actual_value) != 0)) { \
+      std::ostringstream detail;                                                \
+      detail << "expected '" << (expected_value ? expected_value : "(null)")    \
+             << "', got '" << (actual_value ? actual_value : "(null)") << "'"; \
+      fail(#actual, __FILE__, __LINE__, detail.str());                          \
+    }                                                                           \
+  } while (0)
+
 static ap_parser *new_base_parser(void) {
-  ap_error err = {}; 
+  ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
 
   if (!p) {
@@ -41,12 +110,8 @@ static ap_parser *new_base_parser(void) {
   return p;
 }
 
-TEST_GROUP(ArgparseC) {
-  void teardown() {}
-};
-
-TEST(ArgparseC, SuccessParse) {
-  ap_error err = {}; 
+TEST(SuccessParse) {
+  ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
   char *argv[] = {(char *)"prog", (char *)"-t", (char *)"hello", (char *)"-n",
@@ -68,8 +133,8 @@ TEST(ArgparseC, SuccessParse) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, UnknownOption) {
-  ap_error err = {}; 
+TEST(UnknownOption) {
+  ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
   char *argv[] = {(char *)"prog", (char *)"--bogus", NULL};
@@ -83,8 +148,8 @@ TEST(ArgparseC, UnknownOption) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, InvalidInt) {
-  ap_error err = {}; 
+TEST(InvalidInt) {
+  ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
   char *argv[] = {(char *)"prog", (char *)"-t", (char *)"x", (char *)"-n",
@@ -99,9 +164,9 @@ TEST(ArgparseC, InvalidInt) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, ChoicesValidation) {
+TEST(ChoicesValidation) {
   static const char *choices[] = {"fast", "slow"};
-  ap_error err = {}; 
+  ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
   ap_arg_options mode = ap_arg_options_default();
@@ -121,8 +186,8 @@ TEST(ArgparseC, ChoicesValidation) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, NargsOneOrMore) {
-  ap_error err = {}; 
+TEST(NargsOneOrMore) {
+  ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
   ap_arg_options files = ap_arg_options_default();
@@ -141,8 +206,8 @@ TEST(ArgparseC, NargsOneOrMore) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, DefaultValue) {
-  ap_error err = {}; 
+TEST(DefaultValue) {
+  ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
   ap_arg_options name = ap_arg_options_default();
@@ -161,7 +226,7 @@ TEST(ArgparseC, DefaultValue) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, AutoDestPrefersLongFlagAndNormalizesHyphen) {
+TEST(AutoDestPrefersLongFlagAndNormalizesHyphen) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -179,7 +244,7 @@ TEST(ArgparseC, AutoDestPrefersLongFlagAndNormalizesHyphen) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, AutoDestNormalizesPositionalHyphen) {
+TEST(AutoDestNormalizesPositionalHyphen) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -197,7 +262,7 @@ TEST(ArgparseC, AutoDestNormalizesPositionalHyphen) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, ExplicitDestIsNotNormalized) {
+TEST(ExplicitDestIsNotNormalized) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -217,8 +282,8 @@ TEST(ArgparseC, ExplicitDestIsNotNormalized) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, HelpGeneration) {
-  ap_error err = {}; 
+TEST(HelpGeneration) {
+  ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
   ap_arg_options arg = ap_arg_options_default();
   char *help;
@@ -236,7 +301,7 @@ TEST(ArgparseC, HelpGeneration) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, InlineOptionValue) {
+TEST(InlineOptionValue) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
@@ -256,7 +321,7 @@ TEST(ArgparseC, InlineOptionValue) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, RequiredOptionIgnoresDefaultWhenMissing) {
+TEST(RequiredOptionIgnoresDefaultWhenMissing) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -276,7 +341,7 @@ TEST(ArgparseC, RequiredOptionIgnoresDefaultWhenMissing) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, DefaultValueMustMatchChoices) {
+TEST(DefaultValueMustMatchChoices) {
   static const char *choices[] = {"fast", "slow"};
   ap_error err = {};
   ap_namespace *ns = NULL;
@@ -296,7 +361,7 @@ TEST(ArgparseC, DefaultValueMustMatchChoices) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, StoreTrueAndStoreFalse) {
+TEST(StoreTrueAndStoreFalse) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -324,7 +389,7 @@ TEST(ArgparseC, StoreTrueAndStoreFalse) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, StoreTrueRejectsInlineValue) {
+TEST(StoreTrueRejectsInlineValue) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -342,7 +407,7 @@ TEST(ArgparseC, StoreTrueRejectsInlineValue) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, HelpShowsChoicesDefaultAndRequired) {
+TEST(HelpShowsChoicesDefaultAndRequired) {
   static const char *choices[] = {"fast", "slow"};
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -374,7 +439,7 @@ TEST(ArgparseC, HelpShowsChoicesDefaultAndRequired) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, FormatErrorIncludesMessageAndUsage) {
+TEST(FormatErrorIncludesMessageAndUsage) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
@@ -395,7 +460,7 @@ TEST(ArgparseC, FormatErrorIncludesMessageAndUsage) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, ParseKnownArgsCollectsUnknownOptions) {
+TEST(ParseKnownArgsCollectsUnknownOptions) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
@@ -422,7 +487,7 @@ TEST(ArgparseC, ParseKnownArgsCollectsUnknownOptions) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, ParseKnownArgsStillValidatesRequired) {
+TEST(ParseKnownArgsStillValidatesRequired) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
@@ -442,7 +507,7 @@ TEST(ArgparseC, ParseKnownArgsStillValidatesRequired) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, ParseKnownArgsCollectsUnknownOptionValueToken) {
+TEST(ParseKnownArgsCollectsUnknownOptionValueToken) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
@@ -463,7 +528,7 @@ TEST(ArgparseC, ParseKnownArgsCollectsUnknownOptionValueToken) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, ParseKnownArgsCollectsExtraPositionals) {
+TEST(ParseKnownArgsCollectsExtraPositionals) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
@@ -488,7 +553,7 @@ TEST(ArgparseC, ParseKnownArgsCollectsExtraPositionals) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, ParseKnownArgsCollectsAfterDoubleDash) {
+TEST(ParseKnownArgsCollectsAfterDoubleDash) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
@@ -513,7 +578,7 @@ TEST(ArgparseC, ParseKnownArgsCollectsAfterDoubleDash) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, OptionalNargsDoesNotConsumeFollowingKnownOption) {
+TEST(OptionalNargsDoesNotConsumeFollowingKnownOption) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -538,7 +603,7 @@ TEST(ArgparseC, OptionalNargsDoesNotConsumeFollowingKnownOption) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, PositionalZeroOrMoreLeavesTokensForRequiredPositional) {
+TEST(PositionalZeroOrMoreLeavesTokensForRequiredPositional) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -564,7 +629,7 @@ TEST(ArgparseC, PositionalZeroOrMoreLeavesTokensForRequiredPositional) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, ParseKnownArgsUnknownOptionDoesNotConsumeKnownOptionToken) {
+TEST(ParseKnownArgsUnknownOptionDoesNotConsumeKnownOptionToken) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
@@ -590,7 +655,7 @@ TEST(ArgparseC, ParseKnownArgsUnknownOptionDoesNotConsumeKnownOptionToken) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, ParseKnownArgsUnknownInlineOptionRemainsSingleUnknownToken) {
+TEST(ParseKnownArgsUnknownInlineOptionRemainsSingleUnknownToken) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = new_base_parser();
@@ -616,7 +681,7 @@ TEST(ArgparseC, ParseKnownArgsUnknownInlineOptionRemainsSingleUnknownToken) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, ShortOptionClusterForBoolFlags) {
+TEST(ShortOptionClusterForBoolFlags) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -644,7 +709,7 @@ TEST(ArgparseC, ShortOptionClusterForBoolFlags) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, ShortOptionClusterRejectsValueOption) {
+TEST(ShortOptionClusterRejectsValueOption) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -665,7 +730,7 @@ TEST(ArgparseC, ShortOptionClusterRejectsValueOption) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, ParseSubcommandArguments) {
+TEST(ParseSubcommandArguments) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -698,7 +763,7 @@ TEST(ArgparseC, ParseSubcommandArguments) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, HelpListsSubcommands) {
+TEST(HelpListsSubcommands) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
   ap_parser *run = NULL;
@@ -718,7 +783,7 @@ TEST(ArgparseC, HelpListsSubcommands) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, ParseNestedSubcommandArguments) {
+TEST(ParseNestedSubcommandArguments) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -764,7 +829,7 @@ TEST(ArgparseC, ParseNestedSubcommandArguments) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, NestedSubcommandHelpUsesFullCommandPath) {
+TEST(NestedSubcommandHelpUsesFullCommandPath) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
   ap_parser *config = NULL;
@@ -785,7 +850,7 @@ TEST(ArgparseC, NestedSubcommandHelpUsesFullCommandPath) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, MissingSubcommandFails) {
+TEST(MissingSubcommandFails) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -800,7 +865,7 @@ TEST(ArgparseC, MissingSubcommandFails) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, CountActionAccumulatesShortFlags) {
+TEST(CountActionAccumulatesShortFlags) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -821,7 +886,7 @@ TEST(ArgparseC, CountActionAccumulatesShortFlags) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, AppendActionCollectsRepeatedOptionValues) {
+TEST(AppendActionCollectsRepeatedOptionValues) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -842,7 +907,7 @@ TEST(ArgparseC, AppendActionCollectsRepeatedOptionValues) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, StoreConstUsesConstValue) {
+TEST(StoreConstUsesConstValue) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -863,7 +928,7 @@ TEST(ArgparseC, StoreConstUsesConstValue) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, FixedNargsForOption) {
+TEST(FixedNargsForOption) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -890,7 +955,7 @@ TEST(ArgparseC, FixedNargsForOption) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, MutuallyExclusiveGroupRejectsConflicts) {
+TEST(MutuallyExclusiveGroupRejectsConflicts) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -914,7 +979,7 @@ TEST(ArgparseC, MutuallyExclusiveGroupRejectsConflicts) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, RequiredMutuallyExclusiveGroupNeedsOneOption) {
+TEST(RequiredMutuallyExclusiveGroupNeedsOneOption) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -941,7 +1006,7 @@ TEST(ArgparseC, RequiredMutuallyExclusiveGroupNeedsOneOption) {
   ap_parser_free(p);
 }
 
-TEST(ArgparseC, MissingRequiredPositionalUsesConsistentArgumentNameAndMessage) {
+TEST(MissingRequiredPositionalUsesConsistentArgumentNameAndMessage) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -960,4 +1025,29 @@ TEST(ArgparseC, MissingRequiredPositionalUsesConsistentArgumentNameAndMessage) {
   ap_parser_free(p);
 }
 
-int main(int ac, char **av) { return CommandLineTestRunner::RunAllTests(ac, av); }
+} // namespace
+
+int main() {
+  int failures = 0;
+
+  for (const TestCase &test : registry()) {
+    try {
+      test.run();
+      std::fprintf(stdout, "[PASS] %s\n", test.name);
+    } catch (const std::exception &ex) {
+      std::fprintf(stderr, "[FAIL] %s: %s\n", test.name, ex.what());
+      ++failures;
+    } catch (...) {
+      std::fprintf(stderr, "[FAIL] %s: unknown exception\n", test.name);
+      ++failures;
+    }
+  }
+
+  if (failures == 0) {
+    std::fprintf(stdout, "OK (%zu tests)\n", registry().size());
+    return 0;
+  }
+
+  std::fprintf(stderr, "%d test(s) failed\n", failures);
+  return 1;
+}

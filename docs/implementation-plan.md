@@ -76,7 +76,7 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 ## 5. Testing Plan and Current Status
 
 ### Framework
-- CppUTest
+- custom self-contained test executable
 - `ctest` 経由で実行
 
 ### Covered Tests
