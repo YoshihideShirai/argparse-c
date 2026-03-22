@@ -89,6 +89,31 @@ static int copy_int_values(const ap_strvec *src, ap_ns_entry *dst,
   return 0;
 }
 
+static int validate_choices_merged(const ap_arg_def *def, const ap_strvec *values,
+                                   ap_error *err) {
+  int i;
+  int j;
+  if (!def->opts.choices.items || def->opts.choices.count <= 0) {
+    return 0;
+  }
+  for (i = 0; i < values->count; i++) {
+    bool found = false;
+    for (j = 0; j < def->opts.choices.count; j++) {
+      if (strcmp(values->items[i], def->opts.choices.items[j]) == 0) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      ap_error_set(err, AP_ERR_INVALID_CHOICE, def->dest,
+                   "invalid choice '%s' for argument '%s'",
+                   values->items[i], def->dest);
+      return -1;
+    }
+  }
+  return 0;
+}
+
 int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
                        ap_namespace **out_ns, ap_error *err) {
   ap_namespace *ns;
@@ -157,6 +182,12 @@ int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
         }
       }
     } else if (fill_values_from_default(def, &merged, err) != 0) {
+      ap_strvec_free(&merged);
+      ap_namespace_free(ns);
+      return -1;
+    }
+
+    if (validate_choices_merged(def, &merged, err) != 0) {
       ap_strvec_free(&merged);
       ap_namespace_free(ns);
       return -1;

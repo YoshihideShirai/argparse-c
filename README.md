@@ -5,6 +5,7 @@
 ## Features (MVP)
 
 - Optional and positional arguments
+- `--option=value` and `-o=value` styles for options
 - Types: `string`, `int32`, `bool` (`store_true` / `store_false`)
 - `required`, `default_value`, `choices`
 - `nargs`: one, `?`, `*`, `+`

@@ -53,6 +53,7 @@ int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
   for (i = 0; i < parser->defs_count; i++) {
     const ap_arg_def *def = &parser->defs[i];
     const ap_parsed_arg *p = &parsed[i];
+    bool has_parsed_value = has_value(p);
 
     if (def->opts.action == AP_ACTION_STORE_TRUE ||
         def->opts.action == AP_ACTION_STORE_FALSE) {
@@ -64,24 +65,28 @@ int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
       continue;
     }
 
-    if (def->opts.required && !p->seen && !has_value(p)) {
-      if (!def->is_optional && def->opts.default_value &&
-          def->opts.nargs != AP_NARGS_ONE) {
-        /* no-op, will be handled by conversion */
-      } else if (!def->opts.default_value) {
+    if (def->opts.required) {
+      if (def->is_optional) {
+        if (!p->seen) {
+          ap_error_set(err, AP_ERR_MISSING_REQUIRED, def->dest,
+                       "option '%s' is required", def->flags[0]);
+          return -1;
+        }
+      } else if (!has_parsed_value) {
         ap_error_set(err, AP_ERR_MISSING_REQUIRED, def->dest,
                      "argument '%s' is required", def->dest);
         return -1;
       }
     }
 
-    if (def->opts.nargs == AP_NARGS_ONE && p->seen && !has_value(p)) {
+    if (def->opts.nargs == AP_NARGS_ONE && p->seen && !has_parsed_value) {
       ap_error_set(err, AP_ERR_MISSING_VALUE, def->dest,
                    "argument '%s' needs a value", def->dest);
       return -1;
     }
 
-    if (def->opts.nargs == AP_NARGS_ONE_OR_MORE && p->seen && !has_value(p)) {
+    if (def->opts.nargs == AP_NARGS_ONE_OR_MORE && p->seen &&
+        !has_parsed_value) {
       ap_error_set(err, AP_ERR_INVALID_NARGS, def->dest,
                    "argument '%s' requires one or more values", def->dest);
       return -1;

@@ -194,4 +194,88 @@ TEST(ArgparseC, InlineOptionValue) {
   ap_parser_free(p);
 }
 
+TEST(ArgparseC, RequiredOptionIgnoresDefaultWhenMissing) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options name = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  name.required = true;
+  name.default_value = "guest";
+  LONGS_EQUAL(0, ap_add_argument(p, "--name", name, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, DefaultValueMustMatchChoices) {
+  static const char *choices[] = {"fast", "slow"};
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  mode.choices.items = choices;
+  mode.choices.count = 2;
+  mode.default_value = "medium";
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_CHOICE, err.code);
+
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, StoreTrueAndStoreFalse) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options quiet = ap_arg_options_default();
+  bool is_verbose = false;
+  bool is_quiet = false;
+  char *argv[] = {(char *)"prog", (char *)"--verbose", NULL};
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  quiet.type = AP_TYPE_BOOL;
+  quiet.action = AP_ACTION_STORE_FALSE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--verbose", verbose, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--quiet", quiet, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 2, argv, &ns, &err));
+  CHECK(ap_ns_get_bool(ns, "verbose", &is_verbose));
+  CHECK(ap_ns_get_bool(ns, "quiet", &is_quiet));
+  CHECK_TRUE(is_verbose);
+  CHECK_TRUE(is_quiet);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, StoreTrueRejectsInlineValue) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--verbose=yes", NULL};
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--verbose", verbose, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_NARGS, err.code);
+
+  ap_parser_free(p);
+}
+
 int main(int ac, char **av) { return CommandLineTestRunner::RunAllTests(ac, av); }
