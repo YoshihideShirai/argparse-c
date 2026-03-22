@@ -156,6 +156,58 @@ See [sample/example1.c](./sample/example1.c).
 For a nested subcommand example that prints both `subcommand` and
 `subcommand_path`, see [sample/example_subcommands.c](./sample/example_subcommands.c).
 
+For generator-focused examples, see:
+
+- [sample/example_completion.c](./sample/example_completion.c) for bash / fish completion generation and an application-side implementation of `--generate-bash-completion`, `--generate-fish-completion`, and `--generate-manpage`
+- [sample/example_manpage.c](./sample/example_manpage.c) for a subcommand-oriented setup that produces a man page and shell completions from the same parser definition
+
+### Generator API quick start
+
+The formatter APIs return heap-allocated strings, so applications can expose generator flags directly:
+
+```c
+if (bash_completion) {
+  char *script = ap_format_bash_completion(parser);
+  printf("%s", script);
+  free(script);
+  return 0;
+}
+
+if (fish_completion) {
+  char *script = ap_format_fish_completion(parser);
+  printf("%s", script);
+  free(script);
+  return 0;
+}
+
+if (manpage) {
+  char *page = ap_format_manpage(parser);
+  printf("%s", page);
+  free(page);
+  return 0;
+}
+```
+
+### Generate bash completion
+
+```bash
+./build/sample/example_completion --generate-bash-completion   > example_completion.bash
+source ./example_completion.bash
+```
+
+### Generate fish completion
+
+```bash
+./build/sample/example_completion --generate-fish-completion   > ~/.config/fish/completions/example_completion.fish
+```
+
+### Generate a man page
+
+```bash
+./build/sample/example_manpage --generate-manpage > example_manpage.1
+man ./example_manpage.1
+```
+
 ## API Specification
 
 - Japanese: [docs/api-spec.ja.md](./docs/api-spec.ja.md)

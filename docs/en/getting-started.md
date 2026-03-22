@@ -77,6 +77,62 @@ const char *text = NULL;
 ap_ns_get_string(ns, "text", &text);
 ```
 
+## Generator API samples
+
+The repository now includes generator-oriented samples in addition to `sample/example1.c`.
+
+- `sample/example_completion.c`: minimal app-side implementation of `--generate-bash-completion`, `--generate-fish-completion`, and `--generate-manpage`
+- `sample/example_manpage.c`: subcommand-based parser that emits a man page and shell completions from the same parser definition
+
+### Implement generator flags in your application
+
+```c
+ap_arg_options bash = ap_arg_options_default();
+bash.type = AP_TYPE_BOOL;
+bash.action = AP_ACTION_STORE_TRUE;
+bash.help = "print a bash completion script";
+ap_add_argument(parser, "--generate-bash-completion", bash, &err);
+
+ap_arg_options fish = ap_arg_options_default();
+fish.type = AP_TYPE_BOOL;
+fish.action = AP_ACTION_STORE_TRUE;
+fish.help = "print a fish completion script";
+ap_add_argument(parser, "--generate-fish-completion", fish, &err);
+
+ap_arg_options manpage = ap_arg_options_default();
+manpage.type = AP_TYPE_BOOL;
+manpage.action = AP_ACTION_STORE_TRUE;
+manpage.help = "print a roff man page";
+ap_add_argument(parser, "--generate-manpage", manpage, &err);
+
+if (bash_completion) {
+  char *script = ap_format_bash_completion(parser);
+  printf("%s", script);
+  free(script);
+  return 0;
+}
+```
+
+### Generate bash completion
+
+```bash
+./build/sample/example_completion --generate-bash-completion > example_completion.bash
+source ./example_completion.bash
+```
+
+### Generate fish completion
+
+```bash
+./build/sample/example_completion --generate-fish-completion   > ~/.config/fish/completions/example_completion.fish
+```
+
+### Generate a man page
+
+```bash
+./build/sample/example_manpage --generate-manpage > example_manpage.1
+man ./example_manpage.1
+```
+
 ## Recommended next pages
 
 - [Basic usage](guides/basic-usage.md)
