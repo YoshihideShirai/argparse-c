@@ -66,6 +66,22 @@ static int ensure_group_members_capacity(ap_mutually_exclusive_group *group) {
   return 0;
 }
 
+static void arg_def_free(ap_arg_def *def);
+
+static void rollback_last_argument(ap_parser *parser, int def_index) {
+  int i;
+
+  if (!parser || def_index < 0 || def_index >= parser->defs_count) {
+    return;
+  }
+
+  arg_def_free(&parser->defs[def_index]);
+  for (i = def_index; i + 1 < parser->defs_count; i++) {
+    parser->defs[i] = parser->defs[i + 1];
+  }
+  parser->defs_count--;
+}
+
 static void arg_def_free(ap_arg_def *def) {
   int i;
   if (!def) {
@@ -543,7 +559,6 @@ int ap_mutually_exclusive_group_add_argument(ap_mutually_exclusive_group *group,
                                              ap_error *err) {
   ap_parser *parser;
   int new_index;
-  int i;
 
   if (!group || !group->parser) {
     ap_error_set(err, AP_ERR_INVALID_DEFINITION, "",
@@ -560,20 +575,12 @@ int ap_mutually_exclusive_group_add_argument(ap_mutually_exclusive_group *group,
   if (!parser->defs[new_index].is_optional) {
     ap_error_set(err, AP_ERR_INVALID_DEFINITION, name_or_flags,
                  "mutually exclusive groups support only optional arguments");
-    arg_def_free(&parser->defs[new_index]);
-    for (i = new_index; i + 1 < parser->defs_count; i++) {
-      parser->defs[i] = parser->defs[i + 1];
-    }
-    parser->defs_count--;
+    rollback_last_argument(parser, new_index);
     return -1;
   }
 
   if (ensure_group_members_capacity(group) != 0) {
-    arg_def_free(&parser->defs[new_index]);
-    for (i = new_index; i + 1 < parser->defs_count; i++) {
-      parser->defs[i] = parser->defs[i + 1];
-    }
-    parser->defs_count--;
+    rollback_last_argument(parser, new_index);
     ap_error_set(err, AP_ERR_NO_MEMORY, name_or_flags, "out of memory");
     return -1;
   }
