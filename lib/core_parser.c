@@ -211,6 +211,21 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
     const char *token = argv[token_index];
 
     if (!positional_only && strcmp(token, "--") == 0) {
+      if (allow_unknown && unknown_args) {
+        int j;
+        for (j = token_index + 1; j < argc; j++) {
+          char *copy = ap_strdup(argv[j]);
+          if (!copy || ap_strvec_push(unknown_args, copy) != 0) {
+            free(copy);
+            free(positional_defs);
+            free(parsed);
+            ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+            return -1;
+          }
+        }
+        token_index = argc;
+        break;
+      }
       positional_only = true;
       token_index++;
       continue;

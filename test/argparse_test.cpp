@@ -422,4 +422,29 @@ TEST(ArgparseC, ParseKnownArgsCollectsExtraPositionals) {
   ap_parser_free(p);
 }
 
+TEST(ArgparseC, ParseKnownArgsCollectsAfterDoubleDash) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  char *argv[] = {(char *)"prog", (char *)"-t", (char *)"hello",
+                  (char *)"file.txt", (char *)"--", (char *)"--passthrough",
+                  (char *)"value", NULL};
+  const char *input = NULL;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parse_known_args(p, 7, argv, &ns, &unknown, &unknown_count,
+                                     &err));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("file.txt", input);
+  LONGS_EQUAL(2, unknown_count);
+  STRCMP_EQUAL("--passthrough", unknown[0]);
+  STRCMP_EQUAL("value", unknown[1]);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
 int main(int ac, char **av) { return CommandLineTestRunner::RunAllTests(ac, av); }
