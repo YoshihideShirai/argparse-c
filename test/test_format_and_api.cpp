@@ -217,6 +217,7 @@ TEST(FormatHelpShowsPositionalOneOrMoreAndActionFlags) {
   quiet.action = AP_ACTION_STORE_FALSE;
   quiet.help = "disable output";
   verbose.type = AP_TYPE_INT32;
+  verbose.type = AP_TYPE_INT32;
   verbose.action = AP_ACTION_COUNT;
   verbose.help = "increase verbosity";
   color.action = AP_ACTION_STORE_CONST;
@@ -631,5 +632,93 @@ TEST(MissingRequiredPositionalUsesConsistentArgumentNameAndMessage) {
   STRCMP_EQUAL("input-file", err.argument);
   STRCMP_EQUAL("argument 'input-file' is required", err.message);
 
+  ap_parser_free(p);
+}
+
+
+TEST(FormatBashCompletionIncludesRootSubcommandsAndChoices) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *config = NULL;
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options output = ap_arg_options_default();
+  ap_arg_options force = ap_arg_options_default();
+  ap_arg_options mode = ap_arg_options_default();
+  const char *formats[] = {"json", "yaml"};
+  const char *modes[] = {"fast", "slow"};
+  char *script = NULL;
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_INT32;
+  verbose.action = AP_ACTION_COUNT;
+  force.type = AP_TYPE_BOOL;
+  force.action = AP_ACTION_STORE_TRUE;
+  output.choices.items = formats;
+  output.choices.count = 2;
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "-v, --verbose", verbose, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--output", output, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--force", force, &err));
+  config = ap_add_subcommand(p, "config", "config commands", &err);
+  CHECK(config != NULL);
+  LONGS_EQUAL(0, ap_add_argument(config, "--mode", mode, &err));
+
+  script = ap_format_bash_completion(p);
+  CHECK(script != NULL);
+  CHECK(strstr(script, "complete -F _prog 'prog'") != NULL);
+  CHECK(strstr(script, "parser_subcommands='config'") != NULL);
+  CHECK(strstr(script, "parser_options='-h --help -v --verbose --output --force'") != NULL);
+  CHECK(strstr(script, "parser_value_options='--output'") != NULL);
+CHECK(strstr(script, "parser_flag_only_options='-h --help -v --verbose --force'") != NULL);
+  CHECK(strstr(script, "root:--output)") != NULL);
+  CHECK(strstr(script, "'json' 'yaml'") != NULL);
+  CHECK(strstr(script, "root/config:--mode)") != NULL);
+  CHECK(strstr(script, "'fast' 'slow'") != NULL);
+  CHECK(strstr(script, "root/config)\n        parser_subcommands=''\n        parser_options='-h --help --mode'") != NULL);
+  CHECK(strstr(script, "__ap_completion_filter_mutex_candidates") != NULL);
+
+  free(script);
+  ap_parser_free(p);
+}
+
+TEST(FormatBashCompletionMarksValueModesAndFlagOnlyOptions) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options extras = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  ap_arg_options quiet = ap_arg_options_default();
+  char *script = NULL;
+
+  CHECK(p != NULL);
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  extras.nargs = AP_NARGS_ZERO_OR_MORE;
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+  quiet.type = AP_TYPE_BOOL;
+  quiet.action = AP_ACTION_STORE_FALSE;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--extras", extras, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--pair", pair, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--quiet", quiet, &err));
+
+  script = ap_format_bash_completion(p);
+  CHECK(script != NULL);
+  CHECK(strstr(script, "parser_value_options='--maybe --extras --pair'") != NULL);
+  CHECK(strstr(script, "parser_flag_only_options=") != NULL);
+  CHECK(strstr(script, "--quiet") != NULL);
+  CHECK(strstr(script, "root:--maybe)") != NULL);
+  CHECK(strstr(script, "'optional' ;;") != NULL);
+  CHECK(strstr(script, "root:--extras)") != NULL);
+  CHECK(strstr(script, "'multi' ;;") != NULL);
+  CHECK(strstr(script, "root:--pair)") != NULL);
+  CHECK(strstr(script, "'fixed' ;;") != NULL);
+  CHECK(strstr(script, "root:--pair) printf") != NULL);
+  CHECK(strstr(script, " 2 ;;") != NULL);
+
+  free(script);
   ap_parser_free(p);
 }
