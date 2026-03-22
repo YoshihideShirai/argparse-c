@@ -44,8 +44,11 @@
 
 ### `ap_error`
 - `code`: エラーコード
-- `argument`: 問題のあった引数名
-- `message`: 利用者向けエラーメッセージ
+- `argument`: 問題のあった引数を表す安定した識別子
+  - optional 引数では代表 flag（例: `--mode`, `-t`）
+  - positional 引数では宣言名
+  - パーサ全体に関わるエラーでは空文字の場合あり
+- `message`: `option '...'` / `argument '...'` の言い回しを揃えた利用者向けエラーメッセージ
 
 ### `ap_arg_options`
 `ap_add_argument` で渡すオプションです。
@@ -64,6 +67,13 @@
 
 `ap_arg_options_default()` で初期化してから必要項目を上書きする使い方を推奨します。
 
+#### `dest` 自動生成ルール
+- optional 引数では、最初に見つかった long flag（例: `--dry-run`）を優先します
+- long flag が無い場合は、最初の short flag（例: `-v`）を使います
+- positional 引数では、宣言名そのものを使います
+- 自動生成時は `-` を `_` に変換します（例: `dry-run` -> `dry_run`）
+- `dest` を明示指定した場合、その値は変更されません
+
 ## 3. パーサ管理API
 
 ### `ap_parser *ap_parser_new(const char *prog, const char *description)`
@@ -81,8 +91,11 @@
 - `description`: サブコマンドのhelp説明
 - 戻り値: 子パーサ（失敗時はNULL）
 - 備考:
-  - 現在は1階層のサブコマンドのみ対応
-  - パース成功時、選択されたサブコマンド名は namespace の `"subcommand"` に格納されます
+  - ネストしたサブコマンドを追加できます
+  - パース成功時、最終的に選択された **leaf の** サブコマンド名が namespace の `"subcommand"` に格納されます
+  - 途中階層のサブコマンド名は別 namespace key として追加されません
+  - `"subcommand_path"` のような別キーは現在の公開 contract には含まれません
+  - ネストしたサブコマンド parser に対する `ap_format_help()` は、usage/help にフルコマンドパスを表示します
 
 ### `void ap_parser_free(ap_parser *parser)`
 パーサ本体を解放します。
@@ -122,6 +135,23 @@ known/unknown 分離モードでパースします。
 - 既知引数は `out_ns` に格納
 - unknownは `ap_free_tokens(out_unknown_args, out_unknown_count)` で解放
 - `--` 以降のトークンは unknown 側へ回収
+- unknown は出現順で `out_unknown_args` に追加されます
+- unknown として回収されるもの:
+  - 未知オプション
+  - 未知オプションの直後にある、別のオプションらしくない値トークン
+  - positional 割り当て後に余ったトークン
+  - `--` 以降のすべてのトークン
+- known 側には通常どおり検証がかかるため、必須不足や既知引数の不正値では失敗します
+
+#### `nargs` の挙動まとめ
+- optional 引数:
+  - `AP_NARGS_ONE`: 値をちょうど1つ要求
+  - `AP_NARGS_OPTIONAL`: 次トークンが既知オプションでないときだけ消費
+  - `AP_NARGS_ZERO_OR_MORE` / `AP_NARGS_ONE_OR_MORE`: `--` または次の既知オプション直前まで消費
+  - `AP_NARGS_FIXED`: `nargs_count` 個ちょうど要求
+- positional 引数:
+  - 左から順に割り当てます
+  - `AP_NARGS_OPTIONAL` / `AP_NARGS_ZERO_OR_MORE` / `AP_NARGS_ONE_OR_MORE` は、後続 positional の最小必要数を残すように割り当てます
 
 ## 6. 出力整形API
 

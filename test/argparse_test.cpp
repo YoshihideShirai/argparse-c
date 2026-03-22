@@ -77,6 +77,8 @@ TEST(ArgparseC, UnknownOption) {
   CHECK(p != NULL);
   LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
   LONGS_EQUAL(AP_ERR_UNKNOWN_OPTION, err.code);
+  STRCMP_EQUAL("--bogus", err.argument);
+  STRCMP_EQUAL("unknown option '--bogus'", err.message);
 
   ap_parser_free(p);
 }
@@ -91,6 +93,8 @@ TEST(ArgparseC, InvalidInt) {
   CHECK(p != NULL);
   LONGS_EQUAL(-1, ap_parse_args(p, 6, argv, &ns, &err));
   LONGS_EQUAL(AP_ERR_INVALID_INT32, err.code);
+  STRCMP_EQUAL("-n", err.argument);
+  STRCMP_EQUAL("argument '-n' must be a valid int32: 'abc'", err.message);
 
   ap_parser_free(p);
 }
@@ -111,6 +115,8 @@ TEST(ArgparseC, ChoicesValidation) {
 
   LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_bad, &ns, &err));
   LONGS_EQUAL(AP_ERR_INVALID_CHOICE, err.code);
+  STRCMP_EQUAL("--mode", err.argument);
+  STRCMP_EQUAL("invalid choice 'medium' for option '--mode'", err.message);
 
   ap_parser_free(p);
 }
@@ -150,6 +156,62 @@ TEST(ArgparseC, DefaultValue) {
   LONGS_EQUAL(0, ap_parse_args(p, 1, argv, &ns, &err));
   CHECK(ap_ns_get_string(ns, "name", &actual));
   STRCMP_EQUAL("guest", actual);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, AutoDestPrefersLongFlagAndNormalizesHyphen) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  char *argv[] = {(char *)"prog", (char *)"--dry-run", (char *)"yes", NULL};
+  const char *value = NULL;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "-d, --dry-run", ap_arg_options_default(), &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "dry_run", &value));
+  STRCMP_EQUAL("yes", value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, AutoDestNormalizesPositionalHyphen) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  char *argv[] = {(char *)"prog", (char *)"report.txt", NULL};
+  const char *value = NULL;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "input-file", ap_arg_options_default(), &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 2, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "input_file", &value));
+  STRCMP_EQUAL("report.txt", value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, ExplicitDestIsNotNormalized) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options opts = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--dry-run", (char *)"yes", NULL};
+  const char *value = NULL;
+
+  CHECK(p != NULL);
+  opts.dest = "custom-key";
+  LONGS_EQUAL(0, ap_add_argument(p, "--dry-run", opts, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "custom-key", &value));
+  STRCMP_EQUAL("yes", value);
 
   ap_namespace_free(ns);
   ap_parser_free(p);
@@ -208,6 +270,8 @@ TEST(ArgparseC, RequiredOptionIgnoresDefaultWhenMissing) {
 
   LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
   LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+  STRCMP_EQUAL("--name", err.argument);
+  STRCMP_EQUAL("option '--name' is required", err.message);
 
   ap_parser_free(p);
 }
@@ -370,6 +434,8 @@ TEST(ArgparseC, ParseKnownArgsStillValidatesRequired) {
   LONGS_EQUAL(-1, ap_parse_known_args(p, 3, argv, &ns, &unknown, &unknown_count,
                                       &err));
   LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+  STRCMP_EQUAL("-t", err.argument);
+  STRCMP_EQUAL("option '-t' is required", err.message);
   CHECK(unknown == NULL);
   LONGS_EQUAL(0, unknown_count);
 
@@ -441,6 +507,109 @@ TEST(ArgparseC, ParseKnownArgsCollectsAfterDoubleDash) {
   LONGS_EQUAL(2, unknown_count);
   STRCMP_EQUAL("--passthrough", unknown[0]);
   STRCMP_EQUAL("value", unknown[1]);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, OptionalNargsDoesNotConsumeFollowingKnownOption) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options verbose = ap_arg_options_default();
+  bool is_verbose = false;
+  char *argv[] = {(char *)"prog", (char *)"--maybe", (char *)"--verbose", NULL};
+
+  CHECK(p != NULL);
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--verbose", verbose, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv, &ns, &err));
+  LONGS_EQUAL(0, ap_ns_get_count(ns, "maybe"));
+  CHECK(ap_ns_get_bool(ns, "verbose", &is_verbose));
+  CHECK_TRUE(is_verbose);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, PositionalZeroOrMoreLeavesTokensForRequiredPositional) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options files = ap_arg_options_default();
+  const char *target = NULL;
+  char *argv[] = {(char *)"prog", (char *)"a.txt", (char *)"b.txt",
+                  (char *)"dest.out", NULL};
+
+  CHECK(p != NULL);
+  files.nargs = AP_NARGS_ZERO_OR_MORE;
+  files.action = AP_ACTION_APPEND;
+  LONGS_EQUAL(0, ap_add_argument(p, "files", files, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "target", ap_arg_options_default(), &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 4, argv, &ns, &err));
+  LONGS_EQUAL(2, ap_ns_get_count(ns, "files"));
+  STRCMP_EQUAL("a.txt", ap_ns_get_string_at(ns, "files", 0));
+  STRCMP_EQUAL("b.txt", ap_ns_get_string_at(ns, "files", 1));
+  CHECK(ap_ns_get_string(ns, "target", &target));
+  STRCMP_EQUAL("dest.out", target);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, ParseKnownArgsUnknownOptionDoesNotConsumeKnownOptionToken) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  const char *text = NULL;
+  const char *input = NULL;
+  char *argv[] = {(char *)"prog", (char *)"--unknown", (char *)"--text",
+                  (char *)"hello", (char *)"file.txt", NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parse_known_args(p, 5, argv, &ns, &unknown, &unknown_count,
+                                     &err));
+  LONGS_EQUAL(1, unknown_count);
+  STRCMP_EQUAL("--unknown", unknown[0]);
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("hello", text);
+  STRCMP_EQUAL("file.txt", input);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, ParseKnownArgsUnknownInlineOptionRemainsSingleUnknownToken) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  const char *text = NULL;
+  const char *input = NULL;
+  char *argv[] = {(char *)"prog", (char *)"--unknown=value", (char *)"-t",
+                  (char *)"hello", (char *)"file.txt", NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parse_known_args(p, 5, argv, &ns, &unknown, &unknown_count,
+                                     &err));
+  LONGS_EQUAL(1, unknown_count);
+  STRCMP_EQUAL("--unknown=value", unknown[0]);
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("hello", text);
+  STRCMP_EQUAL("file.txt", input);
 
   ap_free_tokens(unknown, unknown_count);
   ap_namespace_free(ns);
@@ -544,6 +713,73 @@ TEST(ArgparseC, HelpListsSubcommands) {
   CHECK(strstr(help, "subcommands:") != NULL);
   CHECK(strstr(help, "run") != NULL);
   CHECK(strstr(help, "run the job") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, ParseNestedSubcommandArguments) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *config = NULL;
+  ap_parser *set = NULL;
+  ap_arg_options global = ap_arg_options_default();
+  ap_arg_options value = ap_arg_options_default();
+  const char *subcommand = NULL;
+  const char *parent_subcommand = NULL;
+  const char *subcommand_path = NULL;
+  const char *value_text = NULL;
+  const char *key = NULL;
+  bool is_global = false;
+  char *argv[] = {(char *)"prog", (char *)"config", (char *)"set",
+                  (char *)"--global", (char *)"--value", (char *)"blue",
+                  (char *)"theme", NULL};
+
+  CHECK(p != NULL);
+  config = ap_add_subcommand(p, "config", "config commands", &err);
+  CHECK(config != NULL);
+  set = ap_add_subcommand(config, "set", "set a value", &err);
+  CHECK(set != NULL);
+
+  global.type = AP_TYPE_BOOL;
+  global.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(set, "--global", global, &err));
+  LONGS_EQUAL(0, ap_add_argument(set, "--value", value, &err));
+  LONGS_EQUAL(0, ap_add_argument(set, "key", ap_arg_options_default(), &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 7, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "subcommand", &subcommand));
+  CHECK(ap_ns_get_bool(ns, "global", &is_global));
+  CHECK(ap_ns_get_string(ns, "value", &value_text));
+  CHECK(ap_ns_get_string(ns, "key", &key));
+  CHECK(!ap_ns_get_string(ns, "config", &parent_subcommand));
+  CHECK(!ap_ns_get_string(ns, "subcommand_path", &subcommand_path));
+  STRCMP_EQUAL("set", subcommand);
+  CHECK_TRUE(is_global);
+  STRCMP_EQUAL("blue", value_text);
+  STRCMP_EQUAL("theme", key);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, NestedSubcommandHelpUsesFullCommandPath) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *config = NULL;
+  ap_parser *set = NULL;
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  config = ap_add_subcommand(p, "config", "config commands", &err);
+  CHECK(config != NULL);
+  set = ap_add_subcommand(config, "set", "set a value", &err);
+  CHECK(set != NULL);
+
+  help = ap_format_help(set);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "usage: prog config set") != NULL);
 
   free(help);
   ap_parser_free(p);
@@ -699,6 +935,27 @@ TEST(ArgparseC, RequiredMutuallyExclusiveGroupNeedsOneOption) {
 
   LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
   LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+  STRCMP_EQUAL("", err.argument);
+  STRCMP_EQUAL("one argument from a mutually exclusive group is required", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, MissingRequiredPositionalUsesConsistentArgumentNameAndMessage) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options opts = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  opts.required = true;
+  LONGS_EQUAL(0, ap_add_argument(p, "input-file", opts, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+  STRCMP_EQUAL("input-file", err.argument);
+  STRCMP_EQUAL("argument 'input-file' is required", err.message);
 
   ap_parser_free(p);
 }

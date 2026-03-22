@@ -12,12 +12,39 @@
 - `nargs`: one, `?`, `*`, `+`, fixed arity
 - `append`, `count`, `store_const`
 - Mutually exclusive groups
-- Subcommands
+- Nested subcommands
 - Built-in `-h/--help`
 - Non-exit error flow (`ap_parse_args` returns error codes)
 - Error text helper: `ap_format_error(parser, &err)`
+- Consistent error payloads: `err.argument` uses the primary flag for options and the declared name for positionals
 - Known/unknown split parser: `ap_parse_known_args(...)`
   - For `ap_parse_known_args`, tokens after `--` are collected into unknown args.
+
+## `nargs` semantics
+
+- `AP_NARGS_ONE`
+  - optionals consume exactly one value
+  - positionals bind exactly one token
+- `AP_NARGS_OPTIONAL`
+  - optionals consume the next token only when it is not a known option
+  - positionals bind one token only when enough tokens remain for later required positionals
+- `AP_NARGS_ZERO_OR_MORE` / `AP_NARGS_ONE_OR_MORE`
+  - optionals keep consuming until `--` or the next known option
+  - positionals consume as many tokens as possible while leaving the minimum required tokens for later positional arguments
+- `AP_NARGS_FIXED`
+  - optionals require exactly `nargs_count` values
+  - positionals bind exactly `nargs_count` tokens
+
+## `ap_parse_known_args` contract
+
+- known arguments are parsed with the same rules as `ap_parse_args`
+- unknown tokens are appended to `out_unknown_args` in encounter order
+- collected unknowns include:
+  - unknown options
+  - the next token after an unknown option when it does not look like another option
+  - extra positional tokens left after positional binding
+  - all tokens after `--`
+- validation still runs for known arguments, so missing required arguments and invalid known values still fail
 
 ## Quick Example
 
@@ -50,6 +77,17 @@ return 0;
 ```
 
 ## Subcommands
+
+### Namespace / help contract
+
+- nested subcommands are supported
+- the namespace exposes only one built-in subcommand key: `"subcommand"`
+- `"subcommand"` always stores the **final selected leaf subcommand name**
+  - example: parsing `prog config set ...` stores `"set"`
+- intermediate subcommand names are **not** added as separate namespace entries
+- a separate `"subcommand_path"` key is **not** currently exposed
+- help for a nested subcommand uses the full command path
+  - example: `ap_format_help(set_parser)` starts with `usage: prog config set`
 
 ```c
 ap_error err = {0};

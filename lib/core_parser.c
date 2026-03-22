@@ -455,16 +455,20 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
     case AP_NARGS_ONE_OR_MORE:
       take = values_left - min_after;
       if (take < 1) {
-        ap_error_set(err, AP_ERR_INVALID_NARGS, def->dest,
-                     "argument '%s' requires at least one value", def->dest);
+        char label[96];
+        ap_error_label_for_arg(def, label, sizeof(label));
+        ap_error_set(err, AP_ERR_INVALID_NARGS, ap_error_argument_name(def),
+                     "%s requires at least one value", label);
         goto fail;
       }
       break;
     case AP_NARGS_FIXED:
       take = def->opts.nargs_count;
       if (values_left < take) {
-        ap_error_set(err, AP_ERR_INVALID_NARGS, def->dest,
-                     "argument '%s' requires exactly %d values", def->dest,
+        char label[96];
+        ap_error_label_for_arg(def, label, sizeof(label));
+        ap_error_set(err, AP_ERR_INVALID_NARGS, ap_error_argument_name(def),
+                     "%s requires exactly %d values", label,
                      def->opts.nargs_count);
         goto fail;
       }

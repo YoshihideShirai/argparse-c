@@ -44,8 +44,11 @@ This document describes the public API defined in `include/argparse-c.h`.
 
 ### `ap_error`
 - `code`: error code
-- `argument`: argument name related to the error
-- `message`: human-readable message
+- `argument`: stable argument identifier related to the error
+  - optional arguments use the primary flag (for example `--mode` or `-t`)
+  - positional arguments use the declared argument name
+  - parser-level errors may leave this empty
+- `message`: human-readable message with consistent `option '...'` / `argument '...'` wording
 
 ### `ap_arg_options`
 Options passed to `ap_add_argument`.
@@ -64,6 +67,13 @@ Options passed to `ap_add_argument`.
 
 Use `ap_arg_options_default()` first, then override needed fields.
 
+#### `dest` auto-generation rules
+- for optional arguments, the first long flag (for example `--dry-run`) is preferred
+- if no long flag exists, the first short flag (for example `-v`) is used
+- for positional arguments, the declared name is used
+- during auto-generation, `-` is converted to `_` (for example `dry-run` -> `dry_run`)
+- when `dest` is provided explicitly, it is kept as-is
+
 ## 3. Parser Lifecycle API
 
 ### `ap_parser *ap_parser_new(const char *prog, const char *description)`
@@ -81,8 +91,11 @@ Adds a child parser for a subcommand.
 - `description`: help description for the subcommand
 - Returns: child parser on success, `NULL` on failure
 - Notes:
-  - only a single subcommand level is supported right now
-  - on success, the selected subcommand name is stored in namespace key `"subcommand"`
+  - nested subcommands are supported
+  - on success, the final selected leaf subcommand name is stored in namespace key `"subcommand"`
+  - intermediate subcommand names are not added as separate namespace entries
+  - a separate `"subcommand_path"` key is not part of the current public contract
+  - `ap_format_help()` for a nested subcommand parser uses the full command path in usage/help text
 
 ### `void ap_parser_free(ap_parser *parser)`
 Frees the parser.
@@ -122,6 +135,23 @@ Known/unknown split mode.
 - Known arguments are returned in `out_ns`
 - Free unknown tokens via `ap_free_tokens(out_unknown_args, out_unknown_count)`
 - Tokens after `--` are collected as unknown
+- Unknown tokens are appended in encounter order
+- Collected unknowns include:
+  - unknown options
+  - the next token after an unknown option when that token is not another option-like token
+  - extra positional tokens left after positional binding
+  - all tokens after `--`
+- Known arguments are still validated, so this API can still fail with missing required arguments or invalid values
+
+#### `nargs` behavior summary
+- optional arguments:
+  - `AP_NARGS_ONE`: requires exactly one value
+  - `AP_NARGS_OPTIONAL`: consumes the next token only when it is not a known option
+  - `AP_NARGS_ZERO_OR_MORE` / `AP_NARGS_ONE_OR_MORE`: stop before `--` or the next known option
+  - `AP_NARGS_FIXED`: requires exactly `nargs_count` values
+- positional arguments:
+  - binding proceeds left-to-right
+  - `AP_NARGS_OPTIONAL`, `AP_NARGS_ZERO_OR_MORE`, and `AP_NARGS_ONE_OR_MORE` leave enough tokens for the minimum required values of later positional arguments
 
 ## 6. Formatting API
 
