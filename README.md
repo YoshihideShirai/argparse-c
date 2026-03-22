@@ -146,6 +146,9 @@ A bilingual GitHub Pages site skeleton for MkDocs + Material for MkDocs is inclu
 
 See [sample/example1.c](./sample/example1.c).
 
+For a nested subcommand example that prints both `subcommand` and
+`subcommand_path`, see [sample/example_subcommands.c](./sample/example_subcommands.c).
+
 ## API Specification
 
 - Japanese: [docs/api-spec.ja.md](./docs/api-spec.ja.md)
