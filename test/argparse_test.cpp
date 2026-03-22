@@ -447,4 +447,53 @@ TEST(ArgparseC, ParseKnownArgsCollectsAfterDoubleDash) {
   ap_parser_free(p);
 }
 
+TEST(ArgparseC, ShortOptionClusterForBoolFlags) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options quiet = ap_arg_options_default();
+  bool is_verbose = false;
+  bool is_quiet = false;
+  char *argv[] = {(char *)"prog", (char *)"-vq", NULL};
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  quiet.type = AP_TYPE_BOOL;
+  quiet.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "-v, --verbose", verbose, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "-q, --quiet", quiet, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 2, argv, &ns, &err));
+  CHECK(ap_ns_get_bool(ns, "verbose", &is_verbose));
+  CHECK(ap_ns_get_bool(ns, "quiet", &is_quiet));
+  CHECK_TRUE(is_verbose);
+  CHECK_TRUE(is_quiet);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, ShortOptionClusterRejectsValueOption) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options number = ap_arg_options_default();
+  ap_arg_options verbose = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"-nv", (char *)"12", NULL};
+
+  CHECK(p != NULL);
+  number.type = AP_TYPE_INT32;
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "-n, --num", number, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "-v, --verbose", verbose, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_NARGS, err.code);
+
+  ap_parser_free(p);
+}
+
 int main(int ac, char **av) { return CommandLineTestRunner::RunAllTests(ac, av); }

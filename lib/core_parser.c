@@ -39,6 +39,53 @@ static int find_flag_index_n(const ap_parser *parser, const char *token,
   return -1;
 }
 
+static int parse_short_cluster(const ap_parser *parser, const char *token,
+                               bool allow_unknown, ap_parsed_arg *parsed,
+                               ap_error *err) {
+  size_t i;
+  char short_flag[3];
+
+  if (!token || token[0] != '-' || token[1] == '-' || token[2] == '\0') {
+    return 1;
+  }
+  if (strchr(token, '=') != NULL) {
+    return 1;
+  }
+
+  short_flag[0] = '-';
+  short_flag[2] = '\0';
+  for (i = 1; token[i] != '\0'; i++) {
+    int def_index;
+    short_flag[1] = token[i];
+    def_index = find_flag_index(parser, short_flag);
+    if (def_index < 0) {
+      if (!allow_unknown) {
+        ap_error_set(err, AP_ERR_UNKNOWN_OPTION, short_flag,
+                     "unknown option '%s'", short_flag);
+      }
+      return allow_unknown ? 1 : -1;
+    }
+    if (parser->defs[def_index].opts.action != AP_ACTION_STORE_TRUE &&
+        parser->defs[def_index].opts.action != AP_ACTION_STORE_FALSE) {
+      if (allow_unknown) {
+        return 1;
+      }
+      ap_error_set(err, AP_ERR_INVALID_NARGS, short_flag,
+                   "option '%s' cannot be used in a short option cluster",
+                   short_flag);
+      return -1;
+    }
+    if (parsed[def_index].seen) {
+      ap_error_set(err, AP_ERR_DUPLICATE_OPTION, short_flag,
+                   "duplicate option '%s'", short_flag);
+      return -1;
+    }
+    parsed[def_index].seen = true;
+  }
+
+  return 0;
+}
+
 static int positional_min_required(const ap_arg_def *def) {
   if (def->opts.action == AP_ACTION_STORE_TRUE ||
       def->opts.action == AP_ACTION_STORE_FALSE) {
@@ -232,6 +279,22 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
     }
 
     if (!positional_only && ap_starts_with_dash(token)) {
+      int cluster_rc =
+          parse_short_cluster(parser, token, allow_unknown, parsed, err);
+      if (cluster_rc == 0) {
+        token_index++;
+        continue;
+      }
+      if (cluster_rc < 0) {
+        int k;
+        for (k = 0; k < parser->defs_count; k++) {
+          ap_strvec_free(&parsed[k].values);
+        }
+        free(positional_defs);
+        free(parsed);
+        return -1;
+      }
+
       const char *eq = strchr(token, '=');
       const char *inline_value = NULL;
       int def_index = -1;

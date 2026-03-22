@@ -6,6 +6,7 @@
 
 - Optional and positional arguments
 - `--option=value` and `-o=value` styles for options
+- Short bool flag clusters (example: `-vq` for `-v -q`)
 - Types: `string`, `int32`, `bool` (`store_true` / `store_false`)
 - `required`, `default_value`, `choices`
 - `nargs`: one, `?`, `*`, `+`
