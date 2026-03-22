@@ -110,7 +110,7 @@ if (ap_parse_args(p, argc, argv, &ns, &err) == 0) {
 }
 ```
 
-## Build (clang)
+## Developer Build (clang)
 
 ```bash
 cmake -S . -B build \
@@ -119,8 +119,6 @@ cmake -S . -B build \
 cmake --build build
 ctest --test-dir build --output-on-failure
 
-# install the shared library and public header
-cmake --install build --prefix /usr/local
 
 # formatting / static analysis (requires clang-format and clang-tidy)
 cmake --build build --target format
@@ -134,6 +132,8 @@ cmake -S . -B build-coverage \
 cmake --build build-coverage
 cmake --build build-coverage --target coverage
 ```
+
+For installation steps aimed at library users, see the Getting Started guides in `docs/en/getting-started.md` and `docs/ja/getting-started.md`.
 
 ## Documentation Site
 

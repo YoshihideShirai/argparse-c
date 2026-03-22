@@ -1,6 +1,6 @@
 # Getting Started
 
-このページでは、`argparse-c` を **ビルドして、最小サンプルを実行するまで** をまとめます。
+このページでは、`argparse-c` を **インストールして、最小サンプルを実行するまで** をまとめます。
 
 ## 前提
 
@@ -8,23 +8,17 @@
 - CMake
 - Git
 
-## ビルド
+## ビルドとインストール
 
 ```bash
 cmake -S . -B build \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++
 cmake --build build
-ctest --test-dir build --output-on-failure
-
-# coverage (gcovr が必要。clang 使用時は `llvm-cov gcov` を自動利用します)
-cmake -S . -B build-coverage \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++ \
-  -DAP_ENABLE_COVERAGE=ON
-cmake --build build-coverage
-cmake --build build-coverage --target coverage
+cmake --install build --prefix /usr/local
 ```
+
+一度ステージング用ディレクトリへ入れたい場合は、`/usr/local` を任意の prefix に置き換えてください。
 
 ## サンプルプログラム
 
