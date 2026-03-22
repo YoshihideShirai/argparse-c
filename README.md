@@ -129,6 +129,7 @@ cmake --build build-coverage --target coverage
 
 A bilingual GitHub Pages site skeleton for MkDocs + Material for MkDocs is included in this repository.
 
+- GitHub Pages: <https://yoshihideshirai.github.io/argparse-c/>
 - landing page with language selection: `docs/index.md`
 - Japanese docs: `docs/ja/`
 - English docs: `docs/en/`
