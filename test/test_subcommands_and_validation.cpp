@@ -124,6 +124,41 @@ TEST(NestedSubcommandHelpUsesFullCommandPath) {
   ap_parser_free(p);
 }
 
+TEST(ParserIntrospectionEnumeratesSubcommands) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *config = NULL;
+  ap_parser *set = NULL;
+  ap_parser_info parser_info = {};
+  ap_subcommand_info config_info = {};
+  ap_subcommand_info set_info = {};
+  ap_arg_info child_help = {};
+
+  CHECK(p != NULL);
+  config = ap_add_subcommand(p, "config", "config commands", &err);
+  CHECK(config != NULL);
+  set = ap_add_subcommand(config, "set", "set a value", &err);
+  CHECK(set != NULL);
+
+  LONGS_EQUAL(0, ap_parser_get_info(p, &parser_info));
+  LONGS_EQUAL(1, parser_info.subcommand_count);
+  LONGS_EQUAL(0, ap_parser_get_subcommand(p, 0, &config_info));
+  STRCMP_EQUAL("config", config_info.name);
+  STRCMP_EQUAL("config commands", config_info.description);
+  CHECK(config_info.parser == config);
+
+  LONGS_EQUAL(0, ap_parser_get_subcommand(config, 0, &set_info));
+  STRCMP_EQUAL("set", set_info.name);
+  STRCMP_EQUAL("set a value", set_info.description);
+  CHECK(set_info.parser == set);
+
+  LONGS_EQUAL(0, ap_parser_get_argument(config_info.parser, 0, &child_help));
+  STRCMP_EQUAL("help", child_help.dest);
+  LONGS_EQUAL(AP_ARG_KIND_OPTIONAL, child_help.kind);
+
+  ap_parser_free(p);
+}
+
 TEST(MissingSubcommandFails) {
   ap_error err = {};
   ap_namespace *ns = NULL;
