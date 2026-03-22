@@ -63,8 +63,10 @@ Options passed to `ap_add_argument`.
 - `default_value`: default when not provided (string form)
 - `const_value`: value stored by `AP_ACTION_STORE_CONST`
 - `choices`: allowed values (`ap_choices`)
-- `completion_kind`: static completion metadata (`ap_completion_kind`)
+- `completion_kind`: completion metadata kind (`ap_completion_kind`)
 - `completion_hint`: optional generator-specific hint string for completions
+- `completion_callback`: optional application callback for dynamic completion candidates (planned extension)
+- `completion_user_data`: opaque pointer passed to `completion_callback` (planned extension)
 - `dest`: key used for lookup (auto-generated when omitted)
 
 Use `ap_arg_options_default()` first, then override needed fields.
@@ -80,8 +82,61 @@ Use `ap_arg_options_default()` first, then override needed fields.
 - bash / fish generators prefer `completion_kind` when it is not `AP_COMPLETION_KIND_NONE`
 - when `completion_kind == AP_COMPLETION_KIND_CHOICES`, generators use `choices` as the completion source
 - when `completion_kind == AP_COMPLETION_KIND_NONE` and `choices` is present, generators treat it as the default `CHOICES` behavior
-- this metadata is static only; callback-style dynamic completion is not part of the current API
+- static metadata remains the baseline contract for parse-time validation and offline generator output
 - `completion_hint` is reserved for generator-specific hints and does not change parse-time validation
+- callback-style dynamic completion is the planned extension point described below; it augments, but does not replace, the static metadata rules above
+
+#### Planned dynamic completion extension
+The current public contract exposes only static completion metadata through `ap_completion_kind`, `choices`, and `completion_hint`. The next-stage design extends that contract so applications can return candidates at runtime without changing parse behavior.
+
+**Planned typedef**
+
+```c
+typedef int (*ap_completion_callback)(const ap_completion_request *request,
+                                      ap_completion_result *result,
+                                      void *user_data,
+                                      ap_error *err);
+```
+
+The exact helper structs can evolve, but the callback contract should preserve these properties:
+- input is read-only and describes the parser path, active option/argument, current token prefix, and shell/generator context
+- output is append-only candidate data owned by the caller/runtime, not by the callback after it returns
+- return value follows the library convention (`0` success, `-1` failure) with details in `ap_error`
+- `user_data` is opaque application state; the library stores and forwards it without interpretation
+
+**Planned `ap_arg_options` extension**
+- add `completion_callback` and `completion_user_data`
+- keep `completion_kind` / `choices` / `completion_hint` valid even when a callback is present
+- define precedence as:
+  1. if `completion_callback` is set, shells that support dynamic completion query it first
+  2. if the callback declines or returns no candidates, generators may fall back to static metadata
+  3. parse-time validation still depends only on argument definition fields such as `choices`, not on callback output
+
+**Compatibility rules**
+- existing applications that use only static metadata continue to behave exactly the same
+- generators that cannot execute application callbacks still emit useful scripts from static metadata alone
+- introspection APIs should continue to expose the static fields; callback exposure is optional and should be documented separately because function pointers are not portable serialization data
+
+**Generator strategy under consideration**
+Two implementation directions are being compared for bash / fish.
+
+1. **Embed callback behavior directly into generated scripts**
+   - not preferred for the public API
+   - generated shell code cannot safely serialize a C function pointer
+   - shell-specific glue would have to invent a second transport protocol anyway
+
+2. **Call back into the application through a completion subcommand**
+   - preferred direction for bash / fish generators
+   - generated scripts remain thin wrappers that invoke something like `prog __complete ...`
+   - the application reconstructs parse context, calls `ap_completion_callback`, and prints candidates in a shell-neutral format
+   - this keeps dynamic policy inside the application binary and lets static metadata remain available for offline fallback
+
+**Recommended contract split**
+- library definition layer: declare callback types and store them in `ap_arg_options`
+- application/runtime layer: provide a completion entrypoint/subcommand that shells can execute
+- generator layer: emit shell adapters that prefer the subcommand path for dynamic candidates and fall back to static metadata when unavailable
+
+This split matches the existing formatter implementations in `lib/format_completion_bash.c` and `lib/format_completion_fish.c`, which currently derive scripts entirely from parser metadata and have no mechanism to embed executable C callbacks.
 
 #### `dest` auto-generation rules
 - for optional arguments, the first long flag (for example `--dry-run`) is preferred
