@@ -117,6 +117,17 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+## Documentation Site
+
+A bilingual GitHub Pages site skeleton for MkDocs + Material for MkDocs is included in this repository.
+
+- landing page with language selection: `docs/index.md`
+- Japanese docs: `docs/ja/`
+- English docs: `docs/en/`
+- local preview: `mkdocs serve`
+- static build: `mkdocs build`
+- GitHub Pages deployment: `.github/workflows/pages.yml`
+
 ## Example Program
 
 See [sample/example1.c](./sample/example1.c).

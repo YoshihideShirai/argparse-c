@@ -1,0 +1,76 @@
+site_name: argparse-c
+site_description: Bilingual documentation site for the argparse-c C99 command-line argument parsing library.
+docs_dir: docs
+site_dir: site
+copyright: Copyright (c) argparse-c contributors
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+
+nav:
+  - Language / 言語: index.md
+  - 日本語:
+      - Home: ja/index.md
+      - Getting Started: ja/getting-started.md
+      - Guides:
+          - 基本の使い方: ja/guides/basic-usage.md
+          - オプションと型: ja/guides/options-and-types.md
+          - nargs: ja/guides/nargs.md
+          - サブコマンド: ja/guides/subcommands.md
+          - known args / unknown args: ja/guides/known-args.md
+      - API Reference: api-spec.ja.md
+      - FAQ: ja/faq.md
+  - English:
+      - Home: en/index.md
+      - Getting Started: en/getting-started.md
+      - Guides:
+          - Basic usage: en/guides/basic-usage.md
+          - Options and types: en/guides/options-and-types.md
+          - nargs: en/guides/nargs.md
+          - Subcommands: en/guides/subcommands.md
+          - known args / unknown args: en/guides/known-args.md
+      - API Reference: api-spec.en.md
+      - FAQ: en/faq.md
+  - Development:
+      - Implementation Plan: implementation-plan.md
