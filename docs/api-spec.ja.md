@@ -18,12 +18,16 @@
 - `AP_ACTION_STORE`: 値を格納
 - `AP_ACTION_STORE_TRUE`: 指定されたら `true`、未指定なら `false`
 - `AP_ACTION_STORE_FALSE`: 指定されたら `false`、未指定なら `true`
+- `AP_ACTION_APPEND`: 複数回指定した値を追加
+- `AP_ACTION_COUNT`: 指定回数をカウント
+- `AP_ACTION_STORE_CONST`: 指定されたら `const_value` を格納
 
 ### `ap_nargs`
 - `AP_NARGS_ONE`: 値1つ（デフォルト）
 - `AP_NARGS_OPTIONAL`: 値0または1つ（`?`）
 - `AP_NARGS_ZERO_OR_MORE`: 値0個以上（`*`）
 - `AP_NARGS_ONE_OR_MORE`: 値1個以上（`+`）
+- `AP_NARGS_FIXED`: `nargs_count` 個ちょうど
 
 ### `ap_error_code`
 - `AP_ERR_NONE`
@@ -49,10 +53,12 @@
 - `type`: 引数の型
 - `action`: 代入動作
 - `nargs`: 値の個数ルール
+- `nargs_count`: `AP_NARGS_FIXED` の固定個数
 - `required`: 必須かどうか
 - `help`: help出力文
 - `metavar`: usage/helpに表示する値名
 - `default_value`: 未指定時のデフォルト（文字列として指定）
+- `const_value`: `AP_ACTION_STORE_CONST` で格納する値
 - `choices`: 許容値一覧（`ap_choices`）
 - `dest`: 取得キー名（未指定時は自動生成）
 
@@ -68,8 +74,26 @@
 - 戻り値: 生成成功で非NULL、失敗でNULL
 - 備考: `-h/--help` は自動で追加されます
 
+### `ap_parser *ap_add_subcommand(ap_parser *parser, const char *name, const char *description, ap_error *err)`
+サブコマンド用の子パーサを追加します。
+
+- `name`: サブコマンド名
+- `description`: サブコマンドのhelp説明
+- 戻り値: 子パーサ（失敗時はNULL）
+- 備考:
+  - 現在は1階層のサブコマンドのみ対応
+  - パース成功時、選択されたサブコマンド名は namespace の `"subcommand"` に格納されます
+
 ### `void ap_parser_free(ap_parser *parser)`
 パーサ本体を解放します。
+
+### `ap_mutually_exclusive_group *ap_add_mutually_exclusive_group(ap_parser *parser, bool required, ap_error *err)`
+相互排他グループを追加します。
+
+- `required=true` の場合、グループ内のいずれか1つが必須です
+
+### `int ap_group_add_argument(ap_mutually_exclusive_group *group, const char *name_or_flags, ap_arg_options options, ap_error *err)`
+相互排他グループに属する引数を追加します。
 
 ## 4. 引数定義API
 

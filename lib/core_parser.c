@@ -3,6 +3,19 @@
 
 #include "ap_internal.h"
 
+static bool action_takes_no_value(ap_action action) {
+  return action == AP_ACTION_STORE_TRUE || action == AP_ACTION_STORE_FALSE ||
+         action == AP_ACTION_COUNT || action == AP_ACTION_STORE_CONST;
+}
+
+static bool action_allows_multiple_occurrences(ap_action action) {
+  return action == AP_ACTION_APPEND || action == AP_ACTION_COUNT ||
+         action == AP_ACTION_STORE_CONST;
+}
+
+static int push_value(ap_parsed_arg *parsed, int def_index, const char *token,
+                      ap_error *err);
+
 static int find_flag_index(const ap_parser *parser, const char *token) {
   int i;
   int j;
@@ -66,7 +79,8 @@ static int parse_short_cluster(const ap_parser *parser, const char *token,
       return allow_unknown ? 1 : -1;
     }
     if (parser->defs[def_index].opts.action != AP_ACTION_STORE_TRUE &&
-        parser->defs[def_index].opts.action != AP_ACTION_STORE_FALSE) {
+        parser->defs[def_index].opts.action != AP_ACTION_STORE_FALSE &&
+        parser->defs[def_index].opts.action != AP_ACTION_COUNT) {
       if (allow_unknown) {
         return 1;
       }
@@ -75,20 +89,24 @@ static int parse_short_cluster(const ap_parser *parser, const char *token,
                    short_flag);
       return -1;
     }
-    if (parsed[def_index].seen) {
+    if (parsed[def_index].seen &&
+        !action_allows_multiple_occurrences(parser->defs[def_index].opts.action)) {
       ap_error_set(err, AP_ERR_DUPLICATE_OPTION, short_flag,
                    "duplicate option '%s'", short_flag);
       return -1;
     }
     parsed[def_index].seen = true;
+    if (parser->defs[def_index].opts.action == AP_ACTION_COUNT &&
+        push_value(parsed, def_index, "1", err) != 0) {
+      return -1;
+    }
   }
 
   return 0;
 }
 
 static int positional_min_required(const ap_arg_def *def) {
-  if (def->opts.action == AP_ACTION_STORE_TRUE ||
-      def->opts.action == AP_ACTION_STORE_FALSE) {
+  if (action_takes_no_value(def->opts.action)) {
     return 0;
   }
   switch (def->opts.nargs) {
@@ -96,6 +114,8 @@ static int positional_min_required(const ap_arg_def *def) {
     return 1;
   case AP_NARGS_ONE_OR_MORE:
     return 1;
+  case AP_NARGS_FIXED:
+    return def->opts.nargs_count;
   case AP_NARGS_OPTIONAL:
   case AP_NARGS_ZERO_OR_MORE:
   default:
@@ -136,11 +156,18 @@ static int consume_optional_values(const ap_parser *parser, int argc, char **arg
   const ap_arg_def *def = &parser->defs[def_index];
   int start = *idx;
 
-  if (def->opts.action == AP_ACTION_STORE_TRUE ||
-      def->opts.action == AP_ACTION_STORE_FALSE) {
+  if (action_takes_no_value(def->opts.action)) {
     if (inline_value) {
       ap_error_set(err, AP_ERR_INVALID_NARGS, def->flags[0],
                    "option '%s' does not take a value", def->flags[0]);
+      return -1;
+    }
+    if (def->opts.action == AP_ACTION_COUNT &&
+        push_value(parsed, def_index, "1", err) != 0) {
+      return -1;
+    }
+    if (def->opts.action == AP_ACTION_STORE_CONST &&
+        push_value(parsed, def_index, def->opts.const_value, err) != 0) {
       return -1;
     }
     return 0;
@@ -180,6 +207,34 @@ static int consume_optional_values(const ap_parser *parser, int argc, char **arg
         *idx = start + 1;
       }
     }
+    return 0;
+  }
+
+  if (def->opts.nargs == AP_NARGS_FIXED) {
+    int need = def->opts.nargs_count;
+    int consumed = 0;
+    int j = start + 1;
+    if (inline_value) {
+      if (push_value(parsed, def_index, inline_value, err) != 0) {
+        return -1;
+      }
+      consumed++;
+    }
+    while (consumed < need) {
+      if (j >= argc || strcmp(argv[j], "--") == 0 ||
+          find_flag_index(parser, argv[j]) >= 0) {
+        ap_error_set(err, AP_ERR_INVALID_NARGS, def->flags[0],
+                     "option '%s' requires exactly %d values", def->flags[0],
+                     def->opts.nargs_count);
+        return -1;
+      }
+      if (push_value(parsed, def_index, argv[j], err) != 0) {
+        return -1;
+      }
+      consumed++;
+      j++;
+    }
+    *idx = j - 1;
     return 0;
   }
 
@@ -341,14 +396,14 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
                      "unknown option '%s'", token);
         return -1;
       }
-      if (parsed[def_index].seen) {
+      if (parsed[def_index].seen &&
+          !action_allows_multiple_occurrences(parser->defs[def_index].opts.action)) {
         free(positional_defs);
         free(parsed);
         ap_error_set(err, AP_ERR_DUPLICATE_OPTION, token,
                      "duplicate option '%s'", token);
         return -1;
       }
-      parsed[def_index].seen = true;
       if (consume_optional_values(parser, argc, argv, &token_index, def_index,
                                   inline_value, parsed, err) != 0) {
         int k;
@@ -359,6 +414,7 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
         free(parsed);
         return -1;
       }
+      parsed[def_index].seen = true;
       token_index++;
       continue;
     }
@@ -401,6 +457,15 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
       if (take < 1) {
         ap_error_set(err, AP_ERR_INVALID_NARGS, def->dest,
                      "argument '%s' requires at least one value", def->dest);
+        goto fail;
+      }
+      break;
+    case AP_NARGS_FIXED:
+      take = def->opts.nargs_count;
+      if (values_left < take) {
+        ap_error_set(err, AP_ERR_INVALID_NARGS, def->dest,
+                     "argument '%s' requires exactly %d values", def->dest,
+                     def->opts.nargs_count);
         goto fail;
       }
       break;

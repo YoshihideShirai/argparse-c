@@ -168,6 +168,18 @@ int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
       entry->as.boolean = p->seen ? false : true;
       continue;
     }
+    if (def->opts.action == AP_ACTION_COUNT) {
+      entry->type = AP_NS_VALUE_INT32;
+      entry->count = 1;
+      entry->as.ints = calloc(1, sizeof(int32_t));
+      if (!entry->as.ints) {
+        ap_namespace_free(ns);
+        ap_error_set(err, AP_ERR_NO_MEMORY, def->dest, "out of memory");
+        return -1;
+      }
+      entry->as.ints[0] = p->values.count;
+      continue;
+    }
 
     if (p->values.count > 0) {
       int j;

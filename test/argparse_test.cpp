@@ -496,4 +496,211 @@ TEST(ArgparseC, ShortOptionClusterRejectsValueOption) {
   ap_parser_free(p);
 }
 
+TEST(ArgparseC, ParseSubcommandArguments) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *run = NULL;
+  ap_arg_options config = ap_arg_options_default();
+  ap_arg_options force = ap_arg_options_default();
+  const char *subcommand = NULL;
+  const char *config_value = NULL;
+  bool force_enabled = false;
+  char *argv[] = {(char *)"prog", (char *)"run", (char *)"--config",
+                  (char *)"prod.json", (char *)"--force", NULL};
+
+  CHECK(p != NULL);
+  run = ap_add_subcommand(p, "run", "run the job", &err);
+  CHECK(run != NULL);
+  force.type = AP_TYPE_BOOL;
+  force.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(run, "--config", config, &err));
+  LONGS_EQUAL(0, ap_add_argument(run, "--force", force, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 5, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "subcommand", &subcommand));
+  CHECK(ap_ns_get_string(ns, "config", &config_value));
+  CHECK(ap_ns_get_bool(ns, "force", &force_enabled));
+  STRCMP_EQUAL("run", subcommand);
+  STRCMP_EQUAL("prod.json", config_value);
+  CHECK_TRUE(force_enabled);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, HelpListsSubcommands) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *run = NULL;
+  char *help;
+
+  CHECK(p != NULL);
+  run = ap_add_subcommand(p, "run", "run the job", &err);
+  CHECK(run != NULL);
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "subcommands:") != NULL);
+  CHECK(strstr(help, "run") != NULL);
+  CHECK(strstr(help, "run the job") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, MissingSubcommandFails) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  CHECK(ap_add_subcommand(p, "run", "run the job", &err) != NULL);
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, CountActionAccumulatesShortFlags) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+  int32_t count = 0;
+  char *argv[] = {(char *)"prog", (char *)"-vvv", NULL};
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_INT32;
+  verbose.action = AP_ACTION_COUNT;
+  LONGS_EQUAL(0, ap_add_argument(p, "-v, --verbose", verbose, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 2, argv, &ns, &err));
+  CHECK(ap_ns_get_int32(ns, "verbose", &count));
+  LONGS_EQUAL(3, count);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, AppendActionCollectsRepeatedOptionValues) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options include = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--include", (char *)"a",
+                  (char *)"--include", (char *)"b", NULL};
+
+  CHECK(p != NULL);
+  include.action = AP_ACTION_APPEND;
+  LONGS_EQUAL(0, ap_add_argument(p, "--include", include, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 5, argv, &ns, &err));
+  LONGS_EQUAL(2, ap_ns_get_count(ns, "include"));
+  STRCMP_EQUAL("a", ap_ns_get_string_at(ns, "include", 0));
+  STRCMP_EQUAL("b", ap_ns_get_string_at(ns, "include", 1));
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, StoreConstUsesConstValue) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options color = ap_arg_options_default();
+  const char *value = NULL;
+  char *argv[] = {(char *)"prog", (char *)"--always", NULL};
+
+  CHECK(p != NULL);
+  color.action = AP_ACTION_STORE_CONST;
+  color.const_value = "always";
+  LONGS_EQUAL(0, ap_add_argument(p, "--always", color, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 2, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "always", &value));
+  STRCMP_EQUAL("always", value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, FixedNargsForOption) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options range = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--range", (char *)"10",
+                  (char *)"20", NULL};
+  int32_t start = 0;
+  int32_t end = 0;
+
+  CHECK(p != NULL);
+  range.type = AP_TYPE_INT32;
+  range.nargs = AP_NARGS_FIXED;
+  range.nargs_count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "--range", range, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 4, argv, &ns, &err));
+  LONGS_EQUAL(2, ap_ns_get_count(ns, "range"));
+  CHECK(ap_ns_get_int32_at(ns, "range", 0, &start));
+  CHECK(ap_ns_get_int32_at(ns, "range", 1, &end));
+  LONGS_EQUAL(10, start);
+  LONGS_EQUAL(20, end);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, MutuallyExclusiveGroupRejectsConflicts) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_mutually_exclusive_group *group = NULL;
+  ap_arg_options json = ap_arg_options_default();
+  ap_arg_options yaml = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--json", (char *)"--yaml", NULL};
+
+  CHECK(p != NULL);
+  json.type = AP_TYPE_BOOL;
+  json.action = AP_ACTION_STORE_TRUE;
+  yaml.type = AP_TYPE_BOOL;
+  yaml.action = AP_ACTION_STORE_TRUE;
+  group = ap_add_mutually_exclusive_group(p, false, &err);
+  CHECK(group != NULL);
+  LONGS_EQUAL(0, ap_group_add_argument(group, "--json", json, &err));
+  LONGS_EQUAL(0, ap_group_add_argument(group, "--yaml", yaml, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv, &ns, &err));
+
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, RequiredMutuallyExclusiveGroupNeedsOneOption) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_mutually_exclusive_group *group = NULL;
+  ap_arg_options json = ap_arg_options_default();
+  ap_arg_options yaml = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  json.type = AP_TYPE_BOOL;
+  json.action = AP_ACTION_STORE_TRUE;
+  yaml.type = AP_TYPE_BOOL;
+  yaml.action = AP_ACTION_STORE_TRUE;
+  group = ap_add_mutually_exclusive_group(p, true, &err);
+  CHECK(group != NULL);
+  LONGS_EQUAL(0, ap_group_add_argument(group, "--json", json, &err));
+  LONGS_EQUAL(0, ap_group_add_argument(group, "--yaml", yaml, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+
+  ap_parser_free(p);
+}
+
 int main(int ac, char **av) { return CommandLineTestRunner::RunAllTests(ac, av); }

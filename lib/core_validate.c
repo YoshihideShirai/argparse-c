@@ -56,7 +56,9 @@ int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
     bool has_parsed_value = has_value(p);
 
     if (def->opts.action == AP_ACTION_STORE_TRUE ||
-        def->opts.action == AP_ACTION_STORE_FALSE) {
+        def->opts.action == AP_ACTION_STORE_FALSE ||
+        def->opts.action == AP_ACTION_COUNT ||
+        def->opts.action == AP_ACTION_STORE_CONST) {
       if (def->opts.required && !p->seen) {
         ap_error_set(err, AP_ERR_MISSING_REQUIRED, def->dest,
                      "option '%s' is required", def->flags[0]);
@@ -92,7 +94,45 @@ int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
       return -1;
     }
 
+    if (def->opts.nargs == AP_NARGS_FIXED &&
+        p->values.count > 0 &&
+        p->values.count != def->opts.nargs_count) {
+      ap_error_set(err, AP_ERR_INVALID_NARGS, def->dest,
+                   "argument '%s' requires exactly %d values", def->dest,
+                   def->opts.nargs_count);
+      return -1;
+    }
+
     if (check_choices(def, p, err) != 0) {
+      return -1;
+    }
+  }
+
+  for (i = 0; i < parser->mutex_groups_count; i++) {
+    const ap_mutex_group_def *group = &parser->mutex_groups[i];
+    int j;
+    int seen_count = 0;
+    const char *first_name = NULL;
+    for (j = 0; j < group->arg_count; j++) {
+      const ap_arg_def *def = &parser->defs[group->arg_indexes[j]];
+      const ap_parsed_arg *p = &parsed[group->arg_indexes[j]];
+      bool active = p->seen || p->values.count > 0;
+      if (!active) {
+        continue;
+      }
+      seen_count++;
+      if (!first_name) {
+        first_name = def->is_optional ? def->flags[0] : def->dest;
+      }
+    }
+    if (seen_count > 1) {
+      ap_error_set(err, AP_ERR_INVALID_DEFINITION, first_name ? first_name : "",
+                   "arguments in a mutually exclusive group cannot be used together");
+      return -1;
+    }
+    if (group->required && seen_count == 0) {
+      ap_error_set(err, AP_ERR_MISSING_REQUIRED, "",
+                   "one argument from a mutually exclusive group is required");
       return -1;
     }
   }
