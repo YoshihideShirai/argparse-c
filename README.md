@@ -119,6 +119,9 @@ cmake -S . -B build \
 cmake --build build
 ctest --test-dir build --output-on-failure
 
+# install the shared library and public header
+cmake --install build --prefix /usr/local
+
 # formatting / static analysis (requires clang-format and clang-tidy)
 cmake --build build --target format
 cmake --build build --target tidy
