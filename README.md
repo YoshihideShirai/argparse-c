@@ -60,6 +60,11 @@ ctest --test-dir build --output-on-failure
 
 See [sample/example1.c](./sample/example1.c).
 
+## API Specification
+
+- Japanese: [docs/api-spec.ja.md](./docs/api-spec.ja.md)
+- English: [docs/api-spec.en.md](./docs/api-spec.en.md)
+
 ## License
 
 MIT License.
