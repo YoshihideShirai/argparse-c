@@ -81,8 +81,9 @@
 - `description`: サブコマンドのhelp説明
 - 戻り値: 子パーサ（失敗時はNULL）
 - 備考:
-  - 現在は1階層のサブコマンドのみ対応
-  - パース成功時、選択されたサブコマンド名は namespace の `"subcommand"` に格納されます
+  - ネストしたサブコマンドを追加できます
+  - パース成功時、最上位で選択されたサブコマンド名は namespace の `"subcommand"` に格納されます
+  - ネスト経路全体は namespace の `"subcommand_path"` に順序付きで格納されます
 
 ### `void ap_parser_free(ap_parser *parser)`
 パーサ本体を解放します。

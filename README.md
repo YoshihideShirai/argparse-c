@@ -12,7 +12,7 @@
 - `nargs`: one, `?`, `*`, `+`, fixed arity
 - `append`, `count`, `store_const`
 - Mutually exclusive groups
-- Subcommands
+- Nested subcommands
 - Built-in `-h/--help`
 - Non-exit error flow (`ap_parse_args` returns error codes)
 - Error text helper: `ap_format_error(parser, &err)`

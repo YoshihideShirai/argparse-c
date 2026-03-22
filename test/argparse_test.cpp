@@ -549,6 +549,72 @@ TEST(ArgparseC, HelpListsSubcommands) {
   ap_parser_free(p);
 }
 
+TEST(ArgparseC, ParseNestedSubcommandArguments) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *config = NULL;
+  ap_parser *set = NULL;
+  ap_arg_options global = ap_arg_options_default();
+  ap_arg_options value = ap_arg_options_default();
+  const char *subcommand = NULL;
+  const char *value_text = NULL;
+  const char *key = NULL;
+  bool is_global = false;
+  char *argv[] = {(char *)"prog", (char *)"config", (char *)"set",
+                  (char *)"--global", (char *)"--value", (char *)"blue",
+                  (char *)"theme", NULL};
+
+  CHECK(p != NULL);
+  config = ap_add_subcommand(p, "config", "config commands", &err);
+  CHECK(config != NULL);
+  set = ap_add_subcommand(config, "set", "set a value", &err);
+  CHECK(set != NULL);
+
+  global.type = AP_TYPE_BOOL;
+  global.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(set, "--global", global, &err));
+  LONGS_EQUAL(0, ap_add_argument(set, "--value", value, &err));
+  LONGS_EQUAL(0, ap_add_argument(set, "key", ap_arg_options_default(), &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 7, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "subcommand", &subcommand));
+  CHECK(ap_ns_get_bool(ns, "global", &is_global));
+  CHECK(ap_ns_get_string(ns, "value", &value_text));
+  CHECK(ap_ns_get_string(ns, "key", &key));
+  LONGS_EQUAL(2, ap_ns_get_count(ns, "subcommand_path"));
+  STRCMP_EQUAL("config", subcommand);
+  CHECK_TRUE(is_global);
+  STRCMP_EQUAL("blue", value_text);
+  STRCMP_EQUAL("theme", key);
+  STRCMP_EQUAL("config", ap_ns_get_string_at(ns, "subcommand_path", 0));
+  STRCMP_EQUAL("set", ap_ns_get_string_at(ns, "subcommand_path", 1));
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, NestedSubcommandHelpUsesFullCommandPath) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *config = NULL;
+  ap_parser *set = NULL;
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  config = ap_add_subcommand(p, "config", "config commands", &err);
+  CHECK(config != NULL);
+  set = ap_add_subcommand(config, "set", "set a value", &err);
+  CHECK(set != NULL);
+
+  help = ap_format_help(set);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "usage: prog config set") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
 TEST(ArgparseC, MissingSubcommandFails) {
   ap_error err = {};
   ap_namespace *ns = NULL;
