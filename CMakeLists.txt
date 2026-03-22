@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(argparse-c C)
+project(argparse-c C CXX)
 
 include_directories(./include)
 add_subdirectory(lib)

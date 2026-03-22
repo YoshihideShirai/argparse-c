@@ -1,0 +1,177 @@
+#include <stdlib.h>
+#include <string.h>
+
+#include "CppUTest/CommandLineTestRunner.h"
+#include "CppUTest/TestHarness.h"
+
+extern "C" {
+#include "argparse-c.h"
+}
+
+static ap_parser *new_base_parser(void) {
+  ap_error err = {}; 
+  ap_parser *p = ap_parser_new("prog", "desc");
+
+  if (!p) {
+    return NULL;
+  }
+
+  ap_arg_options text_opts = ap_arg_options_default();
+  text_opts.required = true;
+  text_opts.help = "text";
+  if (ap_add_argument(p, "-t, --text", text_opts, &err) != 0) {
+    ap_parser_free(p);
+    return NULL;
+  }
+
+  ap_arg_options int_opts = ap_arg_options_default();
+  int_opts.type = AP_TYPE_INT32;
+  if (ap_add_argument(p, "-n, --num", int_opts, &err) != 0) {
+    ap_parser_free(p);
+    return NULL;
+  }
+
+  ap_arg_options pos_opts = ap_arg_options_default();
+  pos_opts.help = "input";
+  if (ap_add_argument(p, "input", pos_opts, &err) != 0) {
+    ap_parser_free(p);
+    return NULL;
+  }
+
+  return p;
+}
+
+TEST_GROUP(ArgparseC) {
+  void teardown() {}
+};
+
+TEST(ArgparseC, SuccessParse) {
+  ap_error err = {}; 
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char *argv[] = {(char *)"prog", (char *)"-t", (char *)"hello", (char *)"-n",
+                  (char *)"12", (char *)"file.txt", NULL};
+  const char *text = NULL;
+  const char *input = NULL;
+  int32_t num = 0;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parse_args(p, 6, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_int32(ns, "num", &num));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("hello", text);
+  LONGS_EQUAL(12, num);
+  STRCMP_EQUAL("file.txt", input);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, UnknownOption) {
+  ap_error err = {}; 
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char *argv[] = {(char *)"prog", (char *)"--bogus", NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_UNKNOWN_OPTION, err.code);
+
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, InvalidInt) {
+  ap_error err = {}; 
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char *argv[] = {(char *)"prog", (char *)"-t", (char *)"x", (char *)"-n",
+                  (char *)"abc", (char *)"file", NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(-1, ap_parse_args(p, 6, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_INT32, err.code);
+
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, ChoicesValidation) {
+  static const char *choices[] = {"fast", "slow"};
+  ap_error err = {}; 
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  char *argv_bad[] = {(char *)"prog", (char *)"--mode", (char *)"medium", NULL};
+
+  CHECK(p != NULL);
+  mode.help = "mode";
+  mode.choices.items = choices;
+  mode.choices.count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_bad, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_CHOICE, err.code);
+
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, NargsOneOrMore) {
+  ap_error err = {}; 
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options files = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--files", (char *)"a.txt", (char *)"b.txt", NULL};
+
+  CHECK(p != NULL);
+  files.nargs = AP_NARGS_ONE_OR_MORE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--files", files, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 4, argv, &ns, &err));
+  LONGS_EQUAL(2, ap_ns_get_count(ns, "files"));
+  STRCMP_EQUAL("a.txt", ap_ns_get_string_at(ns, "files", 0));
+  STRCMP_EQUAL("b.txt", ap_ns_get_string_at(ns, "files", 1));
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, DefaultValue) {
+  ap_error err = {}; 
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options name = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", NULL};
+  const char *actual = NULL;
+
+  CHECK(p != NULL);
+  name.default_value = "guest";
+  LONGS_EQUAL(0, ap_add_argument(p, "--name", name, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 1, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "name", &actual));
+  STRCMP_EQUAL("guest", actual);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, HelpGeneration) {
+  ap_error err = {}; 
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options arg = ap_arg_options_default();
+  char *help;
+
+  CHECK(p != NULL);
+  arg.help = "value";
+  LONGS_EQUAL(0, ap_add_argument(p, "--value", arg, &err));
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "usage: prog") != NULL);
+  CHECK(strstr(help, "--value") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
+int main(int ac, char **av) { return CommandLineTestRunner::RunAllTests(ac, av); }
