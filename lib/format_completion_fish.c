@@ -13,6 +13,19 @@ static bool option_takes_value(const ap_arg_def *def) {
   return def && def->is_optional && !action_takes_no_value(def->opts.action);
 }
 
+static ap_completion_kind option_completion_kind(const ap_arg_def *def) {
+  if (!option_takes_value(def)) {
+    return AP_COMPLETION_KIND_NONE;
+  }
+  if (def->opts.completion_kind != AP_COMPLETION_KIND_NONE) {
+    return def->opts.completion_kind;
+  }
+  if (def->opts.choices.items && def->opts.choices.count > 0) {
+    return AP_COMPLETION_KIND_CHOICES;
+  }
+  return AP_COMPLETION_KIND_NONE;
+}
+
 static const char *metavar_for(const ap_arg_def *def) {
   static char fallback[64];
   size_t i;
@@ -109,7 +122,8 @@ static int append_transition_cases(ap_string_builder *sb,
     if (ap_sb_appendf(sb, "    case \"") != 0) {
       return -1;
     }
-    if (append_parser_key(sb, parser) != 0 || ap_sb_appendf(sb, ":%s\"\n", parser->subcommands[i].name) != 0 ||
+    if (append_parser_key(sb, parser) != 0 ||
+        ap_sb_appendf(sb, ":%s\"\n", parser->subcommands[i].name) != 0 ||
         ap_sb_appendf(sb, "      set key \"") != 0) {
       return -1;
     }
@@ -128,12 +142,11 @@ static int append_choice_cases(ap_string_builder *sb, const ap_parser *parser) {
   int i;
   int j;
   int k;
-  bool emitted = false;
 
   for (i = 0; i < parser->defs_count; i++) {
     const ap_arg_def *def = &parser->defs[i];
-    if (!option_takes_value(def) || !def->opts.choices.items ||
-        def->opts.choices.count <= 0) {
+    if (option_completion_kind(def) != AP_COMPLETION_KIND_CHOICES ||
+        !def->opts.choices.items || def->opts.choices.count <= 0) {
       continue;
     }
     for (j = 0; j < def->flags_count; j++) {
@@ -153,7 +166,6 @@ static int append_choice_cases(ap_string_builder *sb, const ap_parser *parser) {
       if (ap_sb_appendf(sb, "\n") != 0) {
         return -1;
       }
-      emitted = true;
     }
   }
 
@@ -162,10 +174,6 @@ static int append_choice_cases(ap_string_builder *sb, const ap_parser *parser) {
       return -1;
     }
   }
-
-  if (!emitted && parser->subcommands_count == 0) {
-    return 0;
-  }
   return 0;
 }
 
@@ -173,7 +181,7 @@ static int append_option_complete(ap_string_builder *sb, const char *prog,
                                   const ap_parser *parser,
                                   const ap_arg_def *def) {
   int i;
-  bool has_choices = def->opts.choices.items && def->opts.choices.count > 0;
+  ap_completion_kind completion_kind = option_completion_kind(def);
 
   if (ap_sb_appendf(sb, "complete -c ") != 0 ||
       append_fish_double_quoted(sb, prog) != 0 || ap_sb_appendf(sb, " -n '") != 0) {
@@ -206,14 +214,35 @@ static int append_option_complete(ap_string_builder *sb, const char *prog,
     if (ap_sb_appendf(sb, " -r") != 0) {
       return -1;
     }
-    if (has_choices) {
+    switch (completion_kind) {
+    case AP_COMPLETION_KIND_CHOICES:
       if (ap_sb_appendf(sb, " -a '(__ap_") != 0 || append_identifier(sb, prog) != 0 ||
           ap_sb_appendf(sb, "_value_choices ") != 0) {
         return -1;
       }
-      if (append_parser_key(sb, parser) != 0 || ap_sb_appendf(sb, ":%s)'", def->flags[def->flags_count - 1]) != 0) {
+      if (append_parser_key(sb, parser) != 0 ||
+          ap_sb_appendf(sb, ":%s)'", def->flags[def->flags_count - 1]) != 0) {
         return -1;
       }
+      break;
+    case AP_COMPLETION_KIND_FILE:
+      if (ap_sb_appendf(sb, " -F") != 0) {
+        return -1;
+      }
+      break;
+    case AP_COMPLETION_KIND_DIRECTORY:
+      if (ap_sb_appendf(sb, " -a '(__fish_complete_directories)'") != 0) {
+        return -1;
+      }
+      break;
+    case AP_COMPLETION_KIND_COMMAND:
+      if (ap_sb_appendf(sb, " -a '(__fish_complete_command)'") != 0) {
+        return -1;
+      }
+      break;
+    case AP_COMPLETION_KIND_NONE:
+    default:
+      break;
     }
   }
 

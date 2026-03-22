@@ -63,9 +63,25 @@ Options passed to `ap_add_argument`.
 - `default_value`: default when not provided (string form)
 - `const_value`: value stored by `AP_ACTION_STORE_CONST`
 - `choices`: allowed values (`ap_choices`)
+- `completion_kind`: static completion metadata (`ap_completion_kind`)
+- `completion_hint`: optional generator-specific hint string for completions
 - `dest`: key used for lookup (auto-generated when omitted)
 
 Use `ap_arg_options_default()` first, then override needed fields.
+
+### `ap_completion_kind`
+- `AP_COMPLETION_KIND_NONE`: no explicit completion metadata
+- `AP_COMPLETION_KIND_CHOICES`: complete from `choices`
+- `AP_COMPLETION_KIND_FILE`: complete file paths
+- `AP_COMPLETION_KIND_DIRECTORY`: complete directories
+- `AP_COMPLETION_KIND_COMMAND`: complete executable command names
+
+#### Completion metadata rules
+- bash / fish generators prefer `completion_kind` when it is not `AP_COMPLETION_KIND_NONE`
+- when `completion_kind == AP_COMPLETION_KIND_CHOICES`, generators use `choices` as the completion source
+- when `completion_kind == AP_COMPLETION_KIND_NONE` and `choices` is present, generators treat it as the default `CHOICES` behavior
+- this metadata is static only; callback-style dynamic completion is not part of the current API
+- `completion_hint` is reserved for generator-specific hints and does not change parse-time validation
 
 #### `dest` auto-generation rules
 - for optional arguments, the first long flag (for example `--dry-run`) is preferred

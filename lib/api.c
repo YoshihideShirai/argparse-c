@@ -1079,6 +1079,8 @@ int ap_parser_get_argument(const ap_parser *parser, int index,
   out_info->help = def->opts.help;
   out_info->metavar = def->opts.metavar;
   out_info->choices = def->opts.choices;
+  out_info->completion_kind = def->opts.completion_kind;
+  out_info->completion_hint = def->opts.completion_hint;
   out_info->required = def->opts.required;
   out_info->nargs = def->opts.nargs;
   out_info->nargs_count = def->opts.nargs_count;

@@ -63,9 +63,25 @@
 - `default_value`: 未指定時のデフォルト（文字列として指定）
 - `const_value`: `AP_ACTION_STORE_CONST` で格納する値
 - `choices`: 許容値一覧（`ap_choices`）
+- `completion_kind`: 静的な補完メタデータ（`ap_completion_kind`）
+- `completion_hint`: 補完生成器向けの任意ヒント文字列
 - `dest`: 取得キー名（未指定時は自動生成）
 
 `ap_arg_options_default()` で初期化してから必要項目を上書きする使い方を推奨します。
+
+### `ap_completion_kind`
+- `AP_COMPLETION_KIND_NONE`: 明示的な補完メタデータなし
+- `AP_COMPLETION_KIND_CHOICES`: `choices` を補完元として使う
+- `AP_COMPLETION_KIND_FILE`: ファイルパスを補完する
+- `AP_COMPLETION_KIND_DIRECTORY`: ディレクトリを補完する
+- `AP_COMPLETION_KIND_COMMAND`: 実行可能コマンド名を補完する
+
+#### 補完メタデータのルール
+- bash / fish 生成器は `completion_kind` が `AP_COMPLETION_KIND_NONE` 以外ならそれを優先します
+- `completion_kind == AP_COMPLETION_KIND_CHOICES` の場合、補完元として `choices` を使います
+- `completion_kind == AP_COMPLETION_KIND_NONE` で `choices` が設定されている場合は、デフォルトの `CHOICES` 挙動として扱います
+- 現段階では静的メタデータのみで、コールバック型の動的補完APIは公開しません
+- `completion_hint` は生成器固有ヒントのための予約フィールドで、parse時の検証動作は変えません
 
 #### `dest` 自動生成ルール
 - optional 引数では、最初に見つかった long flag（例: `--dry-run`）を優先します

@@ -12,6 +12,19 @@ static bool option_takes_value(const ap_arg_def *def) {
   return def && def->is_optional && !action_takes_no_value(def->opts.action);
 }
 
+static ap_completion_kind option_completion_kind(const ap_arg_def *def) {
+  if (!option_takes_value(def)) {
+    return AP_COMPLETION_KIND_NONE;
+  }
+  if (def->opts.completion_kind != AP_COMPLETION_KIND_NONE) {
+    return def->opts.completion_kind;
+  }
+  if (def->opts.choices.items && def->opts.choices.count > 0) {
+    return AP_COMPLETION_KIND_CHOICES;
+  }
+  return AP_COMPLETION_KIND_NONE;
+}
+
 static int option_value_count(const ap_arg_def *def) {
   if (!option_takes_value(def)) {
     return 0;
@@ -37,6 +50,22 @@ static const char *option_value_mode(const ap_arg_def *def) {
   case AP_NARGS_ONE:
   default:
     return "single";
+  }
+}
+
+static const char *completion_kind_name(ap_completion_kind kind) {
+  switch (kind) {
+  case AP_COMPLETION_KIND_CHOICES:
+    return "choices";
+  case AP_COMPLETION_KIND_FILE:
+    return "file";
+  case AP_COMPLETION_KIND_DIRECTORY:
+    return "directory";
+  case AP_COMPLETION_KIND_COMMAND:
+    return "command";
+  case AP_COMPLETION_KIND_NONE:
+  default:
+    return "none";
   }
 }
 
@@ -183,8 +212,8 @@ static int append_choice_cases(ap_string_builder *sb, const ap_parser *parser) {
 
   for (i = 0; i < parser->defs_count; i++) {
     const ap_arg_def *def = &parser->defs[i];
-    if (!option_takes_value(def) || !def->opts.choices.items ||
-        def->opts.choices.count <= 0) {
+    if (option_completion_kind(def) != AP_COMPLETION_KIND_CHOICES ||
+        !def->opts.choices.items || def->opts.choices.count <= 0) {
       continue;
     }
     for (j = 0; j < def->flags_count; j++) {
@@ -239,6 +268,32 @@ static int append_value_mode_cases(ap_string_builder *sb,
   return 0;
 }
 
+static int append_completion_kind_cases(ap_string_builder *sb,
+                                        const ap_parser *parser) {
+  int i;
+  int j;
+
+  for (i = 0; i < parser->defs_count; i++) {
+    const ap_arg_def *def = &parser->defs[i];
+    if (!option_takes_value(def)) {
+      continue;
+    }
+    for (j = 0; j < def->flags_count; j++) {
+      if (ap_sb_appendf(sb, "      ") != 0 || append_parser_key(sb, parser) != 0 ||
+          ap_sb_appendf(sb, ":%s) printf '%%s\\n' '%s' ;;\n", def->flags[j],
+                        completion_kind_name(option_completion_kind(def))) != 0) {
+        return -1;
+      }
+    }
+  }
+  for (i = 0; i < parser->subcommands_count; i++) {
+    if (append_completion_kind_cases(sb, parser->subcommands[i].parser) != 0) {
+      return -1;
+    }
+  }
+  return 0;
+}
+
 static int append_value_count_cases(ap_string_builder *sb,
                                     const ap_parser *parser) {
   int i;
@@ -282,7 +337,7 @@ char *ap_bash_completion_build(const ap_parser *parser) {
       ap_sb_appendf(&sb,
                     "() {\n"
                     "  local cur parser_key parser_subcommands parser_options parser_value_options parser_flag_only_options\n"
-                    "  local pending_option pending_mode pending_fixed_remaining option_name value_prefix token choices\n"
+                    "  local pending_option pending_mode pending_fixed_remaining option_name value_prefix token choices completion_kind\n"
                     "  local -a filtered candidates\n"
                     "  cur=\"${COMP_WORDS[COMP_CWORD]}\"\n"
                     "  parser_key='root'\n"
@@ -315,6 +370,16 @@ char *ap_bash_completion_build(const ap_parser *parser) {
     return NULL;
   }
   if (append_value_mode_cases(&sb, parser) != 0 ||
+      ap_sb_appendf(&sb,
+                    "      *) return 1 ;;\n"
+                    "    esac\n"
+                    "  }\n\n"
+                    "  __ap_completion_option_completion_kind() {\n"
+                    "    case \"$1\" in\n") != 0) {
+    ap_sb_free(&sb);
+    return NULL;
+  }
+  if (append_completion_kind_cases(&sb, parser) != 0 ||
       ap_sb_appendf(&sb,
                     "      *) return 1 ;;\n"
                     "    esac\n"
@@ -398,20 +463,50 @@ char *ap_bash_completion_build(const ap_parser *parser) {
                     "  if [[ \"$cur\" == --*=* ]]; then\n"
                     "    option_name=${cur%%=*}\n"
                     "    value_prefix=${cur#*=}\n"
-                    "    if choices=$(__ap_completion_choice_words \"$parser_key:$option_name\" 2>/dev/null); then\n"
-                    "      COMPREPLY=( $(compgen -W \"$choices\" -- \"$value_prefix\") )\n"
-                    "      if (( ${#COMPREPLY[@]} > 0 )); then\n"
-                    "        local idx\n"
-                    "        for idx in \"${!COMPREPLY[@]}\"; do\n"
-                    "          COMPREPLY[idx]=\"$option_name=${COMPREPLY[idx]}\"\n"
-                    "        done\n"
-                    "      fi\n"
+                    "    completion_kind=$(__ap_completion_option_completion_kind \"$parser_key:$option_name\" 2>/dev/null || printf '%%s' none)\n"
+                    "    case \"$completion_kind\" in\n"
+                    "      choices)\n"
+                    "        if choices=$(__ap_completion_choice_words \"$parser_key:$option_name\" 2>/dev/null); then\n"
+                    "          COMPREPLY=( $(compgen -W \"$choices\" -- \"$value_prefix\") )\n"
+                    "        fi\n"
+                    "        ;;\n"
+                    "      file)\n"
+                    "        COMPREPLY=( $(compgen -f -- \"$value_prefix\") )\n"
+                    "        ;;\n"
+                    "      directory)\n"
+                    "        COMPREPLY=( $(compgen -d -- \"$value_prefix\") )\n"
+                    "        ;;\n"
+                    "      command)\n"
+                    "        COMPREPLY=( $(compgen -c -- \"$value_prefix\") )\n"
+                    "        ;;\n"
+                    "    esac\n"
+                    "    if (( ${#COMPREPLY[@]} > 0 )); then\n"
+                    "      local idx\n"
+                    "      for idx in \"${!COMPREPLY[@]}\"; do\n"
+                    "        COMPREPLY[idx]=\"$option_name=${COMPREPLY[idx]}\"\n"
+                    "      done\n"
                     "      return 0\n"
                     "    fi\n"
                     "  fi\n\n"
                     "  if [[ -n \"$pending_option\" ]]; then\n"
-                    "    if choices=$(__ap_completion_choice_words \"$parser_key:$pending_option\" 2>/dev/null); then\n"
-                    "      COMPREPLY=( $(compgen -W \"$choices\" -- \"$cur\") )\n"
+                    "    completion_kind=$(__ap_completion_option_completion_kind \"$parser_key:$pending_option\" 2>/dev/null || printf '%%s' none)\n"
+                    "    case \"$completion_kind\" in\n"
+                    "      choices)\n"
+                    "        if choices=$(__ap_completion_choice_words \"$parser_key:$pending_option\" 2>/dev/null); then\n"
+                    "          COMPREPLY=( $(compgen -W \"$choices\" -- \"$cur\") )\n"
+                    "        fi\n"
+                    "        ;;\n"
+                    "      file)\n"
+                    "        COMPREPLY=( $(compgen -f -- \"$cur\") )\n"
+                    "        ;;\n"
+                    "      directory)\n"
+                    "        COMPREPLY=( $(compgen -d -- \"$cur\") )\n"
+                    "        ;;\n"
+                    "      command)\n"
+                    "        COMPREPLY=( $(compgen -c -- \"$cur\") )\n"
+                    "        ;;\n"
+                    "    esac\n"
+                    "    if (( ${#COMPREPLY[@]} > 0 )); then\n"
                     "      return 0\n"
                     "    fi\n"
                     "  fi\n\n"
@@ -426,7 +521,7 @@ char *ap_bash_completion_build(const ap_parser *parser) {
                     "  candidates=()\n"
                     "  while IFS= read -r token; do\n"
                     "    [[ -n \"$token\" ]] && candidates+=(\"$token\")\n"
-                    "  done < <(printf '%s\\n' $parser_subcommands)\n"
+                    "  done < <(printf '%%s\\n' $parser_subcommands)\n"
                     "  COMPREPLY=( $(compgen -W \"${candidates[*]}\" -- \"$cur\") )\n"
                     "  return 0\n"
                     "}\n\n"
