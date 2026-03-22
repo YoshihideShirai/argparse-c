@@ -77,6 +77,62 @@ const char *text = NULL;
 ap_ns_get_string(ns, "text", &text);
 ```
 
+## Generator API のサンプル
+
+`sample/example1.c` に加えて、generator API をすぐ試せるサンプルも含まれています。
+
+- `sample/example_completion.c`: `--generate-bash-completion` / `--generate-fish-completion` / `--generate-manpage` をアプリ側で実装する最小例
+- `sample/example_manpage.c`: subcommand を含む parser 定義から man page と shell completion を生成する例
+
+### アプリ側で generator フラグを実装する例
+
+```c
+ap_arg_options bash = ap_arg_options_default();
+bash.type = AP_TYPE_BOOL;
+bash.action = AP_ACTION_STORE_TRUE;
+bash.help = "print a bash completion script";
+ap_add_argument(parser, "--generate-bash-completion", bash, &err);
+
+ap_arg_options fish = ap_arg_options_default();
+fish.type = AP_TYPE_BOOL;
+fish.action = AP_ACTION_STORE_TRUE;
+fish.help = "print a fish completion script";
+ap_add_argument(parser, "--generate-fish-completion", fish, &err);
+
+ap_arg_options manpage = ap_arg_options_default();
+manpage.type = AP_TYPE_BOOL;
+manpage.action = AP_ACTION_STORE_TRUE;
+manpage.help = "print a roff man page";
+ap_add_argument(parser, "--generate-manpage", manpage, &err);
+
+if (bash_completion) {
+  char *script = ap_format_bash_completion(parser);
+  printf("%s", script);
+  free(script);
+  return 0;
+}
+```
+
+### bash completion を生成する
+
+```bash
+./build/sample/example_completion --generate-bash-completion > example_completion.bash
+source ./example_completion.bash
+```
+
+### fish completion を生成する
+
+```bash
+./build/sample/example_completion --generate-fish-completion   > ~/.config/fish/completions/example_completion.fish
+```
+
+### man page を生成する
+
+```bash
+./build/sample/example_manpage --generate-manpage > example_manpage.1
+man ./example_manpage.1
+```
+
 ## 次に読むとよいページ
 
 - [基本の使い方](guides/basic-usage.md)
