@@ -240,6 +240,20 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
             ap_error_set(err, AP_ERR_NO_MEMORY, token, "out of memory");
             return -1;
           }
+          if (token_index + 1 < argc && strcmp(argv[token_index + 1], "--") != 0 &&
+              find_flag_index(parser, argv[token_index + 1]) < 0 &&
+              !ap_starts_with_dash(argv[token_index + 1])) {
+            char *next_copy = ap_strdup(argv[token_index + 1]);
+            if (!next_copy || ap_strvec_push(unknown_args, next_copy) != 0) {
+              free(next_copy);
+              free(positional_defs);
+              free(parsed);
+              ap_error_set(err, AP_ERR_NO_MEMORY, token, "out of memory");
+              return -1;
+            }
+            token_index += 2;
+            continue;
+          }
           token_index++;
           continue;
         }
@@ -324,6 +338,20 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
   }
 
   if (positional_cursor < positionals->count) {
+    if (allow_unknown && unknown_args) {
+      while (positional_cursor < positionals->count) {
+        char *extra = ap_strdup(positionals->items[positional_cursor]);
+        if (!extra || ap_strvec_push(unknown_args, extra) != 0) {
+          free(extra);
+          ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+          goto fail;
+        }
+        positional_cursor++;
+      }
+      free(positional_defs);
+      *out_parsed = parsed;
+      return 0;
+    }
     ap_error_set(err, AP_ERR_UNEXPECTED_POSITIONAL,
                  positionals->items[positional_cursor],
                  "unexpected positional argument '%s'",
