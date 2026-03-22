@@ -1,0 +1,66 @@
+site_name: argparse-c
+site_description: C99 command-line argument parsing library inspired by Python argparse.
+docs_dir: docs
+site_dir: site
+copyright: Copyright (c) argparse-c contributors
+
+theme:
+  name: material
+  language: ja
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: ダークモードに切り替え
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: ライトモードに切り替え
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Guides:
+      - 基本の使い方: guides/basic-usage.md
+      - オプションと型: guides/options-and-types.md
+      - nargs: guides/nargs.md
+      - サブコマンド: guides/subcommands.md
+      - known args / unknown args: guides/known-args.md
+  - API Reference:
+      - 日本語: api-spec.ja.md
+      - English: api-spec.en.md
+  - 開発メモ:
+      - 実装計画: implementation-plan.md
+  - FAQ: faq.md
