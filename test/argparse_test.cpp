@@ -77,6 +77,8 @@ TEST(ArgparseC, UnknownOption) {
   CHECK(p != NULL);
   LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
   LONGS_EQUAL(AP_ERR_UNKNOWN_OPTION, err.code);
+  STRCMP_EQUAL("--bogus", err.argument);
+  STRCMP_EQUAL("unknown option '--bogus'", err.message);
 
   ap_parser_free(p);
 }
@@ -91,6 +93,8 @@ TEST(ArgparseC, InvalidInt) {
   CHECK(p != NULL);
   LONGS_EQUAL(-1, ap_parse_args(p, 6, argv, &ns, &err));
   LONGS_EQUAL(AP_ERR_INVALID_INT32, err.code);
+  STRCMP_EQUAL("-n", err.argument);
+  STRCMP_EQUAL("argument '-n' must be a valid int32: 'abc'", err.message);
 
   ap_parser_free(p);
 }
@@ -111,6 +115,8 @@ TEST(ArgparseC, ChoicesValidation) {
 
   LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_bad, &ns, &err));
   LONGS_EQUAL(AP_ERR_INVALID_CHOICE, err.code);
+  STRCMP_EQUAL("--mode", err.argument);
+  STRCMP_EQUAL("invalid choice 'medium' for option '--mode'", err.message);
 
   ap_parser_free(p);
 }
@@ -264,6 +270,8 @@ TEST(ArgparseC, RequiredOptionIgnoresDefaultWhenMissing) {
 
   LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
   LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+  STRCMP_EQUAL("--name", err.argument);
+  STRCMP_EQUAL("option '--name' is required", err.message);
 
   ap_parser_free(p);
 }
@@ -426,6 +434,8 @@ TEST(ArgparseC, ParseKnownArgsStillValidatesRequired) {
   LONGS_EQUAL(-1, ap_parse_known_args(p, 3, argv, &ns, &unknown, &unknown_count,
                                       &err));
   LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+  STRCMP_EQUAL("-t", err.argument);
+  STRCMP_EQUAL("option '-t' is required", err.message);
   CHECK(unknown == NULL);
   LONGS_EQUAL(0, unknown_count);
 
@@ -818,6 +828,27 @@ TEST(ArgparseC, RequiredMutuallyExclusiveGroupNeedsOneOption) {
 
   LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
   LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+  STRCMP_EQUAL("", err.argument);
+  STRCMP_EQUAL("one argument from a mutually exclusive group is required", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(ArgparseC, MissingRequiredPositionalUsesConsistentArgumentNameAndMessage) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options opts = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  opts.required = true;
+  LONGS_EQUAL(0, ap_add_argument(p, "input-file", opts, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+  STRCMP_EQUAL("input-file", err.argument);
+  STRCMP_EQUAL("argument 'input-file' is required", err.message);
 
   ap_parser_free(p);
 }

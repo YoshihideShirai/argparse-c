@@ -102,6 +102,29 @@ void ap_error_set(ap_error *err, ap_error_code code, const char *argument,
   va_end(ap);
 }
 
+const char *ap_error_argument_name(const ap_arg_def *def) {
+  if (!def) {
+    return "";
+  }
+  if (def->is_optional && def->flags_count > 0 && def->flags[0]) {
+    return def->flags[0];
+  }
+  return def->dest ? def->dest : "";
+}
+
+void ap_error_label_for_arg(const ap_arg_def *def, char *buf, size_t buf_size) {
+  const char *kind;
+  const char *name;
+
+  if (!buf || buf_size == 0) {
+    return;
+  }
+
+  kind = (def && def->is_optional) ? "option" : "argument";
+  name = ap_error_argument_name(def);
+  snprintf(buf, buf_size, "%s '%s'", kind, name);
+}
+
 char *ap_strdup(const char *s) {
   size_t len;
   char *buf;

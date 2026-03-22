@@ -44,8 +44,11 @@ This document describes the public API defined in `include/argparse-c.h`.
 
 ### `ap_error`
 - `code`: error code
-- `argument`: argument name related to the error
-- `message`: human-readable message
+- `argument`: stable argument identifier related to the error
+  - optional arguments use the primary flag (for example `--mode` or `-t`)
+  - positional arguments use the declared argument name
+  - parser-level errors may leave this empty
+- `message`: human-readable message with consistent `option '...'` / `argument '...'` wording
 
 ### `ap_arg_options`
 Options passed to `ap_add_argument`.

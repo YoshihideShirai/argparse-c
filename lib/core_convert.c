@@ -81,7 +81,7 @@ static int copy_int_values(const ap_strvec *src, ap_ns_entry *dst,
   for (i = 0; i < src->count; i++) {
     if (parse_int32(src->items[i], &dst->as.ints[i]) != 0) {
       ap_error_set(err, AP_ERR_INVALID_INT32, dst->dest,
-                   "argument '%s' requires int32 value, got '%s'", dst->dest,
+                   "argument '%s' must be a valid int32: '%s'", dst->dest,
                    src->items[i]);
       return -1;
     }
@@ -93,6 +93,7 @@ static int validate_choices_merged(const ap_arg_def *def, const ap_strvec *value
                                    ap_error *err) {
   int i;
   int j;
+  char label[96];
   if (!def->opts.choices.items || def->opts.choices.count <= 0) {
     return 0;
   }
@@ -105,9 +106,9 @@ static int validate_choices_merged(const ap_arg_def *def, const ap_strvec *value
       }
     }
     if (!found) {
-      ap_error_set(err, AP_ERR_INVALID_CHOICE, def->dest,
-                   "invalid choice '%s' for argument '%s'",
-                   values->items[i], def->dest);
+      ap_error_label_for_arg(def, label, sizeof(label));
+      ap_error_set(err, AP_ERR_INVALID_CHOICE, ap_error_argument_name(def),
+                   "invalid choice '%s' for %s", values->items[i], label);
       return -1;
     }
   }
@@ -207,10 +208,12 @@ int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
 
     if (!help_requested && def->opts.required && merged.count == 0 &&
         def->opts.nargs == AP_NARGS_ONE) {
+      char label[96];
       ap_strvec_free(&merged);
       ap_namespace_free(ns);
-      ap_error_set(err, AP_ERR_MISSING_REQUIRED, def->dest,
-                   "argument '%s' is required", def->dest);
+      ap_error_label_for_arg(def, label, sizeof(label));
+      ap_error_set(err, AP_ERR_MISSING_REQUIRED, ap_error_argument_name(def),
+                   "%s is required", label);
       return -1;
     }
 

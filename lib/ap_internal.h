@@ -92,6 +92,8 @@ typedef struct {
 
 void ap_error_set(ap_error *err, ap_error_code code, const char *argument,
                   const char *fmt, ...);
+const char *ap_error_argument_name(const ap_arg_def *def);
+void ap_error_label_for_arg(const ap_arg_def *def, char *buf, size_t buf_size);
 
 char *ap_strdup(const char *s);
 char *ap_strndup(const char *s, size_t n);

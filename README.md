@@ -16,6 +16,7 @@
 - Built-in `-h/--help`
 - Non-exit error flow (`ap_parse_args` returns error codes)
 - Error text helper: `ap_format_error(parser, &err)`
+- Consistent error payloads: `err.argument` uses the primary flag for options and the declared name for positionals
 - Known/unknown split parser: `ap_parse_known_args(...)`
   - For `ap_parse_known_args`, tokens after `--` are collected into unknown args.
 

@@ -44,8 +44,11 @@
 
 ### `ap_error`
 - `code`: エラーコード
-- `argument`: 問題のあった引数名
-- `message`: 利用者向けエラーメッセージ
+- `argument`: 問題のあった引数を表す安定した識別子
+  - optional 引数では代表 flag（例: `--mode`, `-t`）
+  - positional 引数では宣言名
+  - パーサ全体に関わるエラーでは空文字の場合あり
+- `message`: `option '...'` / `argument '...'` の言い回しを揃えた利用者向けエラーメッセージ
 
 ### `ap_arg_options`
 `ap_add_argument` で渡すオプションです。

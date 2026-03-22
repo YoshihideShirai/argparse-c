@@ -10,6 +10,7 @@ static int check_choices(const ap_arg_def *def, const ap_parsed_arg *parsed,
                          ap_error *err) {
   int i;
   int j;
+  char label[96];
   if (!def->opts.choices.items || def->opts.choices.count <= 0) {
     return 0;
   }
@@ -23,9 +24,9 @@ static int check_choices(const ap_arg_def *def, const ap_parsed_arg *parsed,
       }
     }
     if (!found) {
-      ap_error_set(err, AP_ERR_INVALID_CHOICE, def->dest,
-                   "invalid choice '%s' for argument '%s'",
-                   parsed->values.items[i], def->dest);
+      ap_error_label_for_arg(def, label, sizeof(label));
+      ap_error_set(err, AP_ERR_INVALID_CHOICE, ap_error_argument_name(def),
+                   "invalid choice '%s' for %s", parsed->values.items[i], label);
       return -1;
     }
   }
@@ -54,14 +55,16 @@ int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
     const ap_arg_def *def = &parser->defs[i];
     const ap_parsed_arg *p = &parsed[i];
     bool has_parsed_value = has_value(p);
+    char label[96];
 
     if (def->opts.action == AP_ACTION_STORE_TRUE ||
         def->opts.action == AP_ACTION_STORE_FALSE ||
         def->opts.action == AP_ACTION_COUNT ||
         def->opts.action == AP_ACTION_STORE_CONST) {
       if (def->opts.required && !p->seen) {
-        ap_error_set(err, AP_ERR_MISSING_REQUIRED, def->dest,
-                     "option '%s' is required", def->flags[0]);
+        ap_error_label_for_arg(def, label, sizeof(label));
+        ap_error_set(err, AP_ERR_MISSING_REQUIRED, ap_error_argument_name(def),
+                     "%s is required", label);
         return -1;
       }
       continue;
@@ -70,36 +73,40 @@ int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
     if (def->opts.required) {
       if (def->is_optional) {
         if (!p->seen) {
-          ap_error_set(err, AP_ERR_MISSING_REQUIRED, def->dest,
-                       "option '%s' is required", def->flags[0]);
+          ap_error_label_for_arg(def, label, sizeof(label));
+          ap_error_set(err, AP_ERR_MISSING_REQUIRED, ap_error_argument_name(def),
+                       "%s is required", label);
           return -1;
         }
       } else if (!has_parsed_value) {
-        ap_error_set(err, AP_ERR_MISSING_REQUIRED, def->dest,
-                     "argument '%s' is required", def->dest);
+        ap_error_label_for_arg(def, label, sizeof(label));
+        ap_error_set(err, AP_ERR_MISSING_REQUIRED, ap_error_argument_name(def),
+                     "%s is required", label);
         return -1;
       }
     }
 
     if (def->opts.nargs == AP_NARGS_ONE && p->seen && !has_parsed_value) {
-      ap_error_set(err, AP_ERR_MISSING_VALUE, def->dest,
-                   "argument '%s' needs a value", def->dest);
+      ap_error_label_for_arg(def, label, sizeof(label));
+      ap_error_set(err, AP_ERR_MISSING_VALUE, ap_error_argument_name(def),
+                   "%s requires a value", label);
       return -1;
     }
 
     if (def->opts.nargs == AP_NARGS_ONE_OR_MORE && p->seen &&
         !has_parsed_value) {
-      ap_error_set(err, AP_ERR_INVALID_NARGS, def->dest,
-                   "argument '%s' requires one or more values", def->dest);
+      ap_error_label_for_arg(def, label, sizeof(label));
+      ap_error_set(err, AP_ERR_INVALID_NARGS, ap_error_argument_name(def),
+                   "%s requires at least one value", label);
       return -1;
     }
 
     if (def->opts.nargs == AP_NARGS_FIXED &&
         p->values.count > 0 &&
         p->values.count != def->opts.nargs_count) {
-      ap_error_set(err, AP_ERR_INVALID_NARGS, def->dest,
-                   "argument '%s' requires exactly %d values", def->dest,
-                   def->opts.nargs_count);
+      ap_error_label_for_arg(def, label, sizeof(label));
+      ap_error_set(err, AP_ERR_INVALID_NARGS, ap_error_argument_name(def),
+                   "%s requires exactly %d values", label, def->opts.nargs_count);
       return -1;
     }
 
@@ -127,7 +134,7 @@ int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
     }
     if (seen_count > 1) {
       ap_error_set(err, AP_ERR_INVALID_DEFINITION, first_name ? first_name : "",
-                   "arguments in a mutually exclusive group cannot be used together");
+                   "mutually exclusive arguments cannot be used together");
       return -1;
     }
     if (group->required && seen_count == 0) {
