@@ -36,6 +36,7 @@ set(AP_CLANG_TOOL_SOURCES
   lib/core_parser.c
   lib/core_validate.c
   lib/format_help.c
+  lib/format_completion_fish.c
   sample/example1.c
   sample/example_subcommands.c
   test/test_format_and_api.cpp

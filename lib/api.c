@@ -1042,6 +1042,10 @@ char *ap_format_bash_completion(const ap_parser *parser) {
   return ap_bash_completion_build(parser);
 }
 
+char *ap_format_fish_completion(const ap_parser *parser) {
+  return ap_fish_completion_build(parser);
+}
+
 int ap_parser_get_info(const ap_parser *parser, ap_parser_info *out_info) {
   if (!parser || !out_info) {
     return -1;
