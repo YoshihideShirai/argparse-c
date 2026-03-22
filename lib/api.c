@@ -761,10 +761,17 @@ static int append_namespace_entries(ap_namespace *dst, const ap_namespace *src,
 
     for (j = 0; j < old_count + added_count; j++) {
       if (strcmp(dst->entries[j].dest, src_entry->dest) == 0) {
+        if (strcmp(src_entry->dest, "subcommand_path") == 0) {
+          entry = NULL;
+          break;
+        }
         ap_error_set(err, AP_ERR_INVALID_DEFINITION, src_entry->dest,
                      "dest '%s' already exists", src_entry->dest);
         return -1;
       }
+    }
+    if (!entry) {
+      continue;
     }
 
     entry->dest = ap_strdup(src_entry->dest);
@@ -805,38 +812,71 @@ static int append_namespace_entries(ap_namespace *dst, const ap_namespace *src,
   return 0;
 }
 
-static int add_subcommand_entry(ap_namespace *ns, const char *name,
-                                ap_error *err) {
+static int add_string_entry(ap_namespace *ns, const char *dest,
+                            const char *value, ap_error *err) {
   ap_ns_entry *next;
   ap_ns_entry *entry;
 
   next = realloc(ns->entries, sizeof(ap_ns_entry) * (size_t)(ns->count + 1));
   if (!next) {
-    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    ap_error_set(err, AP_ERR_NO_MEMORY, dest ? dest : "", "out of memory");
     return -1;
   }
   ns->entries = next;
   entry = &ns->entries[ns->count];
   memset(entry, 0, sizeof(*entry));
-  entry->dest = ap_strdup("subcommand");
+  entry->dest = ap_strdup(dest);
   if (!entry->dest) {
-    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    ap_error_set(err, AP_ERR_NO_MEMORY, dest ? dest : "", "out of memory");
     return -1;
   }
   entry->type = AP_NS_VALUE_STRING;
   entry->count = 1;
   entry->as.strings = calloc(1, sizeof(char *));
   if (!entry->as.strings) {
-    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    ap_error_set(err, AP_ERR_NO_MEMORY, dest ? dest : "", "out of memory");
     return -1;
   }
-  entry->as.strings[0] = ap_strdup(name);
+  entry->as.strings[0] = ap_strdup(value);
   if (!entry->as.strings[0]) {
-    ap_error_set(err, AP_ERR_NO_MEMORY, name, "out of memory");
+    ap_error_set(err, AP_ERR_NO_MEMORY, dest ? dest : "", "out of memory");
     return -1;
   }
   ns->count++;
   return 0;
+}
+
+static int add_subcommand_entry(ap_namespace *ns, const char *name,
+                                ap_error *err) {
+  return add_string_entry(ns, "subcommand", name, err);
+}
+
+static int add_subcommand_path_entry(ap_namespace *ns, const char *name,
+                                     const ap_namespace *sub_ns,
+                                     ap_error *err) {
+  const ap_ns_entry *sub_path_entry = find_entry(sub_ns, "subcommand_path");
+  const char *sub_path =
+      sub_path_entry && sub_path_entry->type == AP_NS_VALUE_STRING &&
+              sub_path_entry->count > 0
+          ? sub_path_entry->as.strings[0]
+          : NULL;
+
+  if (sub_path && sub_path[0] != '\0') {
+    size_t path_len = strlen(name) + 1 + strlen(sub_path) + 1;
+    char *path = malloc(path_len);
+    int rc;
+
+    if (!path) {
+      ap_error_set(err, AP_ERR_NO_MEMORY, "subcommand_path", "out of memory");
+      return -1;
+    }
+    snprintf(path, path_len, "%s %s", name, sub_path);
+    rc = add_string_entry(ns, "subcommand_path", path, err);
+    free(path);
+    return rc;
+  }
+
+  return add_string_entry(ns, "subcommand_path", name, err);
 }
 
 static int parse_internal(ap_parser *parser, int argc, char **argv,
@@ -909,6 +949,11 @@ static int parse_internal(ap_parser *parser, int argc, char **argv,
       if (rc != 0) {
         goto done;
       }
+    }
+    rc = add_subcommand_path_entry(ns, parser->subcommands[subcommand_index].name,
+                                   sub_ns, err);
+    if (rc != 0) {
+      goto done;
     }
     rc = append_namespace_entries(ns, sub_ns, err);
     if (rc != 0) {

@@ -8,6 +8,7 @@ TEST(ParseSubcommandArguments) {
   ap_arg_options config = ap_arg_options_default();
   ap_arg_options force = ap_arg_options_default();
   const char *subcommand = NULL;
+  const char *subcommand_path = NULL;
   const char *config_value = NULL;
   bool force_enabled = false;
   char *argv[] = {(char *)"prog", (char *)"run", (char *)"--config",
@@ -23,9 +24,11 @@ TEST(ParseSubcommandArguments) {
 
   LONGS_EQUAL(0, ap_parse_args(p, 5, argv, &ns, &err));
   CHECK(ap_ns_get_string(ns, "subcommand", &subcommand));
+  CHECK(ap_ns_get_string(ns, "subcommand_path", &subcommand_path));
   CHECK(ap_ns_get_string(ns, "config", &config_value));
   CHECK(ap_ns_get_bool(ns, "force", &force_enabled));
   STRCMP_EQUAL("run", subcommand);
+  STRCMP_EQUAL("run", subcommand_path);
   STRCMP_EQUAL("prod.json", config_value);
   CHECK_TRUE(force_enabled);
 
@@ -88,9 +91,10 @@ TEST(ParseNestedSubcommandArguments) {
   CHECK(ap_ns_get_bool(ns, "global", &is_global));
   CHECK(ap_ns_get_string(ns, "value", &value_text));
   CHECK(ap_ns_get_string(ns, "key", &key));
+  CHECK(ap_ns_get_string(ns, "subcommand_path", &subcommand_path));
   CHECK(!ap_ns_get_string(ns, "config", &parent_subcommand));
-  CHECK(!ap_ns_get_string(ns, "subcommand_path", &subcommand_path));
   STRCMP_EQUAL("set", subcommand);
+  STRCMP_EQUAL("config set", subcommand_path);
   CHECK_TRUE(is_global);
   STRCMP_EQUAL("blue", value_text);
   STRCMP_EQUAL("theme", key);

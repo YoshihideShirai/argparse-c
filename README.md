@@ -85,7 +85,8 @@ return 0;
 - `"subcommand"` always stores the **final selected leaf subcommand name**
   - example: parsing `prog config set ...` stores `"set"`
 - intermediate subcommand names are **not** added as separate namespace entries
-- a separate `"subcommand_path"` key is **not** currently exposed
+- `"subcommand_path"` stores the full selected subcommand chain
+  - example: parsing `prog config set ...` stores `"config set"`
 - help for a nested subcommand uses the full command path
   - example: `ap_format_help(set_parser)` starts with `usage: prog config set`
 
@@ -101,8 +102,10 @@ ap_add_argument(run, "--config", config, &err);
 
 if (ap_parse_args(p, argc, argv, &ns, &err) == 0) {
   const char *subcommand = NULL;
+  const char *subcommand_path = NULL;
   const char *config_path = NULL;
   ap_ns_get_string(ns, "subcommand", &subcommand);
+  ap_ns_get_string(ns, "subcommand_path", &subcommand_path);
   ap_ns_get_string(ns, "config", &config_path);
 }
 ```
