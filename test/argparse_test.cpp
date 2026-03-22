@@ -310,4 +310,25 @@ TEST(ArgparseC, HelpShowsChoicesDefaultAndRequired) {
   ap_parser_free(p);
 }
 
+TEST(ArgparseC, FormatErrorIncludesMessageAndUsage) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char *argv[] = {(char *)"prog", (char *)"--bogus", NULL};
+  char *text = NULL;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_UNKNOWN_OPTION, err.code);
+
+  text = ap_format_error(p, &err);
+  CHECK(text != NULL);
+  CHECK(strstr(text, "error: unknown option '--bogus'") != NULL);
+  CHECK(strstr(text, "usage: prog") != NULL);
+  CHECK(strstr(text, "-t TEXT") != NULL);
+
+  free(text);
+  ap_parser_free(p);
+}
+
 int main(int ac, char **av) { return CommandLineTestRunner::RunAllTests(ac, av); }

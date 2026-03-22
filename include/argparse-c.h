@@ -79,6 +79,7 @@ void ap_namespace_free(ap_namespace *ns);
 
 char *ap_format_usage(const ap_parser *parser);
 char *ap_format_help(const ap_parser *parser);
+char *ap_format_error(const ap_parser *parser, const ap_error *err);
 
 bool ap_ns_get_bool(const ap_namespace *ns, const char *dest, bool *out_value);
 bool ap_ns_get_string(const ap_namespace *ns, const char *dest,

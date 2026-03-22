@@ -51,11 +51,12 @@ int main(int argc, char **argv) {
   }
 
   if (ap_parse_args(parser, argc, argv, &ns, &err) != 0) {
-    fprintf(stderr, "error: %s\n", err.message);
-    char *usage = ap_format_usage(parser);
-    if (usage) {
-      fprintf(stderr, "%s", usage);
-      free(usage);
+    char *error_text = ap_format_error(parser, &err);
+    if (error_text) {
+      fprintf(stderr, "%s", error_text);
+      free(error_text);
+    } else {
+      fprintf(stderr, "error: %s\n", err.message);
     }
     ap_parser_free(parser);
     return 1;

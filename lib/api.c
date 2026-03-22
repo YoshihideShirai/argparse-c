@@ -465,6 +465,39 @@ char *ap_format_usage(const ap_parser *parser) { return ap_usage_build(parser); 
 
 char *ap_format_help(const ap_parser *parser) { return ap_help_build(parser); }
 
+char *ap_format_error(const ap_parser *parser, const ap_error *err) {
+  char *usage = NULL;
+  char *out = NULL;
+  int needed;
+  const char *msg = "unknown error";
+
+  if (!parser) {
+    return NULL;
+  }
+  if (err && err->message[0] != '\0') {
+    msg = err->message;
+  }
+
+  usage = ap_usage_build(parser);
+  if (!usage) {
+    return NULL;
+  }
+
+  needed = snprintf(NULL, 0, "error: %s\n%s", msg, usage);
+  if (needed < 0) {
+    free(usage);
+    return NULL;
+  }
+  out = malloc((size_t)needed + 1);
+  if (!out) {
+    free(usage);
+    return NULL;
+  }
+  snprintf(out, (size_t)needed + 1, "error: %s\n%s", msg, usage);
+  free(usage);
+  return out;
+}
+
 void ap_parser_free(ap_parser *parser) {
   int i;
   if (!parser) {
