@@ -7,6 +7,8 @@ This page walks through **building `argparse-c` and running the sample program**
 - C99 compiler
 - CMake
 - Git
+- Python 3
+- `gcovr` (`python3 -m pip install gcovr`)
 
 ## Build
 
@@ -17,7 +19,7 @@ cmake -S . -B build \
 cmake --build build
 ctest --test-dir build --output-on-failure
 
-# coverage (requires gcovr)
+# coverage (requires gcovr; with clang the build uses `llvm-cov gcov` automatically)
 cmake -S . -B build-coverage \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
