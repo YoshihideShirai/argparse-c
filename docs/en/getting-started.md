@@ -1,32 +1,24 @@
 # Getting Started
 
-This page walks through **building `argparse-c` and running the sample program**.
+This page walks through **installing `argparse-c` and running the sample program**.
 
 ## Prerequisites
 
 - C99 compiler
 - CMake
 - Git
-- Python 3
-- `gcovr` (`python3 -m pip install gcovr`)
 
-## Build
+## Build and install
 
 ```bash
 cmake -S . -B build \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++
 cmake --build build
-ctest --test-dir build --output-on-failure
-
-# coverage (requires gcovr; with clang the build uses `llvm-cov gcov` automatically)
-cmake -S . -B build-coverage \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++ \
-  -DAP_ENABLE_COVERAGE=ON
-cmake --build build-coverage
-cmake --build build-coverage --target coverage
+cmake --install build --prefix /usr/local
 ```
+
+If you want to install into a temporary staging directory first, replace `/usr/local` with your preferred prefix.
 
 ## Sample program
 

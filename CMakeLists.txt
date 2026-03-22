@@ -5,6 +5,8 @@ option(AP_ENABLE_COVERAGE "Enable coverage instrumentation for gcovr" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+include(GNUInstallDirs)
+
 if(AP_ENABLE_COVERAGE)
   if(NOT CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     message(FATAL_ERROR "AP_ENABLE_COVERAGE requires GCC or Clang")
