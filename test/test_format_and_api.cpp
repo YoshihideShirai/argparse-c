@@ -1,5 +1,58 @@
 #include "test_framework.h"
 
+#include <array>
+#include <cerrno>
+#include <cstdio>
+#include <cstdlib>
+#include <filesystem>
+#include <string>
+#include <unistd.h>
+
+namespace {
+
+std::string shell_quote(const std::string &value) {
+  std::string quoted = "'";
+
+  for (char ch : value) {
+    if (ch == '\'') {
+      quoted += "'\\''";
+    } else {
+      quoted += ch;
+    }
+  }
+
+  quoted += '\'';
+  return quoted;
+}
+
+std::string make_temp_dir() {
+  std::array<char, 64> pattern = {0};
+  std::snprintf(pattern.data(), pattern.size(), "/tmp/argparse-c-XXXXXX");
+  char *path = mkdtemp(pattern.data());
+
+  if (!path) {
+    std::ostringstream detail;
+    detail << "mkdtemp failed: " << strerror(errno);
+    throw std::runtime_error(detail.str());
+  }
+
+  return std::string(path);
+}
+
+int run_command(const std::string &command) {
+  int rc = std::system(command.c_str());
+
+  if (rc == -1) {
+    std::ostringstream detail;
+    detail << "system failed for command: " << command;
+    throw std::runtime_error(detail.str());
+  }
+
+  return rc;
+}
+
+}  // namespace
+
 
 TEST(FormatManpageIncludesOptionsAndNestedSubcommands) {
   ap_error err = {};
@@ -892,4 +945,37 @@ TEST(FormatBashCompletionMarksValueModesAndFlagOnlyOptions) {
 
   free(script);
   ap_parser_free(p);
+}
+
+TEST(GeneratedBashCompletionScriptPassesBashSyntaxCheck) {
+  const std::string temp_dir = make_temp_dir();
+  const std::filesystem::path script_path =
+      std::filesystem::path(temp_dir) / "example_completion.bash";
+  const std::string generate_command =
+      shell_quote(AP_EXAMPLE_COMPLETION_PATH) +
+      " --generate-bash-completion > " + shell_quote(script_path.string());
+
+  CHECK(run_command(generate_command) == 0);
+  CHECK(std::filesystem::exists(script_path));
+  CHECK(run_command("bash -n " + shell_quote(script_path.string())) == 0);
+
+  std::filesystem::remove_all(temp_dir);
+}
+
+TEST(GeneratedManpageRendersWithMan) {
+  const std::string temp_dir = make_temp_dir();
+  const std::filesystem::path manpage_path =
+      std::filesystem::path(temp_dir) / "example_manpage.1";
+  const std::string generate_command =
+      shell_quote(AP_EXAMPLE_MANPAGE_PATH) + " --generate-manpage > " +
+      shell_quote(manpage_path.string());
+  const std::string render_command =
+      "MANPAGER=cat MANWIDTH=80 man -l " + shell_quote(manpage_path.string()) +
+      " > /dev/null";
+
+  CHECK(run_command(generate_command) == 0);
+  CHECK(std::filesystem::exists(manpage_path));
+  CHECK(run_command(render_command) == 0);
+
+  std::filesystem::remove_all(temp_dir);
 }
