@@ -64,7 +64,8 @@ static int copy_string_values(const ap_strvec *src, ap_ns_entry *dst,
   return 0;
 }
 
-static int copy_int_values(const ap_strvec *src, ap_ns_entry *dst,
+static int copy_int_values(const ap_arg_def *def, const ap_strvec *src,
+                           ap_ns_entry *dst,
                            ap_error *err) {
   int i;
   if (src->count == 0) {
@@ -80,9 +81,9 @@ static int copy_int_values(const ap_strvec *src, ap_ns_entry *dst,
   dst->count = src->count;
   for (i = 0; i < src->count; i++) {
     if (parse_int32(src->items[i], &dst->as.ints[i]) != 0) {
-      ap_error_set(err, AP_ERR_INVALID_INT32, dst->dest,
-                   "argument '%s' must be a valid int32: '%s'", dst->dest,
-                   src->items[i]);
+      ap_error_set(err, AP_ERR_INVALID_INT32, ap_error_argument_name(def),
+                   "argument '%s' must be a valid int32: '%s'",
+                   ap_error_argument_name(def), src->items[i]);
       return -1;
     }
   }
@@ -226,7 +227,7 @@ int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
       }
     } else if (def->opts.type == AP_TYPE_INT32) {
       entry->type = AP_NS_VALUE_INT32;
-      if (copy_int_values(&merged, entry, err) != 0) {
+      if (copy_int_values(def, &merged, entry, err) != 0) {
         ap_strvec_free(&merged);
         ap_namespace_free(ns);
         return -1;

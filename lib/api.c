@@ -106,7 +106,7 @@ const char *ap_error_argument_name(const ap_arg_def *def) {
   if (!def) {
     return "";
   }
-  if (def->is_optional && def->flags_count > 0 && def->flags[0]) {
+  if (def->flags_count > 0 && def->flags[0]) {
     return def->flags[0];
   }
   return def->dest ? def->dest : "";
