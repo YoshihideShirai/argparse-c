@@ -865,6 +865,486 @@ TEST(MissingSubcommandFails) {
   ap_parser_free(p);
 }
 
+
+
+TEST(CountRequiresInt32TypeDefinition) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_STRING;
+  verbose.action = AP_ACTION_COUNT;
+
+  LONGS_EQUAL(-1, ap_add_argument(p, "--verbose", verbose, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("--verbose", err.argument);
+  STRCMP_EQUAL("count action requires int32 type", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(InvalidNargsDefinitionIsRejected) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options value = ap_arg_options_default();
+
+  CHECK(p != NULL);
+  value.nargs = (ap_nargs)99;
+
+  LONGS_EQUAL(-1, ap_add_argument(p, "--value", value, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("--value", err.argument);
+  STRCMP_EQUAL("invalid nargs definition", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(DuplicateDestIsRejected) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options first = ap_arg_options_default();
+  ap_arg_options second = ap_arg_options_default();
+
+  CHECK(p != NULL);
+  first.dest = "same";
+  second.dest = "same";
+  LONGS_EQUAL(0, ap_add_argument(p, "--first", first, &err));
+
+  LONGS_EQUAL(-1, ap_add_argument(p, "--second", second, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("same", err.argument);
+  STRCMP_EQUAL("dest 'same' already exists", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(OptionalArgumentDeclarationRejectsNonFlagToken) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(-1, ap_add_argument(p, "-v, verbose", ap_arg_options_default(), &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("verbose", err.argument);
+  STRCMP_EQUAL("optional argument flags must start with '-'", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(PositionalDeclarationRejectsMultipleTokens) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(-1, ap_add_argument(p, "input, output", ap_arg_options_default(), &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("input, output", err.argument);
+  STRCMP_EQUAL("positional argument must be a single non-flag token", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(DuplicateSubcommandIsRejected) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+
+  CHECK(p != NULL);
+  CHECK(ap_add_subcommand(p, "run", "first", &err) != NULL);
+  CHECK(ap_add_subcommand(p, "run", "second", &err) == NULL);
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("run", err.argument);
+  STRCMP_EQUAL("subcommand 'run' already exists", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(InvalidSubcommandNameIsRejected) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+
+  CHECK(p != NULL);
+  CHECK(ap_add_subcommand(p, "bad name", "desc", &err) == NULL);
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("bad name", err.argument);
+  STRCMP_EQUAL("subcommand name must be a single non-flag token", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(GroupAddArgumentRequiresGroup) {
+  ap_error err = {};
+
+  LONGS_EQUAL(-1, ap_group_add_argument(NULL, "--json", ap_arg_options_default(), &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("", err.argument);
+  STRCMP_EQUAL("group is required", err.message);
+}
+
+TEST(MissingValueWhenNextTokenIsKnownOption) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--name", (char *)"--verbose", NULL};
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--name", ap_arg_options_default(), &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--verbose", verbose, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_MISSING_VALUE, err.code);
+  STRCMP_EQUAL("--name", err.argument);
+  STRCMP_EQUAL("option '--name' requires a value", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(OneOrMoreOptionRequiresAtLeastOneValue) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options files = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--files", NULL};
+
+  CHECK(p != NULL);
+  files.nargs = AP_NARGS_ONE_OR_MORE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--files", files, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_NARGS, err.code);
+  STRCMP_EQUAL("--files", err.argument);
+  STRCMP_EQUAL("option '--files' requires at least one value", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(FixedOptionRejectsMissingValues) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options range = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--range", (char *)"10", NULL};
+
+  CHECK(p != NULL);
+  range.nargs = AP_NARGS_FIXED;
+  range.nargs_count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "--range", range, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_NARGS, err.code);
+  STRCMP_EQUAL("--range", err.argument);
+  STRCMP_EQUAL("option '--range' requires exactly 2 values", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(PositionalOneOrMoreRequiresValue) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options files = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  files.nargs = AP_NARGS_ONE_OR_MORE;
+  files.action = AP_ACTION_APPEND;
+  LONGS_EQUAL(0, ap_add_argument(p, "files", files, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_NARGS, err.code);
+  STRCMP_EQUAL("files", err.argument);
+  STRCMP_EQUAL("argument 'files' requires at least one value", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(PositionalFixedRequiresExactValues) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options coords = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"10", NULL};
+
+  CHECK(p != NULL);
+  coords.nargs = AP_NARGS_FIXED;
+  coords.nargs_count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "coords", coords, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_NARGS, err.code);
+  STRCMP_EQUAL("coords", err.argument);
+  STRCMP_EQUAL("argument 'coords' requires exactly 2 values", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(UnexpectedPositionalArgumentFails) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  char *argv[] = {(char *)"prog", (char *)"input.txt", NULL};
+
+  CHECK(p != NULL);
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_UNEXPECTED_POSITIONAL, err.code);
+  STRCMP_EQUAL("input.txt", err.argument);
+  STRCMP_EQUAL("unexpected positional argument 'input.txt'", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(DuplicateLongOptionFails) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  char *argv[] = {(char *)"prog", (char *)"--name", (char *)"a", (char *)"--name", (char *)"b", NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "--name", ap_arg_options_default(), &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 5, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_DUPLICATE_OPTION, err.code);
+  STRCMP_EQUAL("--name", err.argument);
+  STRCMP_EQUAL("duplicate option '--name'", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(UnknownShortOptionInClusterFails) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"-vz", NULL};
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "-v, --verbose", verbose, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_UNKNOWN_OPTION, err.code);
+  STRCMP_EQUAL("-z", err.argument);
+  STRCMP_EQUAL("unknown option '-z'", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(ParseKnownArgsTreatsUnknownClusterAsUnknownToken) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  const char *text = NULL;
+  const char *input = NULL;
+  char *argv[] = {(char *)"prog", (char *)"-xz", (char *)"-t", (char *)"hello", (char *)"file.txt", NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parse_known_args(p, 5, argv, &ns, &unknown, &unknown_count, &err));
+  LONGS_EQUAL(1, unknown_count);
+  STRCMP_EQUAL("-xz", unknown[0]);
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("hello", text);
+  STRCMP_EQUAL("file.txt", input);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(FormatHelpCoversOptionalAndPositionalNargsVariants) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options extras = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  ap_arg_options item = ap_arg_options_default();
+  ap_arg_options paths = ap_arg_options_default();
+  ap_arg_options coords = ap_arg_options_default();
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  maybe.metavar = "VALUE";
+  maybe.help = "optional value";
+  extras.nargs = AP_NARGS_ZERO_OR_MORE;
+  extras.metavar = "EXTRA";
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+  pair.metavar = "PAIR";
+  item.nargs = AP_NARGS_OPTIONAL;
+  item.metavar = "ITEM";
+  paths.nargs = AP_NARGS_ZERO_OR_MORE;
+  paths.action = AP_ACTION_APPEND;
+  paths.metavar = "PATH";
+  coords.nargs = AP_NARGS_FIXED;
+  coords.nargs_count = 2;
+  coords.metavar = "COORD";
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--extras", extras, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--pair", pair, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "item", item, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "paths", paths, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "coords", coords, &err));
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "[--maybe [VALUE]]") != NULL);
+  CHECK(strstr(help, "[--extras [EXTRA ...]]") != NULL);
+  CHECK(strstr(help, "[--pair PAIR PAIR]") != NULL);
+  CHECK(strstr(help, "[ITEM]") != NULL);
+  CHECK(strstr(help, "[PATH ...]") != NULL);
+  CHECK(strstr(help, "COORD COORD") != NULL);
+  CHECK(strstr(help, "optional value") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
+TEST(FormatUsageShowsRequiredBoolAndConstActions) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options enable = ap_arg_options_default();
+  ap_arg_options color = ap_arg_options_default();
+  char *usage = NULL;
+
+  CHECK(p != NULL);
+  enable.type = AP_TYPE_BOOL;
+  enable.action = AP_ACTION_STORE_TRUE;
+  enable.required = true;
+  color.action = AP_ACTION_STORE_CONST;
+  color.const_value = "always";
+  color.required = true;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--enable", enable, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--color", color, &err));
+
+  usage = ap_format_usage(p);
+  CHECK(usage != NULL);
+  CHECK(strstr(usage, " --enable") != NULL);
+  CHECK(strstr(usage, " --color") != NULL);
+  CHECK(strstr(usage, "[--color]") == NULL);
+
+  free(usage);
+  ap_parser_free(p);
+}
+
+TEST(HelpOptionBypassesRequiredArguments) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options required = ap_arg_options_default();
+  bool help = false;
+  char *argv[] = {(char *)"prog", (char *)"--help", NULL};
+
+  CHECK(p != NULL);
+  required.required = true;
+  LONGS_EQUAL(0, ap_add_argument(p, "--name", required, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 2, argv, &ns, &err));
+  CHECK(ap_ns_get_bool(ns, "help", &help));
+  CHECK_TRUE(help);
+  LONGS_EQUAL(0, ap_ns_get_count(ns, "name"));
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(HelpOptionBypassesRequiredSubcommand) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  bool help = false;
+  char *argv[] = {(char *)"prog", (char *)"--help", NULL};
+
+  CHECK(p != NULL);
+  CHECK(ap_add_subcommand(p, "run", "run the job", &err) != NULL);
+
+  LONGS_EQUAL(0, ap_parse_args(p, 2, argv, &ns, &err));
+  CHECK(ap_ns_get_bool(ns, "help", &help));
+  CHECK_TRUE(help);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ShortOptionClusterRejectsDuplicateBoolFlag) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"-vv", NULL};
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "-v, --verbose", verbose, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_DUPLICATE_OPTION, err.code);
+  STRCMP_EQUAL("-v", err.argument);
+  STRCMP_EQUAL("duplicate option '-v'", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(StoreTrueRequiresBoolTypeDefinition) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_STRING;
+  verbose.action = AP_ACTION_STORE_TRUE;
+
+  LONGS_EQUAL(-1, ap_add_argument(p, "--verbose", verbose, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("--verbose", err.argument);
+  STRCMP_EQUAL("store_true/store_false requires bool type", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(StoreConstRequiresConstValueDefinition) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+
+  CHECK(p != NULL);
+  mode.action = AP_ACTION_STORE_CONST;
+
+  LONGS_EQUAL(-1, ap_add_argument(p, "--mode", mode, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("--mode", err.argument);
+  STRCMP_EQUAL("store_const requires const_value", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(FixedNargsRequiresPositiveCountDefinition) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options range = ap_arg_options_default();
+
+  CHECK(p != NULL);
+  range.nargs = AP_NARGS_FIXED;
+  range.nargs_count = 0;
+
+  LONGS_EQUAL(-1, ap_add_argument(p, "--range", range, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("--range", err.argument);
+  STRCMP_EQUAL("fixed nargs requires nargs_count > 0", err.message);
+
+  ap_parser_free(p);
+}
+
 TEST(CountActionAccumulatesShortFlags) {
   ap_error err = {};
   ap_namespace *ns = NULL;

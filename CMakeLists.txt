@@ -31,11 +31,9 @@ if(AP_ENABLE_COVERAGE AND Python3_Interpreter_FOUND)
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
     COMMAND ${Python3_EXECUTABLE} -m gcovr
       --root ${CMAKE_SOURCE_DIR}
-      --filter ${CMAKE_SOURCE_DIR}
+      --filter ${CMAKE_SOURCE_DIR}/lib
       --object-directory ${CMAKE_BINARY_DIR}
       --gcov-executable ${AP_GCOV_EXECUTABLE}
-      --exclude '.*/test/.*'
-      --exclude '.*/sample/.*'
       --txt coverage.txt
       --html-details coverage.html
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
