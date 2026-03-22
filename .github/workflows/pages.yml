@@ -57,9 +57,9 @@ jobs:
           mkdir -p site/coverage
           ctest --test-dir build-coverage --output-on-failure
           python -m gcovr \
-            --root . \
-            --filter . \
-            --exclude-directories build-coverage \
+            --root "$GITHUB_WORKSPACE" \
+            --filter "$GITHUB_WORKSPACE" \
+            --object-directory "$GITHUB_WORKSPACE/build-coverage" \
             --exclude '.*/test/.*' \
             --exclude '.*/sample/.*' \
             --txt site/coverage.txt \
