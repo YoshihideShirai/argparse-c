@@ -16,6 +16,14 @@ cmake -S . -B build \
   -DCMAKE_CXX_COMPILER=clang++
 cmake --build build
 ctest --test-dir build --output-on-failure
+
+# coverage (gcovr が必要)
+cmake -S . -B build-coverage \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DAP_ENABLE_COVERAGE=ON
+cmake --build build-coverage
+cmake --build build-coverage --target coverage
 ```
 
 ## サンプルプログラム

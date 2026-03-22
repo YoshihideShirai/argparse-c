@@ -76,8 +76,9 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 ## 5. Testing Plan and Current Status
 
 ### Framework
-- CppUTest
+- custom self-contained test executable
 - `ctest` 経由で実行
+- `gcovr` によるテキスト/HTML カバレッジレポートを生成
 
 ### Covered Tests
 - 正常系パース
@@ -101,7 +102,7 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 ### CI (`.github/workflows/ci.yml`)
 - trigger: push (`main`/`master`), pull_request
 - matrix: `gcc`, `clang`
-- steps: dependency install -> cmake configure -> build -> ctest
+- steps: dependency install -> cmake configure -> build -> ctest -> gcovr
 
 ### CD (`.github/workflows/cd.yml`)
 - trigger: tag push (`v*`) / workflow_dispatch
@@ -111,6 +112,11 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
   - linux build tarball (`libargparse-c.so`, `example1`)
   - `SHA256SUMS.txt`
 - publish: GitHub Release
+
+### Docs / Coverage Pages (`.github/workflows/pages.yml`)
+- trigger: push (`main`/`master`), workflow_dispatch
+- build: MkDocs site + coverage build/test + `gcovr --html-details`
+- publish: GitHub Pages (`/coverage/` で HTML レポートを公開)
 
 ## 7. Next Phase Plan (Recommended)
 - `dest` 自動生成規則の追加テスト・ドキュメント強化

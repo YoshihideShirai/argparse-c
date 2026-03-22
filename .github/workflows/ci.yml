@@ -41,3 +41,45 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build --output-on-failure
+
+  coverage:
+    name: Coverage (gcovr)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build gcc g++
+          python -m pip install --upgrade pip
+          pip install gcovr
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-coverage \
+            -G Ninja \
+            -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_CXX_COMPILER=g++ \
+            -DAP_ENABLE_COVERAGE=ON
+
+      - name: Build
+        run: cmake --build build-coverage --parallel
+
+      - name: Test and report coverage
+        run: |
+          ctest --test-dir build-coverage --output-on-failure
+          python -m gcovr \
+            --root . \
+            --filter . \
+            --exclude-directories build-coverage \
+            --exclude '.*/test/.*' \
+            --exclude '.*/sample/.*' \
+            --txt

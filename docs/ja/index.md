@@ -12,6 +12,7 @@
 - **Getting Started**: 最初のビルドと実行
 - **Guides**: 機能別の丁寧な使い方
 - **API Reference**: 公開 API の詳細仕様
+- **Coverage report**: GitHub Pages 上の `coverage/index.html` で HTML レポートを公開
 
 ## 3分でわかる最小例
 

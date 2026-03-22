@@ -1,4 +1,4 @@
-name: Deploy docs to GitHub Pages
+name: Deploy docs and coverage to GitHub Pages
 
 on:
   push:
@@ -28,16 +28,42 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install MkDocs
+      - name: Install dependencies
         run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build gcc g++
           python -m pip install --upgrade pip
-          pip install mkdocs-material
+          pip install mkdocs-material gcovr
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Build site
+      - name: Build documentation site
         run: mkdocs build
+
+      - name: Configure coverage build
+        run: |
+          cmake -S . -B build-coverage \
+            -G Ninja \
+            -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_CXX_COMPILER=g++ \
+            -DAP_ENABLE_COVERAGE=ON
+
+      - name: Build coverage targets
+        run: cmake --build build-coverage --parallel
+
+      - name: Generate coverage report
+        run: |
+          mkdir -p site/coverage
+          ctest --test-dir build-coverage --output-on-failure
+          python -m gcovr \
+            --root . \
+            --filter . \
+            --exclude-directories build-coverage \
+            --exclude '.*/test/.*' \
+            --exclude '.*/sample/.*' \
+            --txt site/coverage.txt \
+            --html-details site/coverage/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

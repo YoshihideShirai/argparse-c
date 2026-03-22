@@ -12,6 +12,7 @@
 - **Getting Started**: build the project and run the sample
 - **Guides**: practical usage by feature
 - **API Reference**: full public API contract
+- **Coverage report**: HTML report published at `coverage/index.html` on GitHub Pages
 
 ## Minimal example
 
