@@ -174,4 +174,24 @@ TEST(ArgparseC, HelpGeneration) {
   ap_parser_free(p);
 }
 
+TEST(ArgparseC, InlineOptionValue) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char *argv[] = {(char *)"prog", (char *)"--text=hello", (char *)"-n=33",
+                  (char *)"file.txt", NULL};
+  const char *text = NULL;
+  int32_t num = 0;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parse_args(p, 4, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_int32(ns, "num", &num));
+  STRCMP_EQUAL("hello", text);
+  LONGS_EQUAL(33, num);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
 int main(int ac, char **av) { return CommandLineTestRunner::RunAllTests(ac, av); }

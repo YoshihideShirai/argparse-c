@@ -20,6 +20,25 @@ static int find_flag_index(const ap_parser *parser, const char *token) {
   return -1;
 }
 
+static int find_flag_index_n(const ap_parser *parser, const char *token,
+                             size_t token_len) {
+  int i;
+  int j;
+  for (i = 0; i < parser->defs_count; i++) {
+    const ap_arg_def *def = &parser->defs[i];
+    if (!def->is_optional) {
+      continue;
+    }
+    for (j = 0; j < def->flags_count; j++) {
+      const char *flag = def->flags[j];
+      if (strlen(flag) == token_len && strncmp(flag, token, token_len) == 0) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
+
 static int positional_min_required(const ap_arg_def *def) {
   if (def->opts.action == AP_ACTION_STORE_TRUE ||
       def->opts.action == AP_ACTION_STORE_FALSE) {
@@ -65,16 +84,25 @@ static int push_value(ap_parsed_arg *parsed, int def_index, const char *token,
 
 static int consume_optional_values(const ap_parser *parser, int argc, char **argv,
                                    int *idx, int def_index,
+                                   const char *inline_value,
                                    ap_parsed_arg *parsed, ap_error *err) {
   const ap_arg_def *def = &parser->defs[def_index];
   int start = *idx;
 
   if (def->opts.action == AP_ACTION_STORE_TRUE ||
       def->opts.action == AP_ACTION_STORE_FALSE) {
+    if (inline_value) {
+      ap_error_set(err, AP_ERR_INVALID_NARGS, def->flags[0],
+                   "option '%s' does not take a value", def->flags[0]);
+      return -1;
+    }
     return 0;
   }
 
   if (def->opts.nargs == AP_NARGS_ONE) {
+    if (inline_value) {
+      return push_value(parsed, def_index, inline_value, err);
+    }
     if (start + 1 >= argc) {
       ap_error_set(err, AP_ERR_MISSING_VALUE, def->flags[0],
                    "option '%s' requires a value", def->flags[0]);
@@ -93,6 +121,9 @@ static int consume_optional_values(const ap_parser *parser, int argc, char **arg
   }
 
   if (def->opts.nargs == AP_NARGS_OPTIONAL) {
+    if (inline_value) {
+      return push_value(parsed, def_index, inline_value, err);
+    }
     if (start + 1 < argc) {
       int next_flag_idx = find_flag_index(parser, argv[start + 1]);
       if (next_flag_idx < 0) {
@@ -108,6 +139,12 @@ static int consume_optional_values(const ap_parser *parser, int argc, char **arg
   {
     int j = start + 1;
     int consumed = 0;
+    if (inline_value) {
+      if (push_value(parsed, def_index, inline_value, err) != 0) {
+        return -1;
+      }
+      consumed = 1;
+    }
     while (j < argc) {
       if (strcmp(argv[j], "--") == 0) {
         break;
@@ -179,7 +216,18 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
     }
 
     if (!positional_only && ap_starts_with_dash(token)) {
-      int def_index = find_flag_index(parser, token);
+      const char *eq = strchr(token, '=');
+      const char *inline_value = NULL;
+      int def_index = -1;
+      if (eq && eq != token) {
+        def_index =
+            find_flag_index_n(parser, token, (size_t)(eq - token));
+        if (def_index >= 0) {
+          inline_value = eq + 1;
+        }
+      } else {
+        def_index = find_flag_index(parser, token);
+      }
       if (def_index < 0) {
         free(positional_defs);
         free(parsed);
@@ -196,7 +244,7 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
       }
       parsed[def_index].seen = true;
       if (consume_optional_values(parser, argc, argv, &token_index, def_index,
-                                  parsed, err) != 0) {
+                                  inline_value, parsed, err) != 0) {
         int k;
         for (k = 0; k < parser->defs_count; k++) {
           ap_strvec_free(&parsed[k].values);
