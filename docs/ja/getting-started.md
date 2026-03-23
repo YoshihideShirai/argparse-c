@@ -38,7 +38,7 @@ sudo cp -a /tmp/argparse-c/lib /usr/local/
 この tarball には次が含まれます。
 
 - `include/argparse-c.h`
-- `lib/` 配下の shared library
+- `lib/` 配下の shared library と static archive
 - `lib/cmake/argparse-c/` 配下の CMake package files
 - `lib/pkgconfig/argparse-c.pc` の pkg-config file
 
@@ -48,17 +48,27 @@ sudo cp -a /tmp/argparse-c/lib /usr/local/
 
 ```cmake
 find_package(argparse-c CONFIG REQUIRED)
+
+# Shared library
 target_link_libraries(your_app PRIVATE argparse-c::argparse-c)
+
+# Static library
+target_link_libraries(your_app PRIVATE argparse-c::argparse-c-static)
 ```
 
 ### pkg-config
 
 ```bash
+# Shared library
 pkg-config --cflags --libs argparse-c
 cc main.c $(pkg-config --cflags --libs argparse-c) -o your_app
+
+# Static library
+pkg-config --cflags --libs --static argparse-c
+cc main.c $(pkg-config --cflags --libs --static argparse-c) -o your_app
 ```
 
-install 後は `argparse-cConfig.cmake`、`argparse-cConfigVersion.cmake`、`argparse-c.pc` が prefix 配下へ配置されるため、利用側で include/lib path を手動設定しなくてもライブラリを検出できます。
+install 後は `argparse-cConfig.cmake`、`argparse-cConfigVersion.cmake`、`argparse-c.pc` が prefix 配下へ配置されるため、利用側で include/lib path を手動設定しなくてもライブラリを検出できます。export される CMake package では、shared link 用に `argparse-c::argparse-c`、static link 用に `argparse-c::argparse-c-static` を使い分けられます。
 
 ## サンプルプログラム
 
