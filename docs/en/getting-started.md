@@ -1,6 +1,6 @@
 # Getting Started
 
-This page walks through **installing `argparse-c` and running the sample program**.
+This page is the main onboarding path from the repository README. It walks through **installing `argparse-c`, running the first sample, and choosing the next guide**.
 
 ## Prerequisites
 

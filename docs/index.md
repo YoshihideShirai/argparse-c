@@ -1,18 +1,24 @@
 # argparse-c Documentation
 
-`argparse-c` のドキュメントサイトへようこそ。/ Welcome to the `argparse-c` documentation site.
+Build C99 CLIs with a Python `argparse`-style workflow.
 
-このサイトは **日本語** と **English** の 2 言語で利用できます。
+`argparse-c` lets you define options, positionals, subcommands, completion entrypoints, manpage output, and known-args parsing from one parser definition.
 
-## Language / 言語
+## Choose a language
 
-- [日本語ドキュメント](ja/index.md)
 - [English documentation](en/index.md)
+- [日本語ドキュメント](ja/index.md)
 
-## 内容 / Contents
+## Start in three clicks
 
-- Getting Started / はじめに
-- Guides / ガイド
-- API Reference
-- FAQ
-- Coverage report / カバレッジレポート (`coverage/index.html`)
+1. Open **Getting Started** for installation and the first sample program.
+2. Continue to **Guides** for feature-specific usage.
+3. Use **API Reference** when you need the exact public contract.
+
+## Shortcuts
+
+- [English / Getting Started](en/getting-started.md)
+- [日本語 / Getting Started](ja/getting-started.md)
+- [API Reference (English)](api-spec.en.md)
+- [API Reference (日本語)](api-spec.ja.md)
+- [Coverage report](coverage/index.html)

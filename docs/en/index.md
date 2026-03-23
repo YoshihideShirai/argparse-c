@@ -1,85 +1,45 @@
 # argparse-c
 
-`argparse-c` is a **C99 command-line argument parsing library** inspired by Python's `argparse`.
+Build C99 command-line tools with a Python `argparse`-style authoring experience.
 
-- Supports optional and positional arguments
-- Supports `--option=value` and `-o=value`
-- Supports subcommands, `nargs`, `choices`, and mutually exclusive groups
-- Returns errors to the caller instead of calling `exit()` internally
+`argparse-c` is for developers who want more than basic flag parsing: completion, manpage generation, subcommands, `nargs`, and known-args parsing are all available from the same parser definition.
 
-## What you can read on this site
+## Why start here?
 
-- **Getting Started**: build the project and run the sample
-- **Guides**: practical usage by feature
-- **API Reference**: full public API contract
-- **Coverage report**: HTML report published at `coverage/index.html` on GitHub Pages
+Use this site when you want to:
 
-## Minimal example
+- install the library from source or release assets
+- copy a minimal CLI example and then expand it
+- add completion or manpage generation without inventing custom plumbing
+- look up the exact API contract after learning the basics
 
-```c
-#include <stdio.h>
-#include <stdlib.h>
+## Recommended reading order
 
-#include "argparse-c.h"
+1. **[Getting Started](getting-started.md)** — install the library, run the first sample, and learn the minimum parser flow
+2. **Guides** — dive into features as you need them
+   - [Basic usage](guides/basic-usage.md)
+   - [Options and types](guides/options-and-types.md)
+   - [nargs](guides/nargs.md)
+   - [Subcommands](guides/subcommands.md)
+   - [Completion callbacks](guides/completion-callbacks.md)
+3. **Reference**
+   - [API Reference (English)](../api-spec.en.md)
+   - [FAQ](faq.md)
 
-int main(int argc, char **argv) {
-  ap_error err = {0};
-  ap_namespace *ns = NULL;
-  ap_parser *parser = ap_parser_new("demo", "demo parser");
+## What you can build quickly
 
-  ap_arg_options opts = ap_arg_options_default();
-  opts.required = true;
-  opts.help = "input text";
-  ap_add_argument(parser, "-t, --text", opts, &err);
+- a single-command CLI with required flags and positional inputs
+- a nested subcommand CLI
+- a wrapper command that forwards unknown arguments via `ap_parse_known_args(...)`
+- a CLI that emits bash/fish completion scripts and a manpage
 
-  if (ap_parse_args(parser, argc, argv, &ns, &err) != 0) {
-    char *message = ap_format_error(parser, &err);
-    fprintf(stderr, "%s", message ? message : err.message);
-    free(message);
-    ap_parser_free(parser);
-    return 1;
-  }
+## Example programs in this repository
 
-  {
-    const char *text = NULL;
-    if (ap_ns_get_string(ns, "text", &text)) {
-      printf("text=%s\n", text);
-    }
-  }
+- [`sample/example1.c`](../../sample/example1.c) — minimal parse/validate/read flow
+- [`sample/example_completion.c`](../../sample/example_completion.c) — completion and manpage generator entrypoints
+- [`sample/example_subcommands.c`](../../sample/example_subcommands.c) — nested subcommands and `subcommand_path`
 
-  ap_namespace_free(ns);
-  ap_parser_free(parser);
-  return 0;
-}
-```
+## Need Japanese docs?
 
-## Main features
-
-### Core arguments
-
-- positional arguments
-- optional arguments
-- required options
-- default values
-
-### Value handling
-
-- `string`, `int32`, `bool`
-- `choices`
-- `append`, `count`, `store_const`
-
-### Advanced CLI features
-
-- `nargs` (`?`, `*`, `+`, fixed)
-- nested subcommands
-- mutually exclusive groups
-- `ap_parse_known_args(...)`
-
-## Next pages
-
-1. [Getting Started](getting-started.md)
-2. [Basic usage](guides/basic-usage.md)
-3. [Options and types](guides/options-and-types.md)
-4. [Completion callbacks](guides/completion-callbacks.md) — `ap_complete(...)`, `ap_completion_callback`, `__complete`, shell integration, and fallback policy
-5. [API Reference (English)](../api-spec.en.md)
-6. [日本語ドキュメント](../ja/index.md)
+- [日本語トップ](../ja/index.md)
+- [日本語 Getting Started](../ja/getting-started.md)
