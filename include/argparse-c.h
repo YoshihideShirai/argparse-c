@@ -95,8 +95,11 @@ struct ap_completion_request {
   const ap_parser *parser;
   const char *shell;
   const char *current_token;
+  /* NULL for positional completion, otherwise the flag currently taking a
+   * value. */
   const char *active_option;
   const char *subcommand_path;
+  /* Destination for the active option value or active positional argument. */
   const char *dest;
   int argc;
   char **argv;

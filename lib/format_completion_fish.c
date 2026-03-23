@@ -379,8 +379,23 @@ char *ap_fish_completion_build(const ap_parser *parser) {
       append_fish_double_quoted(&sb, ap_parser_completion_entrypoint(parser)) !=
           0 ||
       ap_sb_appendf(&sb, " --shell fish -- $tokens $current\n"
+                         "end\n\nfunction __ap_") != 0 ||
+      append_identifier(&sb, prog) != 0 ||
+      ap_sb_appendf(&sb, "_positional_complete\n"
+                         "  set -l current (commandline -ct)\n"
+                         "  if string match -qr '^-' -- \"$current\"\n"
+                         "    return 1\n"
+                         "  end\n"
+                         "  __ap_") != 0 ||
+      append_identifier(&sb, prog) != 0 ||
+      ap_sb_appendf(&sb, "_dynamic_complete\n"
                          "end\n\n") != 0 ||
-      append_complete_commands(&sb, prog, parser) != 0) {
+      append_complete_commands(&sb, prog, parser) != 0 ||
+      ap_sb_appendf(&sb, "complete -c ") != 0 ||
+      append_fish_double_quoted(&sb, prog) != 0 ||
+      ap_sb_appendf(&sb, " -f -a '(__ap_") != 0 ||
+      append_identifier(&sb, prog) != 0 ||
+      ap_sb_appendf(&sb, "_positional_complete)'\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
   }

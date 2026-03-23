@@ -105,8 +105,11 @@ int main(int argc, char **argv) {
       "example_completion",
       "demo app that can generate bash/fish completions and a man page.");
   const char *mode_choices[] = {"fast", "slow"};
+  const char *format_choices[] = {"json", "yaml", "toml"};
   static const char *const exec_candidates[] = {"git", "grep", "ls", "sed",
                                                 NULL};
+  static const char *const task_candidates[] = {"build", "bench", "bundle",
+                                                "test", NULL};
 
   if (!parser) {
     fprintf(stderr, "failed to initialize parser\n");
@@ -119,6 +122,8 @@ int main(int argc, char **argv) {
     ap_arg_options manpage = ap_arg_options_default();
     ap_arg_options mode = ap_arg_options_default();
     ap_arg_options input = ap_arg_options_default();
+    ap_arg_options format = ap_arg_options_default();
+    ap_arg_options task = ap_arg_options_default();
     ap_arg_options exec = ap_arg_options_default();
 
     bash.type = AP_TYPE_BOOL;
@@ -141,6 +146,16 @@ int main(int argc, char **argv) {
     input.completion_kind = AP_COMPLETION_KIND_FILE;
     input.completion_hint = "path to an input file";
 
+    format.help = "output format";
+    format.choices.items = format_choices;
+    format.choices.count = 3;
+
+    task.help = "task name";
+    task.completion_kind = AP_COMPLETION_KIND_COMMAND;
+    task.completion_hint = "dynamic task";
+    task.completion_callback = exec_completion_callback;
+    task.completion_user_data = (void *)task_candidates;
+
     exec.help = "program to launch";
     exec.completion_kind = AP_COMPLETION_KIND_COMMAND;
     exec.completion_hint = "command name";
@@ -152,7 +167,9 @@ int main(int argc, char **argv) {
         ap_add_argument(parser, "--generate-manpage", manpage, &err) != 0 ||
         ap_add_argument(parser, "--mode", mode, &err) != 0 ||
         ap_add_argument(parser, "--exec", exec, &err) != 0 ||
-        ap_add_argument(parser, "input", input, &err) != 0) {
+        ap_add_argument(parser, "input", input, &err) != 0 ||
+        ap_add_argument(parser, "format", format, &err) != 0 ||
+        ap_add_argument(parser, "task", task, &err) != 0) {
       fprintf(stderr, "%s\n", err.message);
       ap_parser_free(parser);
       return 1;
@@ -191,14 +208,20 @@ int main(int argc, char **argv) {
   {
     const char *mode = NULL;
     const char *input = NULL;
+    const char *format = NULL;
+    const char *task = NULL;
     const char *exec = NULL;
 
     ap_ns_get_string(ns, "mode", &mode);
     ap_ns_get_string(ns, "input", &input);
+    ap_ns_get_string(ns, "format", &format);
+    ap_ns_get_string(ns, "task", &task);
     ap_ns_get_string(ns, "exec", &exec);
 
     printf("mode=%s\n", mode ? mode : "(null)");
     printf("input=%s\n", input ? input : "(null)");
+    printf("format=%s\n", format ? format : "(null)");
+    printf("task=%s\n", task ? task : "(null)");
     printf("exec=%s\n", exec ? exec : "(null)");
   }
 

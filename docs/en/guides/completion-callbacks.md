@@ -76,6 +76,46 @@ When completion is enabled, the entrypoint name is reserved for hidden completio
 - `completion_kind = AP_COMPLETION_KIND_COMMAND`
 - `completion_callback` + `completion_user_data`
 
+The same metadata now applies to the currently active positional argument as well. When `ap_complete(...)` or `ap_try_handle_completion(...)` resolves a positional target, `ap_completion_request.active_option` is `NULL` and `ap_completion_request.dest` is the positional destination name.
+
+```c
+static const char *const task_names[] = {"build", "bench", "bundle", NULL};
+
+static int task_completion(const ap_completion_request *request,
+                           ap_completion_result *result, void *user_data,
+                           ap_error *err) {
+  const char *prefix = request && request->current_token ? request->current_token : "";
+  const char *const *items = (const char *const *)user_data;
+
+  if (!request || request->active_option != NULL ||
+      strcmp(request->dest, "task") != 0) {
+    return 0;
+  }
+  for (int i = 0; items[i] != NULL; i++) {
+    if (strncmp(items[i], prefix, strlen(prefix)) == 0 &&
+        ap_completion_result_add(result, items[i], "task", err) != 0) {
+      return -1;
+    }
+  }
+  return 0;
+}
+
+ap_arg_options input = ap_arg_options_default();
+input.completion_kind = AP_COMPLETION_KIND_FILE;
+ap_add_argument(parser, "input", input, &err);
+
+static const char *const format_choices[] = {"json", "yaml", "toml"};
+ap_arg_options format = ap_arg_options_default();
+format.choices.items = format_choices;
+format.choices.count = 3;
+ap_add_argument(parser, "format", format, &err);
+
+ap_arg_options task = ap_arg_options_default();
+task.completion_callback = task_completion;
+task.completion_user_data = (void *)task_names;
+ap_add_argument(parser, "task", task, &err);
+```
+
 If you need to bypass the helper, you can still call `ap_complete(...)` directly.
 
 ## Shell installation

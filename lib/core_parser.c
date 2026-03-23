@@ -134,6 +134,100 @@ static int remaining_min_required(const ap_parser *parser,
   return min_required;
 }
 
+static int collect_positional_def_indexes(const ap_parser *parser,
+                                          int **out_defs, int *out_count) {
+  int *positional_defs = NULL;
+  int positional_count = 0;
+  int i;
+
+  if (!parser || !out_defs || !out_count) {
+    return -1;
+  }
+
+  for (i = 0; i < parser->defs_count; i++) {
+    if (!parser->defs[i].is_optional) {
+      positional_count++;
+    }
+  }
+
+  if (positional_count > 0) {
+    positional_defs = malloc(sizeof(int) * (size_t)positional_count);
+    if (!positional_defs) {
+      return -1;
+    }
+    positional_count = 0;
+    for (i = 0; i < parser->defs_count; i++) {
+      if (!parser->defs[i].is_optional) {
+        positional_defs[positional_count++] = i;
+      }
+    }
+  }
+
+  *out_defs = positional_defs;
+  *out_count = positional_count;
+  return 0;
+}
+
+const ap_arg_def *ap_next_positional_def(const ap_parser *parser,
+                                         int consumed_positionals) {
+  int *positional_defs = NULL;
+  int positional_defs_count = 0;
+  int positional_cursor = 0;
+  int next_slot = consumed_positionals + 1;
+  const ap_arg_def *result = NULL;
+  int i;
+
+  if (!parser || consumed_positionals < 0) {
+    return NULL;
+  }
+  if (collect_positional_def_indexes(parser, &positional_defs,
+                                     &positional_defs_count) != 0) {
+    return NULL;
+  }
+
+  for (i = 0; i < positional_defs_count; i++) {
+    const ap_arg_def *def = &parser->defs[positional_defs[i]];
+    int values_left = next_slot - positional_cursor;
+    int min_after = remaining_min_required(parser, positional_defs,
+                                           positional_defs_count, i + 1);
+    int take = 0;
+
+    switch (def->opts.nargs) {
+    case AP_NARGS_ONE:
+      take = values_left > 0 ? 1 : 0;
+      break;
+    case AP_NARGS_OPTIONAL:
+      take = values_left > min_after ? 1 : 0;
+      break;
+    case AP_NARGS_ZERO_OR_MORE:
+      take = values_left - min_after;
+      if (take < 0) {
+        take = 0;
+      }
+      break;
+    case AP_NARGS_ONE_OR_MORE:
+      take = values_left - min_after;
+      if (take < 1) {
+        take = 1;
+      }
+      break;
+    case AP_NARGS_FIXED:
+      take = def->opts.nargs_count;
+      break;
+    }
+
+    if (positional_cursor < next_slot &&
+        positional_cursor + take >= next_slot) {
+      result = def;
+      break;
+    }
+    positional_cursor += take;
+  }
+
+  free(positional_defs);
+  return result;
+}
+
 static int push_value(ap_parsed_arg *parsed, int def_index, const char *token,
                       ap_error *err) {
   char *copy = ap_strdup(token);
@@ -288,25 +382,11 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
     return -1;
   }
 
-  for (i = 0; i < parser->defs_count; i++) {
-    if (!parser->defs[i].is_optional) {
-      positional_defs_count++;
-    }
-  }
-
-  if (positional_defs_count > 0) {
-    positional_defs = malloc(sizeof(int) * (size_t)positional_defs_count);
-    if (!positional_defs) {
-      free(parsed);
-      ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
-      return -1;
-    }
-    positional_defs_count = 0;
-    for (i = 0; i < parser->defs_count; i++) {
-      if (!parser->defs[i].is_optional) {
-        positional_defs[positional_defs_count++] = i;
-      }
-    }
+  if (collect_positional_def_indexes(parser, &positional_defs,
+                                     &positional_defs_count) != 0) {
+    free(parsed);
+    ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+    return -1;
   }
 
   while (token_index < argc) {
