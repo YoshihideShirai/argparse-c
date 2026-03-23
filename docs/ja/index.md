@@ -1,85 +1,45 @@
 # argparse-c
 
-`argparse-c` は、Python の `argparse` に着想を得た **C99 向けコマンドライン引数パーサ**です。
+Python の `argparse` に近い書き味で、C99 の CLI を組み立てるためのドキュメント入口です。
 
-- optional / positional arguments に対応
-- `--option=value` と `-o=value` をサポート
-- `subcommand`、`nargs`、`choices`、相互排他グループに対応
-- エラー時に `exit()` せず、呼び出し側へ制御を返す設計
+`argparse-c` は、単純な flag parsing だけでなく、completion、manpage 生成、subcommands、`nargs`、known-args parsing までを 1 つの parser 定義から扱いたい場面を想定しています。
 
-## このサイトで読めること
+## このページから始める理由
 
-- **Getting Started**: 最初のビルドと実行
-- **Guides**: 機能別の丁寧な使い方
-- **API Reference**: 公開 API の詳細仕様
-- **Coverage report**: GitHub Pages 上の `coverage/index.html` で HTML レポートを公開
+このサイトでは次をすぐ辿れます。
 
-## 3分でわかる最小例
+- source / release asset からのインストール手順
+- 最小 CLI サンプルと、その次に読むべきガイド
+- completion や manpage を追加する実践的な導線
+- 最後に API 仕様へ戻るための入口
 
-```c
-#include <stdio.h>
-#include <stdlib.h>
+## おすすめの読み順
 
-#include "argparse-c.h"
+1. **[Getting Started](getting-started.md)** — インストール、最初の sample 実行、最小 parser フロー
+2. **Guides** — 必要になった機能ごとに読む
+   - [基本の使い方](guides/basic-usage.md)
+   - [オプションと型](guides/options-and-types.md)
+   - [nargs](guides/nargs.md)
+   - [Subcommands](guides/subcommands.md)
+   - [Completion callback](guides/completion-callbacks.md)
+3. **Reference**
+   - [API仕様（日本語）](../api-spec.ja.md)
+   - [FAQ](faq.md)
 
-int main(int argc, char **argv) {
-  ap_error err = {0};
-  ap_namespace *ns = NULL;
-  ap_parser *parser = ap_parser_new("demo", "demo parser");
+## すぐ作りやすい CLI の例
 
-  ap_arg_options opts = ap_arg_options_default();
-  opts.required = true;
-  opts.help = "input text";
-  ap_add_argument(parser, "-t, --text", opts, &err);
+- 必須 option と positional を持つ単機能 CLI
+- ネストした subcommand を持つ CLI
+- `ap_parse_known_args(...)` で未知引数を転送する wrapper CLI
+- bash / fish completion script と manpage を同じ定義から出力する CLI
 
-  if (ap_parse_args(parser, argc, argv, &ns, &err) != 0) {
-    char *message = ap_format_error(parser, &err);
-    fprintf(stderr, "%s", message ? message : err.message);
-    free(message);
-    ap_parser_free(parser);
-    return 1;
-  }
+## このリポジトリのサンプル
 
-  {
-    const char *text = NULL;
-    if (ap_ns_get_string(ns, "text", &text)) {
-      printf("text=%s\n", text);
-    }
-  }
+- [`sample/example1.c`](../../sample/example1.c) — 最小の parse / validate / 値取得
+- [`sample/example_completion.c`](../../sample/example_completion.c) — completion / manpage generator の入口
+- [`sample/example_subcommands.c`](../../sample/example_subcommands.c) — nested subcommands と `subcommand_path`
 
-  ap_namespace_free(ns);
-  ap_parser_free(parser);
-  return 0;
-}
-```
+## English docs も使う
 
-## 主な機能
-
-### 基本引数
-
-- positional 引数
-- optional 引数
-- 必須指定 (`required`)
-- デフォルト値 (`default_value`)
-
-### 値の扱い
-
-- `string`, `int32`, `bool`
-- `choices`
-- `append`, `count`, `store_const`
-
-### 複雑な CLI 向け機能
-
-- `nargs` (`?`, `*`, `+`, fixed)
-- nested subcommands
-- mutually exclusive groups
-- `ap_parse_known_args(...)`
-
-## 次に読むページ
-
-1. [Getting Started](getting-started.md)
-2. [基本の使い方](guides/basic-usage.md)
-3. [オプションと型](guides/options-and-types.md)
-4. [Completion callback ガイド](guides/completion-callbacks.md) — `ap_complete(...)` / `ap_completion_callback` / `__complete` / shell 統合 / fallback 方針
-5. [API Reference（日本語）](../api-spec.ja.md)
-6. [English documentation](../en/index.md)
+- [English index](../en/index.md)
+- [English Getting Started](../en/getting-started.md)
