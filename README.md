@@ -4,11 +4,13 @@
 
 > Build C99 CLIs with Python `argparse`-like ergonomics — including completion, manpage generation, subcommands, and known-args parsing.
 
+[![README (日本語)](https://img.shields.io/badge/README-日本語-0A66C2?style=for-the-badge)](./README.ja.md)
 [![Docs (English)](https://img.shields.io/badge/GitHub%20Pages-English-0A66C2?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/en/)
 [![Docs (日本語)](https://img.shields.io/badge/GitHub%20Pages-日本語-0A66C2?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/ja/)
 
 ## Start here
 
+- **README / 日本語**: [README.ja.md](./README.ja.md)
 - **GitHub Pages / English**: <https://yoshihideshirai.github.io/argparse-c/en/>
 - **GitHub Pages / 日本語**: <https://yoshihideshirai.github.io/argparse-c/ja/>
 - **Getting Started / English**: <https://yoshihideshirai.github.io/argparse-c/en/getting-started/>
@@ -17,6 +19,8 @@
 If you want the installation steps, completion setup, package metadata, or API details, jump to GitHub Pages first. The repository README now stays focused on **what this library is**, **why it is useful**, and **which examples to open next**.
 
 ## What is `argparse-c`?
+
+The English and Japanese READMEs are kept at the same level of detail for the overview, benefits, and feature list. Detailed setup and feature usage live in the docs site.
 
 `argparse-c` helps you define command-line interfaces in C99 without hand-writing low-level argument scanning and validation logic. You declare a parser, add options and positionals, parse `argv`, and read values from a namespace.
 
