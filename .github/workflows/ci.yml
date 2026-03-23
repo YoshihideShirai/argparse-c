@@ -42,6 +42,32 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+  clang-tools:
+    name: Clang format / tidy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build gcc g++ clang-format clang-tidy
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-clang-tools \
+            -G Ninja \
+            -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_CXX_COMPILER=g++
+
+      - name: Verify clang-format
+        run: cmake --build build-clang-tools --target format-check
+
+      - name: Run clang-tidy
+        run: cmake --build build-clang-tools --target tidy
+
   coverage:
     name: Coverage (gcovr)
     runs-on: ubuntu-latest
@@ -78,7 +104,7 @@ jobs:
           ctest --test-dir build-coverage --output-on-failure
           python -m gcovr \
             --root "$GITHUB_WORKSPACE" \
-            --filter "$GITHUB_WORKSPACE" \
+            --filter "$GITHUB_WORKSPACE/lib" \
             --object-directory "$GITHUB_WORKSPACE/build-coverage" \
             --exclude '.*/test/.*' \
             --exclude '.*/sample/.*' \

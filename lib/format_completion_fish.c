@@ -106,7 +106,8 @@ static int append_description(ap_string_builder *sb, const ap_arg_def *def) {
   const char *help = def->opts.help;
 
   if (help && help[0] != '\0') {
-    if (ap_sb_appendf(sb, " -d ") != 0 || append_fish_double_quoted(sb, help) != 0) {
+    if (ap_sb_appendf(sb, " -d ") != 0 ||
+        append_fish_double_quoted(sb, help) != 0) {
       return -1;
     }
   } else if (option_takes_value(def)) {
@@ -158,7 +159,8 @@ static int append_choice_cases(ap_string_builder *sb, const ap_parser *parser) {
         return -1;
       }
       if (append_parser_key(sb, parser) != 0 ||
-          ap_sb_appendf(sb, ":%s\"\n      printf '%%s\\n'", def->flags[j]) != 0) {
+          ap_sb_appendf(sb, ":%s\"\n      printf '%%s\\n'", def->flags[j]) !=
+              0) {
         return -1;
       }
       for (k = 0; k < def->opts.choices.count; k++) {
@@ -188,12 +190,13 @@ static int append_option_complete(ap_string_builder *sb, const char *prog,
   ap_completion_kind completion_kind = option_completion_kind(def);
 
   if (ap_sb_appendf(sb, "complete -c ") != 0 ||
-      append_fish_double_quoted(sb, prog) != 0 || ap_sb_appendf(sb, " -n '") != 0) {
+      append_fish_double_quoted(sb, prog) != 0 ||
+      ap_sb_appendf(sb, " -n '") != 0) {
     return -1;
   }
   if (ap_sb_appendf(sb, "__ap_") != 0 || append_identifier(sb, prog) != 0 ||
-      ap_sb_appendf(sb, "_parser_is ") != 0 || append_parser_key(sb, parser) != 0 ||
-      ap_sb_appendf(sb, "'") != 0) {
+      ap_sb_appendf(sb, "_parser_is ") != 0 ||
+      append_parser_key(sb, parser) != 0 || ap_sb_appendf(sb, "'") != 0) {
     return -1;
   }
 
@@ -228,7 +231,8 @@ static int append_option_complete(ap_string_builder *sb, const char *prog,
     }
     switch (completion_kind) {
     case AP_COMPLETION_KIND_CHOICES:
-      if (ap_sb_appendf(sb, " -a '(__ap_") != 0 || append_identifier(sb, prog) != 0 ||
+      if (ap_sb_appendf(sb, " -a '(__ap_") != 0 ||
+          append_identifier(sb, prog) != 0 ||
           ap_sb_appendf(sb, "_value_choices ") != 0) {
         return -1;
       }
@@ -265,11 +269,13 @@ static int append_subcommand_complete(ap_string_builder *sb, const char *prog,
                                       const ap_parser *parser,
                                       const ap_subcommand_def *sub) {
   if (ap_sb_appendf(sb, "complete -c ") != 0 ||
-      append_fish_double_quoted(sb, prog) != 0 || ap_sb_appendf(sb, " -n '") != 0) {
+      append_fish_double_quoted(sb, prog) != 0 ||
+      ap_sb_appendf(sb, " -n '") != 0) {
     return -1;
   }
   if (ap_sb_appendf(sb, "__ap_") != 0 || append_identifier(sb, prog) != 0 ||
-      ap_sb_appendf(sb, "_parser_is ") != 0 || append_parser_key(sb, parser) != 0 ||
+      ap_sb_appendf(sb, "_parser_is ") != 0 ||
+      append_parser_key(sb, parser) != 0 ||
       ap_sb_appendf(sb, "' -f -a ") != 0 ||
       append_fish_double_quoted(sb, sub->name) != 0) {
     return -1;
@@ -302,7 +308,8 @@ static int append_complete_commands(ap_string_builder *sb, const char *prog,
         0) {
       return -1;
     }
-    if (append_complete_commands(sb, prog, parser->subcommands[i].parser) != 0) {
+    if (append_complete_commands(sb, prog, parser->subcommands[i].parser) !=
+        0) {
       return -1;
     }
   }
@@ -326,13 +333,12 @@ char *ap_fish_completion_build(const ap_parser *parser) {
       append_fish_double_quoted(&sb, prog) != 0 ||
       ap_sb_appendf(&sb, " -f\n\nfunction __ap_") != 0 ||
       append_identifier(&sb, prog) != 0 ||
-      ap_sb_appendf(&sb,
-                    "_parser_key\n"
-                    "  set -l tokens (commandline -opc)\n"
-                    "  set -e tokens[1]\n"
-                    "  set -l key root\n"
-                    "  for token in $tokens\n"
-                    "    switch \"$key:$token\"\n") != 0) {
+      ap_sb_appendf(&sb, "_parser_key\n"
+                         "  set -l tokens (commandline -opc)\n"
+                         "  set -e tokens[1]\n"
+                         "  set -l key root\n"
+                         "  for token in $tokens\n"
+                         "    switch \"$key:$token\"\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
   }
@@ -346,37 +352,31 @@ char *ap_fish_completion_build(const ap_parser *parser) {
                     "function __ap_",
                     "%s") != 0 ||
       append_identifier(&sb, prog) != 0 ||
-      ap_sb_appendf(&sb,
-                    "_parser_is\n"
-                    "  test (__ap_") != 0 ||
+      ap_sb_appendf(&sb, "_parser_is\n"
+                         "  test (__ap_") != 0 ||
       append_identifier(&sb, prog) != 0 ||
-      ap_sb_appendf(&sb,
-                    "_parser_key) = \"$argv[1]\"\n"
-                    "end\n\n"
-                    "function __ap_") != 0 ||
+      ap_sb_appendf(&sb, "_parser_key) = \"$argv[1]\"\n"
+                         "end\n\n"
+                         "function __ap_") != 0 ||
       append_identifier(&sb, prog) != 0 ||
-      ap_sb_appendf(&sb,
-                    "_value_choices\n"
-                    "  switch \"$argv[1]\"\n") != 0) {
+      ap_sb_appendf(&sb, "_value_choices\n"
+                         "  switch \"$argv[1]\"\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
   }
 
   if (append_choice_cases(&sb, parser) != 0 ||
-      ap_sb_appendf(&sb,
-                    "  end\n"
-                    "end\n\nfunction __ap_") != 0 ||
+      ap_sb_appendf(&sb, "  end\n"
+                         "end\n\nfunction __ap_") != 0 ||
       append_identifier(&sb, prog) != 0 ||
-      ap_sb_appendf(&sb,
-                    "_dynamic_complete\n"
-                    "  set -l tokens (commandline -opc)\n"
-                    "  set -e tokens[1]\n"
-                    "  set -l current (commandline -ct)\n"
-                    "  ") != 0 ||
+      ap_sb_appendf(&sb, "_dynamic_complete\n"
+                         "  set -l tokens (commandline -opc)\n"
+                         "  set -e tokens[1]\n"
+                         "  set -l current (commandline -ct)\n"
+                         "  ") != 0 ||
       append_fish_double_quoted(&sb, prog) != 0 ||
-      ap_sb_appendf(&sb,
-                    " __complete --shell fish -- $tokens $current\n"
-                    "end\n\n") != 0 ||
+      ap_sb_appendf(&sb, " __complete --shell fish -- $tokens $current\n"
+                         "end\n\n") != 0 ||
       append_complete_commands(&sb, prog, parser) != 0) {
     ap_sb_free(&sb);
     return NULL;

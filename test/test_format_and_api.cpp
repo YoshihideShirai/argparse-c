@@ -68,8 +68,7 @@ int dynamic_exec_completion(const ap_completion_request *request,
   return 0;
 }
 
-}  // namespace
-
+} // namespace
 
 TEST(FormatManpageIncludesOptionsAndNestedSubcommands) {
   ap_error err = {};
@@ -747,8 +746,6 @@ TEST(MissingRequiredPositionalUsesConsistentArgumentNameAndMessage) {
   ap_parser_free(p);
 }
 
-
-
 TEST(FormatFishCompletionIncludesSubcommandsOptionsAndChoices) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -797,14 +794,27 @@ TEST(FormatFishCompletionIncludesSubcommandsOptionsAndChoices) {
   CHECK(strstr(script, "set key \"root/config\"") != NULL);
   CHECK(strstr(script, "case \"root/config:set\"") != NULL);
   CHECK(strstr(script, "set key \"root/config/set\"") != NULL);
-  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -f -a \"config\" -d \"config commands\"") != NULL);
-  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -s h -l help -d \"show this help message and exit\"") != NULL);
-  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -s v -l verbose -d \"increase verbosity\"") != NULL);
-  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -l output -d \"output format\" -r -a '(__ap_prog_value_choices root:--output)'") != NULL);
-  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -l force -d \"force overwrite\"") != NULL);
-  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root/config' -l mode -d \"mode for config\" -r -a '(__ap_prog_value_choices root/config:--mode)'") != NULL);
-  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root/config' -f -a \"set\" -d \"set values\"") != NULL);
-  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root/config/set' -l target -d \"set target\" -r") != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -f "
+                       "-a \"config\" -d \"config commands\"") != NULL);
+  CHECK(strstr(script,
+               "complete -c \"prog\" -n '__ap_prog_parser_is root' -s "
+               "h -l help -d \"show this help message and exit\"") != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -s "
+                       "v -l verbose -d \"increase verbosity\"") != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -l "
+                       "output -d \"output format\" -r -a "
+                       "'(__ap_prog_value_choices root:--output)'") != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is root' -l "
+                       "force -d \"force overwrite\"") != NULL);
+  CHECK(strstr(script,
+               "complete -c \"prog\" -n '__ap_prog_parser_is "
+               "root/config' -l mode -d \"mode for config\" -r -a "
+               "'(__ap_prog_value_choices root/config:--mode)'") != NULL);
+  CHECK(strstr(script, "complete -c \"prog\" -n '__ap_prog_parser_is "
+                       "root/config' -f -a \"set\" -d \"set values\"") != NULL);
+  CHECK(strstr(script,
+               "complete -c \"prog\" -n '__ap_prog_parser_is "
+               "root/config/set' -l target -d \"set target\" -r") != NULL);
   CHECK(strstr(script, "case \"root:--output\"") != NULL);
   CHECK(strstr(script, "\"json\" \"yaml\"") != NULL);
   CHECK(strstr(script, "case \"root/config:--mode\"") != NULL);
@@ -847,14 +857,19 @@ TEST(FormatBashCompletionIncludesRootSubcommandsAndChoices) {
   CHECK(script != NULL);
   CHECK(strstr(script, "complete -F _prog 'prog'") != NULL);
   CHECK(strstr(script, "parser_subcommands='config'") != NULL);
-  CHECK(strstr(script, "parser_options='-h --help -v --verbose --output --force'") != NULL);
+  CHECK(strstr(script,
+               "parser_options='-h --help -v --verbose --output --force'") !=
+        NULL);
   CHECK(strstr(script, "parser_value_options='--output'") != NULL);
-CHECK(strstr(script, "parser_flag_only_options='-h --help -v --verbose --force'") != NULL);
+  CHECK(strstr(script,
+               "parser_flag_only_options='-h --help -v --verbose --force'") !=
+        NULL);
   CHECK(strstr(script, "root:--output)") != NULL);
   CHECK(strstr(script, "'json' 'yaml'") != NULL);
   CHECK(strstr(script, "root/config:--mode)") != NULL);
   CHECK(strstr(script, "'fast' 'slow'") != NULL);
-  CHECK(strstr(script, "root/config)\n        parser_subcommands=''\n        parser_options='-h --help --mode'") != NULL);
+  CHECK(strstr(script, "root/config)\n        parser_subcommands=''\n        "
+                       "parser_options='-h --help --mode'") != NULL);
   CHECK(strstr(script, "__ap_completion_filter_mutex_candidates") != NULL);
 
   free(script);
@@ -922,6 +937,19 @@ TEST(CompleteUsesDynamicCallbackAndStaticChoiceFallback) {
   ap_parser_free(p);
 }
 
+TEST(CompleteRejectsNullArgvWhenArgcIsPositive) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_completion_result result = {};
+
+  CHECK(p != NULL);
+
+  LONGS_EQUAL(-1, ap_complete(p, 1, NULL, "bash", &result, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+
+  ap_parser_free(p);
+}
+
 TEST(FormatCompletionUsesStaticCompletionMetadata) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -958,9 +986,13 @@ TEST(FormatCompletionUsesStaticCompletionMetadata) {
   CHECK(strstr(bash, "compgen -d -- \"$cur\"") != NULL);
   CHECK(strstr(bash, "compgen -c -- \"$cur\"") != NULL);
   CHECK(strstr(fish, "-l input -d \"INPUT\" -r -F") != NULL);
-  CHECK(strstr(fish, "-l dir -d \"DIR\" -r -a '(__fish_complete_directories)'") != NULL);
-  CHECK(strstr(fish, "-l exec -d \"EXEC\" -r -a '(__fish_complete_command)'") != NULL);
-  CHECK(strstr(fish, "-l mode -d \"MODE\" -r -a '(__ap_prog_value_choices root:--mode)'") != NULL);
+  CHECK(
+      strstr(fish, "-l dir -d \"DIR\" -r -a '(__fish_complete_directories)'") !=
+      NULL);
+  CHECK(strstr(fish, "-l exec -d \"EXEC\" -r -a '(__fish_complete_command)'") !=
+        NULL);
+  CHECK(strstr(fish, "-l mode -d \"MODE\" -r -a '(__ap_prog_value_choices "
+                     "root:--mode)'") != NULL);
 
   free(bash);
   free(fish);
@@ -990,7 +1022,8 @@ TEST(FormatCompletionScriptsCallApplicationForDynamicCallbacks) {
   CHECK(strstr(bash, "root:--exec) printf '%s\\n' 'dynamic' ;;") != NULL);
   CHECK(strstr(fish, "\"prog\" __complete --shell fish -- $tokens $current") !=
         NULL);
-  CHECK(strstr(fish, "-l exec -d \"EXEC\" -r -a '(__ap_prog_dynamic_complete)'") !=
+  CHECK(strstr(fish,
+               "-l exec -d \"EXEC\" -r -a '(__ap_prog_dynamic_complete)'") !=
         NULL);
 
   free(bash);
@@ -1022,7 +1055,8 @@ TEST(FormatBashCompletionMarksValueModesAndFlagOnlyOptions) {
 
   script = ap_format_bash_completion(p);
   CHECK(script != NULL);
-  CHECK(strstr(script, "parser_value_options='--maybe --extras --pair'") != NULL);
+  CHECK(strstr(script, "parser_value_options='--maybe --extras --pair'") !=
+        NULL);
   CHECK(strstr(script, "parser_flag_only_options=") != NULL);
   CHECK(strstr(script, "--quiet") != NULL);
   CHECK(strstr(script, "root:--maybe)") != NULL);
@@ -1042,9 +1076,9 @@ TEST(GeneratedBashCompletionScriptPassesBashSyntaxCheck) {
   const std::string temp_dir = make_temp_dir();
   const std::filesystem::path script_path =
       std::filesystem::path(temp_dir) / "example_completion.bash";
-  const std::string generate_command =
-      shell_quote(AP_EXAMPLE_COMPLETION_PATH) +
-      " --generate-bash-completion > " + shell_quote(script_path.string());
+  const std::string generate_command = shell_quote(AP_EXAMPLE_COMPLETION_PATH) +
+                                       " --generate-bash-completion > " +
+                                       shell_quote(script_path.string());
 
   CHECK(run_command(generate_command) == 0);
   CHECK(std::filesystem::exists(script_path));
@@ -1057,12 +1091,12 @@ TEST(GeneratedManpageRendersWithMan) {
   const std::string temp_dir = make_temp_dir();
   const std::filesystem::path manpage_path =
       std::filesystem::path(temp_dir) / "example_manpage.1";
-  const std::string generate_command =
-      shell_quote(AP_EXAMPLE_MANPAGE_PATH) + " --generate-manpage > " +
-      shell_quote(manpage_path.string());
-  const std::string render_command =
-      "MANPAGER=cat MANWIDTH=80 man -l " + shell_quote(manpage_path.string()) +
-      " > /dev/null";
+  const std::string generate_command = shell_quote(AP_EXAMPLE_MANPAGE_PATH) +
+                                       " --generate-manpage > " +
+                                       shell_quote(manpage_path.string());
+  const std::string render_command = "MANPAGER=cat MANWIDTH=80 man -l " +
+                                     shell_quote(manpage_path.string()) +
+                                     " > /dev/null";
 
   CHECK(run_command(generate_command) == 0);
   CHECK(std::filesystem::exists(manpage_path));
