@@ -886,46 +886,110 @@ TEST(FormatBashCompletionIncludesRootSubcommandsAndChoices) {
   ap_parser_free(p);
 }
 
-TEST(FormatGeneratorsEscapeSpecialCharactersAndDeepNestedCompletionPaths) {
+TEST(FormatBashCompletionEscapesChoiceBoundaryCharacters) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("my-prog.v1", "desc");
+  ap_arg_options choice = ap_arg_options_default();
+  const char *values[] = {"two words", "it's", "x=y", "lint.v2", "check-x"};
+  char *script = NULL;
+
+  CHECK(p != NULL);
+  choice.choices.items = values;
+  choice.choices.count = 5;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--bash-choice", choice, &err));
+
+  script = ap_format_bash_completion(p);
+  CHECK(script != NULL);
+  CHECK(strstr(script, "complete -F _my_prog_v1 'my-prog.v1'") != NULL);
+  CHECK(strstr(script, "root:--bash-choice)") != NULL);
+  CHECK(strstr(script, "'two words' 'it'\\''s' 'x=y' 'lint.v2' 'check-x'") !=
+        NULL);
+
+  free(script);
+  ap_parser_free(p);
+}
+
+TEST(FormatFishCompletionEscapesHelpAndChoiceBoundaryCharacters) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("my-prog.v1", "desc");
+  ap_arg_options fish_opt = ap_arg_options_default();
+  const char *choices[] = {"quote\"", "path\\dir", "$HOME", "line1\nline2"};
+  char *script = NULL;
+  const char *help_fragment =
+      "-l fish-opt -d \"say \\\"hi\\\"\\\\\\$USER next\" -r -a "
+      "'(__ap_my_prog_v1_value_choices root:--fish-opt)'";
+
+  CHECK(p != NULL);
+  fish_opt.help = "say \"hi\"\\$USER\nnext";
+  fish_opt.choices.items = choices;
+  fish_opt.choices.count = 4;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--fish-opt", fish_opt, &err));
+
+  script = ap_format_fish_completion(p);
+  CHECK(script != NULL);
+  CHECK(strstr(script, "complete -c \"my-prog.v1\" -f") != NULL);
+  CHECK(strstr(script, "function __ap_my_prog_v1_parser_key") != NULL);
+  CHECK(strstr(script, help_fragment) != NULL);
+  CHECK(strstr(script, "case \"root:--fish-opt\"") != NULL);
+  CHECK(strstr(script,
+               "\"quote\\\"\" \"path\\\\dir\" \"\\$HOME\" \"line1 line2\"") !=
+        NULL);
+
+  free(script);
+  ap_parser_free(p);
+}
+
+TEST(FormatManpageEscapesRoffBoundaryCharacters) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options man_opt = ap_arg_options_default();
+  const char *choices[] = {"-dash", "\\slash", ".dot", "'tick", "line1\nline2"};
+  char *manpage = NULL;
+
+  CHECK(p != NULL);
+  man_opt.help = ".lead\n'quote\n-dash\\trail";
+  man_opt.default_value = "-default\\value\n.second";
+  man_opt.choices.items = choices;
+  man_opt.choices.count = 5;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--man-opt", man_opt, &err));
+
+  manpage = ap_format_manpage(p);
+  CHECK(manpage != NULL);
+  CHECK(strstr(manpage, "\\&.lead") != NULL);
+  CHECK(strstr(manpage, "\\&'quote") != NULL);
+  CHECK(strstr(manpage, "\\-dash\\\\trail") != NULL);
+  CHECK(strstr(manpage, "default: \\-default\\\\value") != NULL);
+  CHECK(strstr(manpage, "\\&.second") != NULL);
+  CHECK(strstr(manpage,
+               "choices: \\-dash, \\\\slash, \\&.dot, \\&'tick, line1") !=
+        NULL);
+  CHECK(strstr(manpage, "line2") != NULL);
+
+  free(manpage);
+  ap_parser_free(p);
+}
+
+TEST(FormatGeneratorsKeepDeepNestedCompletionAndManpageKeysAligned) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("my-prog.v1", "desc");
   ap_parser *build = NULL;
   ap_parser *lint = NULL;
   ap_parser *check = NULL;
   ap_parser *leaf = NULL;
-  ap_arg_options bash_choice = ap_arg_options_default();
-  ap_arg_options fish_opt = ap_arg_options_default();
-  ap_arg_options man_opt = ap_arg_options_default();
   ap_arg_options leaf_mode = ap_arg_options_default();
-  const char *bash_choices[] = {"two words", "it's"};
-  const char *fish_choices[] = {"quote\"", "path\\dir", "$HOME",
-                                "line1\nline2"};
-  const char *man_choices[] = {"-dash", "\\slash", ".dot", "'tick"};
   const char *leaf_choices[] = {"fast", "slow"};
   char *bash = NULL;
   char *fish = NULL;
   char *manpage = NULL;
-  const char *fish_help_fragment =
-      "-l fish-opt -d \"say \\\"hi\\\"\\\\\\$USER next\" -r -a "
-      "'(__ap_my_prog_v1_value_choices root:--fish-opt)'";
 
   CHECK(p != NULL);
-  bash_choice.choices.items = bash_choices;
-  bash_choice.choices.count = 2;
-  fish_opt.help = "say \"hi\"\\$USER\nnext";
-  fish_opt.choices.items = fish_choices;
-  fish_opt.choices.count = 4;
-  man_opt.help = ".lead\n'quote\n-dash\\trail";
-  man_opt.default_value = "-default\\value";
-  man_opt.choices.items = man_choices;
-  man_opt.choices.count = 4;
   leaf_mode.help = "leaf mode";
   leaf_mode.choices.items = leaf_choices;
   leaf_mode.choices.count = 2;
 
-  LONGS_EQUAL(0, ap_add_argument(p, "--bash-choice", bash_choice, &err));
-  LONGS_EQUAL(0, ap_add_argument(p, "--fish-opt", fish_opt, &err));
-  LONGS_EQUAL(0, ap_add_argument(p, "--man-opt", man_opt, &err));
   build = ap_add_subcommand(p, "build-tools", "build helpers", &err);
   CHECK(build != NULL);
   lint = ap_add_subcommand(build, "lint.v2", "lint helpers", &err);
@@ -944,10 +1008,7 @@ TEST(FormatGeneratorsEscapeSpecialCharactersAndDeepNestedCompletionPaths) {
   CHECK(fish != NULL);
   CHECK(manpage != NULL);
 
-  CHECK(strstr(bash, "complete -F _my_prog_v1 'my-prog.v1'") != NULL);
   CHECK(strstr(bash, "parser_subcommands='build-tools'") != NULL);
-  CHECK(strstr(bash, "root:--bash-choice)") != NULL);
-  CHECK(strstr(bash, "'two words' 'it'\\''s'") != NULL);
   CHECK(strstr(bash, "root/build-tools/lint.v2/check-x)") != NULL);
   CHECK(strstr(bash, "parser_subcommands='final.step'") != NULL);
   CHECK(strstr(bash, "root/build-tools/lint.v2/check-x/final.step)") != NULL);
@@ -957,13 +1018,6 @@ TEST(FormatGeneratorsEscapeSpecialCharactersAndDeepNestedCompletionPaths) {
         NULL);
   CHECK(strstr(bash, "'fast' 'slow'") != NULL);
 
-  CHECK(strstr(fish, "complete -c \"my-prog.v1\" -f") != NULL);
-  CHECK(strstr(fish, "function __ap_my_prog_v1_parser_key") != NULL);
-  CHECK(strstr(fish, fish_help_fragment) != NULL);
-  CHECK(strstr(fish, "case \"root:--fish-opt\"") != NULL);
-  CHECK(strstr(fish,
-               "\"quote\\\"\" \"path\\\\dir\" \"\\$HOME\" \"line1 line2\"") !=
-        NULL);
   CHECK(strstr(fish, "case \"root:build-tools\"") != NULL);
   CHECK(strstr(fish, "set key \"root/build-tools\"") != NULL);
   CHECK(strstr(fish, "case \"root/build-tools:lint.v2\"") != NULL);
@@ -981,12 +1035,13 @@ TEST(FormatGeneratorsEscapeSpecialCharactersAndDeepNestedCompletionPaths) {
                "root/build-tools/lint.v2/check-x/final.step:--leaf-mode)'") !=
         NULL);
 
-  CHECK(strstr(manpage, "\\&.lead") != NULL);
-  CHECK(strstr(manpage, "\\&'quote") != NULL);
-  CHECK(strstr(manpage, "\\-dash\\\\trail") != NULL);
-  CHECK(strstr(manpage, "default: \\-default\\\\value") != NULL);
-  CHECK(strstr(manpage, "choices: \\-dash, \\\\slash, \\&.dot, \\&'tick") !=
-        NULL);
+  CHECK(strstr(manpage, ".SH SYNOPSIS") != NULL);
+  CHECK(strstr(manpage, "my\\-prog.v1 build\\-tools lint.v2 check\\-x [\\-h] "
+                        "[SUBCOMMAND]") != NULL);
+  CHECK(strstr(manpage, "final leaf") != NULL);
+  CHECK(strstr(manpage,
+               "my\\-prog.v1 build\\-tools lint.v2 check\\-x final.step [\\-h] "
+               "[\\-\\-leaf\\-mode LEAF-MODE]") != NULL);
 
   free(bash);
   free(fish);
