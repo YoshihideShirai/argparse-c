@@ -1,6 +1,7 @@
 #include "test_framework.h"
 
 #include <array>
+#include <cmath>
 #include <cerrno>
 #include <cstring>
 #include <cstdio>
@@ -282,6 +283,8 @@ TEST(NamespaceGetterFailurePathsReturnFalseOrNull) {
   ap_arg_options name = ap_arg_options_default();
   bool bool_out = false;
   int32_t int_out = 0;
+  int64_t int64_out = 0;
+  double double_out = 0.0;
   const char *str_out = NULL;
   char *argv[] = {(char *)"prog",   (char *)"--verbose", (char *)"--count",
                   (char *)"--name", (char *)"alice",     NULL};
@@ -303,12 +306,16 @@ TEST(NamespaceGetterFailurePathsReturnFalseOrNull) {
   CHECK(!ap_ns_get_string(ns, "missing", &str_out));
   CHECK(!ap_ns_get_int32(ns, "name", &int_out));
   CHECK(!ap_ns_get_int32(ns, "count", NULL));
+  CHECK(!ap_ns_get_int64(ns, "count", &int64_out));
+  CHECK(!ap_ns_get_double(ns, "count", &double_out));
   LONGS_EQUAL(-1, ap_ns_get_count(ns, "missing"));
   CHECK(ap_ns_get_string_at(ns, "missing", 0) == NULL);
   CHECK(ap_ns_get_string_at(ns, "name", 1) == NULL);
   CHECK(!ap_ns_get_int32_at(ns, "count", -1, &int_out));
   CHECK(!ap_ns_get_int32_at(ns, "count", 1, &int_out));
   CHECK(!ap_ns_get_int32_at(ns, "count", 0, NULL));
+  CHECK(!ap_ns_get_int64_at(ns, "count", 0, &int64_out));
+  CHECK(!ap_ns_get_double_at(ns, "count", 0, &double_out));
 
   ap_namespace_free(ns);
   ap_parser_free(p);
@@ -1211,4 +1218,67 @@ TEST(GeneratedManpageRendersWithMan) {
   CHECK(run_command(render_command) == 0);
 
   std::filesystem::remove_all(temp_dir);
+}
+
+
+TEST(NamespaceGettersSupportInt64AndDoubleArrays) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options ids = ap_arg_options_default();
+  ap_arg_options weights = ap_arg_options_default();
+  int64_t id0 = 0;
+  int64_t id1 = 0;
+  double weight0 = 0.0;
+  double weight1 = 0.0;
+  char *argv[] = {(char *)"prog", (char *)"--ids", (char *)"7",
+                  (char *)"--ids", (char *)"9", (char *)"--weights",
+                  (char *)"0.5",  (char *)"--weights", (char *)"1.5", NULL};
+
+  CHECK(p != NULL);
+  ids.type = AP_TYPE_INT64;
+  ids.action = AP_ACTION_APPEND;
+  weights.type = AP_TYPE_DOUBLE;
+  weights.action = AP_ACTION_APPEND;
+  LONGS_EQUAL(0, ap_add_argument(p, "--ids", ids, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--weights", weights, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 9, argv, &ns, &err));
+  CHECK(ap_ns_get_int64_at(ns, "ids", 0, &id0));
+  CHECK(ap_ns_get_int64_at(ns, "ids", 1, &id1));
+  CHECK(ap_ns_get_double_at(ns, "weights", 0, &weight0));
+  CHECK(ap_ns_get_double_at(ns, "weights", 1, &weight1));
+  LONGS_EQUAL(7LL, id0);
+  LONGS_EQUAL(9LL, id1);
+  CHECK(std::fabs(weight0 - 0.5) < 1e-12);
+  CHECK(std::fabs(weight1 - 1.5) < 1e-12);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(DefinitionErrorsRejectUnsupportedActionTypeCombinations) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options count = ap_arg_options_default();
+  ap_arg_options store_const = ap_arg_options_default();
+
+  CHECK(p != NULL);
+  count.type = AP_TYPE_INT32;
+  count.action = AP_ACTION_COUNT;
+  count.default_value = "1";
+  LONGS_EQUAL(-1, ap_add_argument(p, "--count", count, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("count action does not support choices/default_value/const_value/custom nargs", err.message);
+
+  store_const.type = AP_TYPE_DOUBLE;
+  store_const.action = AP_ACTION_STORE_CONST;
+  store_const.const_value = "3.14";
+  store_const.choices.items = (const char **)&store_const.const_value;
+  store_const.choices.count = 1;
+  LONGS_EQUAL(-1, ap_add_argument(p, "--pi", store_const, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("store_const does not support default_value/choices/custom nargs", err.message);
+
+  ap_parser_free(p);
 }

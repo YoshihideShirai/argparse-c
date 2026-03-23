@@ -4,6 +4,8 @@
 
 - `AP_TYPE_STRING`
 - `AP_TYPE_INT32`
+- `AP_TYPE_INT64`
+- `AP_TYPE_DOUBLE`
 - `AP_TYPE_BOOL`
 
 ## `int32` の例
@@ -16,6 +18,28 @@ ap_add_argument(parser, "-n, --num", number, &err);
 ```
 
 不正な整数が与えられた場合は、`AP_ERR_INVALID_INT32` になります。
+
+## `int64` の例
+
+```c
+ap_arg_options offset = ap_arg_options_default();
+offset.type = AP_TYPE_INT64;
+offset.help = "64-bit integer value";
+ap_add_argument(parser, "--offset", offset, &err);
+```
+
+64bit 整数に変換できない入力は `AP_ERR_INVALID_INT64` になります。
+
+## `double` の例
+
+```c
+ap_arg_options ratio = ap_arg_options_default();
+ratio.type = AP_TYPE_DOUBLE;
+ratio.help = "floating-point ratio";
+ap_add_argument(parser, "--ratio", ratio, &err);
+```
+
+浮動小数点に変換できない入力は `AP_ERR_INVALID_DOUBLE` になります。
 
 ## `bool` の例
 
@@ -53,3 +77,20 @@ ap_add_argument(parser, "--mode", mode, &err);
 
 - `--dry-run` → `dry_run`
 - positional `input-file` → `input_file`
+
+
+## `append` と型付き配列
+
+```c
+ap_arg_options ids = ap_arg_options_default();
+ids.type = AP_TYPE_INT64;
+ids.action = AP_ACTION_APPEND;
+ap_add_argument(parser, "--id", ids, &err);
+
+ap_arg_options weights = ap_arg_options_default();
+weights.type = AP_TYPE_DOUBLE;
+weights.action = AP_ACTION_APPEND;
+ap_add_argument(parser, "--weight", weights, &err);
+```
+
+追加された値は `ap_ns_get_int64_at(...)` / `ap_ns_get_double_at(...)` で順番に取り出せます。

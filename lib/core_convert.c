@@ -1,3 +1,5 @@
+#include <errno.h>
+#include <float.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,14 +12,48 @@ static int parse_int32(const char *text, int32_t *out_value) {
   if (!text || !out_value) {
     return -1;
   }
+  errno = 0;
   value = strtol(text, &end, 10);
-  if (*text == '\0' || *end != '\0') {
+  if (*text == '\0' || *end != '\0' || errno == ERANGE) {
     return -1;
   }
   if (value < INT32_MIN || value > INT32_MAX) {
     return -1;
   }
   *out_value = (int32_t)value;
+  return 0;
+}
+
+static int parse_int64(const char *text, int64_t *out_value) {
+  char *end = NULL;
+  long long value;
+  if (!text || !out_value) {
+    return -1;
+  }
+  errno = 0;
+  value = strtoll(text, &end, 10);
+  if (*text == '\0' || *end != '\0' || errno == ERANGE) {
+    return -1;
+  }
+  if (value < INT64_MIN || value > INT64_MAX) {
+    return -1;
+  }
+  *out_value = (int64_t)value;
+  return 0;
+}
+
+static int parse_double(const char *text, double *out_value) {
+  char *end = NULL;
+  double value;
+  if (!text || !out_value) {
+    return -1;
+  }
+  errno = 0;
+  value = strtod(text, &end);
+  if (*text == '\0' || *end != '\0' || errno == ERANGE) {
+    return -1;
+  }
+  *out_value = value;
   return 0;
 }
 
@@ -82,6 +118,57 @@ static int copy_int_values(const ap_arg_def *def, const ap_strvec *src,
     if (parse_int32(src->items[i], &dst->as.ints[i]) != 0) {
       ap_error_set(err, AP_ERR_INVALID_INT32, ap_error_argument_name(def),
                    "argument '%s' must be a valid int32: '%s'",
+                   ap_error_argument_name(def), src->items[i]);
+      return -1;
+    }
+  }
+  return 0;
+}
+
+
+static int copy_int64_values(const ap_arg_def *def, const ap_strvec *src,
+                             ap_ns_entry *dst, ap_error *err) {
+  int i;
+  if (src->count == 0) {
+    dst->as.int64s = NULL;
+    dst->count = 0;
+    return 0;
+  }
+  dst->as.int64s = calloc((size_t)src->count, sizeof(int64_t));
+  if (!dst->as.int64s) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, dst->dest, "out of memory");
+    return -1;
+  }
+  dst->count = src->count;
+  for (i = 0; i < src->count; i++) {
+    if (parse_int64(src->items[i], &dst->as.int64s[i]) != 0) {
+      ap_error_set(err, AP_ERR_INVALID_INT64, ap_error_argument_name(def),
+                   "argument '%s' must be a valid int64: '%s'",
+                   ap_error_argument_name(def), src->items[i]);
+      return -1;
+    }
+  }
+  return 0;
+}
+
+static int copy_double_values(const ap_arg_def *def, const ap_strvec *src,
+                              ap_ns_entry *dst, ap_error *err) {
+  int i;
+  if (src->count == 0) {
+    dst->as.doubles = NULL;
+    dst->count = 0;
+    return 0;
+  }
+  dst->as.doubles = calloc((size_t)src->count, sizeof(double));
+  if (!dst->as.doubles) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, dst->dest, "out of memory");
+    return -1;
+  }
+  dst->count = src->count;
+  for (i = 0; i < src->count; i++) {
+    if (parse_double(src->items[i], &dst->as.doubles[i]) != 0) {
+      ap_error_set(err, AP_ERR_INVALID_DOUBLE, ap_error_argument_name(def),
+                   "argument '%s' must be a valid double: '%s'",
                    ap_error_argument_name(def), src->items[i]);
       return -1;
     }
@@ -227,6 +314,20 @@ int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
     } else if (def->opts.type == AP_TYPE_INT32) {
       entry->type = AP_NS_VALUE_INT32;
       if (copy_int_values(def, &merged, entry, err) != 0) {
+        ap_strvec_free(&merged);
+        ap_namespace_free(ns);
+        return -1;
+      }
+    } else if (def->opts.type == AP_TYPE_INT64) {
+      entry->type = AP_NS_VALUE_INT64;
+      if (copy_int64_values(def, &merged, entry, err) != 0) {
+        ap_strvec_free(&merged);
+        ap_namespace_free(ns);
+        return -1;
+      }
+    } else if (def->opts.type == AP_TYPE_DOUBLE) {
+      entry->type = AP_NS_VALUE_DOUBLE;
+      if (copy_double_values(def, &merged, entry, err) != 0) {
         ap_strvec_free(&merged);
         ap_namespace_free(ns);
         return -1;

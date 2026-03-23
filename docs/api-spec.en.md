@@ -12,6 +12,8 @@ This document describes the public API defined in `include/argparse-c.h`.
 ### `ap_type`
 - `AP_TYPE_STRING`: string
 - `AP_TYPE_INT32`: 32-bit integer
+- `AP_TYPE_INT64`: 64-bit integer
+- `AP_TYPE_DOUBLE`: double-precision floating point
 - `AP_TYPE_BOOL`: boolean
 
 ### `ap_action`
@@ -42,7 +44,9 @@ This document describes the public API defined in `include/argparse-c.h`.
 | `AP_ERR_INVALID_NARGS` | Value count violates `nargs` / short-cluster rules | the primary flag for optionals, declared name for positionals | `... requires at least one value`, `... requires exactly N values`, or `option '...' cannot be used in a short option cluster` |
 | `AP_ERR_MISSING_REQUIRED` | Required option/argument/subcommand/group missing | primary flag, declared positional name, `subcommand`, or empty string for group-wide failures | `option '...' is required`, `argument '...' is required`, `subcommand is required`, etc. |
 | `AP_ERR_INVALID_CHOICE` | Parsed/defaulted value is outside `choices` | the primary flag for optionals, declared name for positionals | `invalid choice 'X' for option '...'` / `... for argument '...'` |
-| `AP_ERR_INVALID_INT32` | Integer conversion fails | the primary flag for optionals, declared name for positionals | `argument '...' must be a valid int32: 'X'` |
+| `AP_ERR_INVALID_INT32` | 32-bit integer conversion fails | the primary flag for optionals, declared name for positionals | `argument '...' must be a valid int32: 'X'` |
+| `AP_ERR_INVALID_INT64` | 64-bit integer conversion fails | the primary flag for optionals, declared name for positionals | `argument '...' must be a valid int64: 'X'` |
+| `AP_ERR_INVALID_DOUBLE` | Floating-point conversion fails | the primary flag for optionals, declared name for positionals | `argument '...' must be a valid double: 'X'` |
 | `AP_ERR_UNEXPECTED_POSITIONAL` | Extra positional token remains in strict mode | the unexpected token itself | `unexpected positional argument 'TOKEN'` |
 
 ### `ap_error`
@@ -253,11 +257,15 @@ Returned strings are heap-allocated. Free them with `free()`.
 - `bool ap_ns_get_bool(const ap_namespace *ns, const char *dest, bool *out_value)`
 - `bool ap_ns_get_string(const ap_namespace *ns, const char *dest, const char **out_value)`
 - `bool ap_ns_get_int32(const ap_namespace *ns, const char *dest, int32_t *out_value)`
+- `bool ap_ns_get_int64(const ap_namespace *ns, const char *dest, int64_t *out_value)`
+- `bool ap_ns_get_double(const ap_namespace *ns, const char *dest, double *out_value)`
 
 ### Multi-value access (`nargs=*` / `+`, etc.)
 - `int ap_ns_get_count(const ap_namespace *ns, const char *dest)`
 - `const char *ap_ns_get_string_at(const ap_namespace *ns, const char *dest, int index)`
 - `bool ap_ns_get_int32_at(const ap_namespace *ns, const char *dest, int index, int32_t *out_value)`
+- `bool ap_ns_get_int64_at(const ap_namespace *ns, const char *dest, int index, int64_t *out_value)`
+- `bool ap_ns_get_double_at(const ap_namespace *ns, const char *dest, int index, double *out_value)`
 
 ### `void ap_namespace_free(ap_namespace *ns)`
 Frees namespace results.

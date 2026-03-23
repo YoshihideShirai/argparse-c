@@ -12,6 +12,8 @@
 ### `ap_type`
 - `AP_TYPE_STRING`: 文字列
 - `AP_TYPE_INT32`: 32bit整数
+- `AP_TYPE_INT64`: 64bit整数
+- `AP_TYPE_DOUBLE`: 倍精度浮動小数点
 - `AP_TYPE_BOOL`: 真偽値
 
 ### `ap_action`
@@ -42,7 +44,9 @@
 | `AP_ERR_INVALID_NARGS` | `nargs` 個数規則違反や short cluster 不正 | optional は primary flag、positional は宣言名 | `... requires at least one value`、`... requires exactly N values`、`option '...' cannot be used in a short option cluster` |
 | `AP_ERR_MISSING_REQUIRED` | 必須 option/argument/subcommand/group が不足 | primary flag、positional 名、`subcommand`、または group 全体失敗時の空文字 | `option '...' is required`、`argument '...' is required`、`subcommand is required` など |
 | `AP_ERR_INVALID_CHOICE` | `choices` 外の値を検出 | optional は primary flag、positional は宣言名 | `invalid choice 'X' for option '...'` / `... for argument '...'` |
-| `AP_ERR_INVALID_INT32` | 整数変換失敗 | optional は primary flag、positional は宣言名 | `argument '...' must be a valid int32: 'X'` |
+| `AP_ERR_INVALID_INT32` | 32bit整数変換失敗 | optional は primary flag、positional は宣言名 | `argument '...' must be a valid int32: 'X'` |
+| `AP_ERR_INVALID_INT64` | 64bit整数変換失敗 | optional は primary flag、positional は宣言名 | `argument '...' must be a valid int64: 'X'` |
+| `AP_ERR_INVALID_DOUBLE` | 浮動小数点変換失敗 | optional は primary flag、positional は宣言名 | `argument '...' must be a valid double: 'X'` |
 | `AP_ERR_UNEXPECTED_POSITIONAL` | strict mode で余分な positional token が残った | 余分だった token そのもの | `unexpected positional argument 'TOKEN'` |
 
 ### `ap_error`
@@ -210,11 +214,15 @@ help文字列を生成します。
 - `bool ap_ns_get_bool(const ap_namespace *ns, const char *dest, bool *out_value)`
 - `bool ap_ns_get_string(const ap_namespace *ns, const char *dest, const char **out_value)`
 - `bool ap_ns_get_int32(const ap_namespace *ns, const char *dest, int32_t *out_value)`
+- `bool ap_ns_get_int64(const ap_namespace *ns, const char *dest, int64_t *out_value)`
+- `bool ap_ns_get_double(const ap_namespace *ns, const char *dest, double *out_value)`
 
 ### 複数値取得（`nargs=*` / `+` など）
 - `int ap_ns_get_count(const ap_namespace *ns, const char *dest)`
 - `const char *ap_ns_get_string_at(const ap_namespace *ns, const char *dest, int index)`
 - `bool ap_ns_get_int32_at(const ap_namespace *ns, const char *dest, int index, int32_t *out_value)`
+- `bool ap_ns_get_int64_at(const ap_namespace *ns, const char *dest, int index, int64_t *out_value)`
+- `bool ap_ns_get_double_at(const ap_namespace *ns, const char *dest, int index, double *out_value)`
 
 ### `void ap_namespace_free(ap_namespace *ns)`
 namespaceを解放します。
