@@ -7,7 +7,7 @@
 - Optional and positional arguments
 - `--option=value` and `-o=value` styles for options
 - Short bool flag clusters (example: `-vq` for `-v -q`)
-- Types: `string`, `int32`, `bool` (`store_true` / `store_false`)
+- Types: `string`, `int32`, `int64`, `uint64`, `double`, `bool` (`store_true` / `store_false`)
 - `required`, `default_value`, `choices`
 - `nargs`: one, `?`, `*`, `+`, fixed arity
 - `append`, `count`, `store_const`
@@ -63,6 +63,12 @@ int main(int argc, char **argv) {
   o.required = true;
   o.help = "input text";
   ap_add_argument(p, "-t, --text", o, &err);
+
+  ap_arg_options ratio = ap_arg_options_default();
+  ratio.type = AP_TYPE_DOUBLE;
+  ratio.default_value = "1.0";
+  ratio.help = "scaling ratio";
+  ap_add_argument(p, "--ratio", ratio, &err);
 
   if (ap_parse_args(p, argc, argv, &ns, &err) != 0) {
     fprintf(stderr, "error: %s\n", err.message);

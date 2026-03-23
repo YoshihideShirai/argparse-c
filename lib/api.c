@@ -461,6 +461,13 @@ static int validate_options(const ap_arg_options *options, bool is_optional,
                    "store_true/store_false requires bool type");
       return -1;
     }
+    if (options->choices.items || options->default_value ||
+        options->const_value || options->nargs != AP_NARGS_ONE) {
+      ap_error_set(err, AP_ERR_INVALID_DEFINITION, name_or_flags,
+                   "store_true/store_false do not support "
+                   "choices/default_value/const_value/custom nargs");
+      return -1;
+    }
     return 0;
   }
   if (options->action == AP_ACTION_COUNT) {
@@ -469,12 +476,26 @@ static int validate_options(const ap_arg_options *options, bool is_optional,
                    "count action requires int32 type");
       return -1;
     }
+    if (options->choices.items || options->default_value ||
+        options->const_value || options->nargs != AP_NARGS_ONE) {
+      ap_error_set(err, AP_ERR_INVALID_DEFINITION, name_or_flags,
+                   "count action does not support "
+                   "choices/default_value/const_value/custom nargs");
+      return -1;
+    }
     return 0;
   }
   if (options->action == AP_ACTION_STORE_CONST) {
     if (!options->const_value) {
       ap_error_set(err, AP_ERR_INVALID_DEFINITION, name_or_flags,
                    "store_const requires const_value");
+      return -1;
+    }
+    if (options->default_value || options->choices.items ||
+        options->nargs != AP_NARGS_ONE) {
+      ap_error_set(
+          err, AP_ERR_INVALID_DEFINITION, name_or_flags,
+          "store_const does not support default_value/choices/custom nargs");
       return -1;
     }
     return 0;
@@ -868,6 +889,30 @@ static int append_namespace_entries(ap_namespace *dst, const ap_namespace *src,
       }
       memcpy(entry->as.ints, src_entry->as.ints,
              sizeof(int32_t) * (size_t)src_entry->count);
+    } else if (src_entry->type == AP_NS_VALUE_INT64 && src_entry->count > 0) {
+      entry->as.int64s = calloc((size_t)src_entry->count, sizeof(int64_t));
+      if (!entry->as.int64s) {
+        ap_error_set(err, AP_ERR_NO_MEMORY, src_entry->dest, "out of memory");
+        return -1;
+      }
+      memcpy(entry->as.int64s, src_entry->as.int64s,
+             sizeof(int64_t) * (size_t)src_entry->count);
+    } else if (src_entry->type == AP_NS_VALUE_UINT64 && src_entry->count > 0) {
+      entry->as.uint64s = calloc((size_t)src_entry->count, sizeof(uint64_t));
+      if (!entry->as.uint64s) {
+        ap_error_set(err, AP_ERR_NO_MEMORY, src_entry->dest, "out of memory");
+        return -1;
+      }
+      memcpy(entry->as.uint64s, src_entry->as.uint64s,
+             sizeof(uint64_t) * (size_t)src_entry->count);
+    } else if (src_entry->type == AP_NS_VALUE_DOUBLE && src_entry->count > 0) {
+      entry->as.doubles = calloc((size_t)src_entry->count, sizeof(double));
+      if (!entry->as.doubles) {
+        ap_error_set(err, AP_ERR_NO_MEMORY, src_entry->dest, "out of memory");
+        return -1;
+      }
+      memcpy(entry->as.doubles, src_entry->as.doubles,
+             sizeof(double) * (size_t)src_entry->count);
     } else if (src_entry->type == AP_NS_VALUE_BOOL) {
       entry->as.boolean = src_entry->as.boolean;
     }
@@ -1501,6 +1546,12 @@ void ap_namespace_free(ap_namespace *ns) {
       free(ns->entries[i].as.strings);
     } else if (ns->entries[i].type == AP_NS_VALUE_INT32) {
       free(ns->entries[i].as.ints);
+    } else if (ns->entries[i].type == AP_NS_VALUE_INT64) {
+      free(ns->entries[i].as.int64s);
+    } else if (ns->entries[i].type == AP_NS_VALUE_UINT64) {
+      free(ns->entries[i].as.uint64s);
+    } else if (ns->entries[i].type == AP_NS_VALUE_DOUBLE) {
+      free(ns->entries[i].as.doubles);
     }
   }
   free(ns->entries);
@@ -1549,6 +1600,39 @@ bool ap_ns_get_int32(const ap_namespace *ns, const char *dest,
   return true;
 }
 
+bool ap_ns_get_int64(const ap_namespace *ns, const char *dest,
+                     int64_t *out_value) {
+  const ap_ns_entry *entry = find_entry(ns, dest);
+  if (!entry || entry->type != AP_NS_VALUE_INT64 || entry->count < 1 ||
+      !out_value) {
+    return false;
+  }
+  *out_value = entry->as.int64s[0];
+  return true;
+}
+
+bool ap_ns_get_uint64(const ap_namespace *ns, const char *dest,
+                      uint64_t *out_value) {
+  const ap_ns_entry *entry = find_entry(ns, dest);
+  if (!entry || entry->type != AP_NS_VALUE_UINT64 || entry->count < 1 ||
+      !out_value) {
+    return false;
+  }
+  *out_value = entry->as.uint64s[0];
+  return true;
+}
+
+bool ap_ns_get_double(const ap_namespace *ns, const char *dest,
+                      double *out_value) {
+  const ap_ns_entry *entry = find_entry(ns, dest);
+  if (!entry || entry->type != AP_NS_VALUE_DOUBLE || entry->count < 1 ||
+      !out_value) {
+    return false;
+  }
+  *out_value = entry->as.doubles[0];
+  return true;
+}
+
 int ap_ns_get_count(const ap_namespace *ns, const char *dest) {
   const ap_ns_entry *entry = find_entry(ns, dest);
   if (!entry) {
@@ -1578,5 +1662,38 @@ bool ap_ns_get_int32_at(const ap_namespace *ns, const char *dest, int index,
     return false;
   }
   *out_value = entry->as.ints[index];
+  return true;
+}
+
+bool ap_ns_get_int64_at(const ap_namespace *ns, const char *dest, int index,
+                        int64_t *out_value) {
+  const ap_ns_entry *entry = find_entry(ns, dest);
+  if (!entry || entry->type != AP_NS_VALUE_INT64 || index < 0 ||
+      index >= entry->count || !out_value) {
+    return false;
+  }
+  *out_value = entry->as.int64s[index];
+  return true;
+}
+
+bool ap_ns_get_uint64_at(const ap_namespace *ns, const char *dest, int index,
+                         uint64_t *out_value) {
+  const ap_ns_entry *entry = find_entry(ns, dest);
+  if (!entry || entry->type != AP_NS_VALUE_UINT64 || index < 0 ||
+      index >= entry->count || !out_value) {
+    return false;
+  }
+  *out_value = entry->as.uint64s[index];
+  return true;
+}
+
+bool ap_ns_get_double_at(const ap_namespace *ns, const char *dest, int index,
+                         double *out_value) {
+  const ap_ns_entry *entry = find_entry(ns, dest);
+  if (!entry || entry->type != AP_NS_VALUE_DOUBLE || index < 0 ||
+      index >= entry->count || !out_value) {
+    return false;
+  }
+  *out_value = entry->as.doubles[index];
   return true;
 }
