@@ -16,6 +16,71 @@ static int print_generated_text(const char *text) {
   return 0;
 }
 
+static int exec_completion_callback(const ap_completion_request *request,
+                                    ap_completion_result *result,
+                                    void *user_data, ap_error *err) {
+  const char *const *commands = (const char *const *)user_data;
+  const char *prefix = request && request->current_token ? request->current_token : "";
+  int i;
+
+  if (!commands) {
+    return 0;
+  }
+  for (i = 0; commands[i] != NULL; i++) {
+    if (strncmp(commands[i], prefix, strlen(prefix)) == 0 &&
+        ap_completion_result_add(result, commands[i], "dynamic command", err) !=
+            0) {
+      return -1;
+    }
+  }
+  return 0;
+}
+
+static int print_completion_candidates(const ap_completion_result *result) {
+  int i;
+
+  if (!result) {
+    return 1;
+  }
+  for (i = 0; i < result->count; i++) {
+    printf("%s\n", result->items[i].value);
+  }
+  return 0;
+}
+
+static int maybe_handle_completion_request(ap_parser *parser, int argc,
+                                           char **argv) {
+  ap_completion_result result;
+  ap_error err = {0};
+  const char *shell = "bash";
+  int arg_index = 2;
+
+  if (argc <= 1 || strcmp(argv[1], "__complete") != 0) {
+    return -1;
+  }
+
+  ap_completion_result_init(&result);
+  if (arg_index < argc && strcmp(argv[arg_index], "--shell") == 0 &&
+      arg_index + 1 < argc) {
+    shell = argv[arg_index + 1];
+    arg_index += 2;
+  }
+  if (arg_index < argc && strcmp(argv[arg_index], "--") == 0) {
+    arg_index++;
+  }
+
+  if (ap_complete(parser, argc - arg_index, argv + arg_index, shell, &result,
+                  &err) != 0) {
+    fprintf(stderr, "%s\n", err.message);
+    ap_completion_result_free(&result);
+    return 1;
+  }
+
+  print_completion_candidates(&result);
+  ap_completion_result_free(&result);
+  return 0;
+}
+
 static int maybe_handle_generator_flags(ap_parser *parser, ap_namespace *ns) {
   bool is_help = false;
   bool bash_completion = false;
@@ -50,6 +115,8 @@ int main(int argc, char **argv) {
       "example_completion",
       "demo app that can generate bash/fish completions and a man page.");
   const char *mode_choices[] = {"fast", "slow"};
+  static const char *const exec_candidates[] = {"git", "grep", "ls", "sed",
+                                                NULL};
 
   if (!parser) {
     fprintf(stderr, "failed to initialize parser\n");
@@ -87,6 +154,8 @@ int main(int argc, char **argv) {
     exec.help = "program to launch";
     exec.completion_kind = AP_COMPLETION_KIND_COMMAND;
     exec.completion_hint = "command name";
+    exec.completion_callback = exec_completion_callback;
+    exec.completion_user_data = (void *)exec_candidates;
 
     if (ap_add_argument(parser, "--generate-bash-completion", bash, &err) != 0 ||
         ap_add_argument(parser, "--generate-fish-completion", fish, &err) != 0 ||
@@ -97,6 +166,14 @@ int main(int argc, char **argv) {
       fprintf(stderr, "%s\n", err.message);
       ap_parser_free(parser);
       return 1;
+    }
+  }
+
+  {
+    int completion_rc = maybe_handle_completion_request(parser, argc, argv);
+    if (completion_rc >= 0) {
+      ap_parser_free(parser);
+      return completion_rc;
     }
   }
 

@@ -25,6 +25,10 @@ static ap_completion_kind option_completion_kind(const ap_arg_def *def) {
   return AP_COMPLETION_KIND_NONE;
 }
 
+static bool option_has_dynamic_completion(const ap_arg_def *def) {
+  return option_takes_value(def) && def->opts.completion_callback != NULL;
+}
+
 static int option_value_count(const ap_arg_def *def) {
   if (!option_takes_value(def)) {
     return 0;
@@ -55,6 +59,24 @@ static const char *option_value_mode(const ap_arg_def *def) {
 
 static const char *completion_kind_name(ap_completion_kind kind) {
   switch (kind) {
+  case AP_COMPLETION_KIND_CHOICES:
+    return "choices";
+  case AP_COMPLETION_KIND_FILE:
+    return "file";
+  case AP_COMPLETION_KIND_DIRECTORY:
+    return "directory";
+  case AP_COMPLETION_KIND_COMMAND:
+    return "command";
+  default:
+    return "none";
+  }
+}
+
+static const char *completion_dispatch_kind_name(const ap_arg_def *def) {
+  if (option_has_dynamic_completion(def)) {
+    return "dynamic";
+  }
+  switch (option_completion_kind(def)) {
   case AP_COMPLETION_KIND_CHOICES:
     return "choices";
   case AP_COMPLETION_KIND_FILE:
@@ -281,7 +303,7 @@ static int append_completion_kind_cases(ap_string_builder *sb,
     for (j = 0; j < def->flags_count; j++) {
       if (ap_sb_appendf(sb, "      ") != 0 || append_parser_key(sb, parser) != 0 ||
           ap_sb_appendf(sb, ":%s) printf '%%s\\n' '%s' ;;\n", def->flags[j],
-                        completion_kind_name(option_completion_kind(def))) != 0) {
+                        completion_dispatch_kind_name(def)) != 0) {
         return -1;
       }
     }
@@ -405,6 +427,12 @@ char *ap_bash_completion_build(const ap_parser *parser) {
                     "    shift\n"
                     "    printf '%%s\\n' \"$@\"\n"
                     "  }\n\n"
+                    "  __ap_completion_dynamic_query() {\n"
+                    "    ") != 0 ||
+      append_single_quoted(&sb, prog) != 0 ||
+      ap_sb_appendf(&sb,
+                    " __complete --shell bash -- \"${COMP_WORDS[@]:1}\"\n"
+                    "  }\n\n"
                     "  __ap_completion_load_parser \"$parser_key\" || return 0\n"
                     "  local i=1\n"
                     "  while (( i < COMP_CWORD )); do\n"
@@ -470,6 +498,9 @@ char *ap_bash_completion_build(const ap_parser *parser) {
                     "          COMPREPLY=( $(compgen -W \"$choices\" -- \"$value_prefix\") )\n"
                     "        fi\n"
                     "        ;;\n"
+                    "      dynamic)\n"
+                    "        mapfile -t COMPREPLY < <(__ap_completion_dynamic_query)\n"
+                    "        ;;\n"
                     "      file)\n"
                     "        COMPREPLY=( $(compgen -f -- \"$value_prefix\") )\n"
                     "        ;;\n"
@@ -495,6 +526,9 @@ char *ap_bash_completion_build(const ap_parser *parser) {
                     "        if choices=$(__ap_completion_choice_words \"$parser_key:$pending_option\" 2>/dev/null); then\n"
                     "          COMPREPLY=( $(compgen -W \"$choices\" -- \"$cur\") )\n"
                     "        fi\n"
+                    "        ;;\n"
+                    "      dynamic)\n"
+                    "        mapfile -t COMPREPLY < <(__ap_completion_dynamic_query)\n"
                     "        ;;\n"
                     "      file)\n"
                     "        COMPREPLY=( $(compgen -f -- \"$cur\") )\n"
