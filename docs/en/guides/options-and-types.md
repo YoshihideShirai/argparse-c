@@ -5,6 +5,7 @@
 - `AP_TYPE_STRING`
 - `AP_TYPE_INT32`
 - `AP_TYPE_INT64`
+- `AP_TYPE_UINT64`
 - `AP_TYPE_DOUBLE`
 - `AP_TYPE_BOOL`
 
@@ -29,6 +30,17 @@ ap_add_argument(parser, "--offset", offset, &err);
 ```
 
 Invalid 64-bit integer input produces `AP_ERR_INVALID_INT64`.
+
+## `uint64` example
+
+```c
+ap_arg_options size = ap_arg_options_default();
+size.type = AP_TYPE_UINT64;
+size.help = "64-bit unsigned value";
+ap_add_argument(parser, "--size", size, &err);
+```
+
+Invalid unsigned input produces `AP_ERR_INVALID_UINT64`.
 
 ## `double` example
 
@@ -93,4 +105,4 @@ weights.action = AP_ACTION_APPEND;
 ap_add_argument(parser, "--weight", weights, &err);
 ```
 
-Use `ap_ns_get_int64_at(...)` and `ap_ns_get_double_at(...)` to read each appended value.
+Use `ap_ns_get_int64_at(...)`, `ap_ns_get_uint64_at(...)`, and `ap_ns_get_double_at(...)` to read typed appended values.

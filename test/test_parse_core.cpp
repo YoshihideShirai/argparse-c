@@ -563,3 +563,32 @@ TEST(DefaultChoicesAndAppendForInt64AndDouble) {
   ap_namespace_free(ns);
   ap_parser_free(p);
 }
+
+
+TEST(ParseUint64ValuesAndRejectNegativeInput) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options size = ap_arg_options_default();
+  uint64_t size_value = 0;
+  char *argv_ok[] = {(char *)"prog", (char *)"--size",
+                     (char *)"18446744073709551615", NULL};
+  char *argv_bad[] = {(char *)"prog", (char *)"--size", (char *)"-1", NULL};
+
+  CHECK(p != NULL);
+  size.type = AP_TYPE_UINT64;
+  LONGS_EQUAL(0, ap_add_argument(p, "--size", size, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv_ok, &ns, &err));
+  CHECK(ap_ns_get_uint64(ns, "size", &size_value));
+  LONGS_EQUAL(18446744073709551615ULL, size_value);
+  ap_namespace_free(ns);
+  ns = NULL;
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_bad, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_UINT64, err.code);
+  STRCMP_EQUAL("--size", err.argument);
+  STRCMP_EQUAL("argument '--size' must be a valid uint64: '-1'", err.message);
+
+  ap_parser_free(p);
+}

@@ -67,6 +67,7 @@ typedef enum {
   AP_NS_VALUE_STRING = 0,
   AP_NS_VALUE_INT32,
   AP_NS_VALUE_INT64,
+  AP_NS_VALUE_UINT64,
   AP_NS_VALUE_DOUBLE,
   AP_NS_VALUE_BOOL,
 } ap_ns_value_type;
@@ -79,6 +80,7 @@ typedef struct {
     char **strings;
     int32_t *ints;
     int64_t *int64s;
+    uint64_t *uint64s;
     double *doubles;
     bool boolean;
   } as;

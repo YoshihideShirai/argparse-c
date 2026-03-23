@@ -12,6 +12,7 @@ typedef enum {
   AP_TYPE_STRING = 0,
   AP_TYPE_INT32,
   AP_TYPE_INT64,
+  AP_TYPE_UINT64,
   AP_TYPE_DOUBLE,
   AP_TYPE_BOOL,
 } ap_type;
@@ -45,6 +46,7 @@ typedef enum {
   AP_ERR_INVALID_CHOICE,
   AP_ERR_INVALID_INT32,
   AP_ERR_INVALID_INT64,
+  AP_ERR_INVALID_UINT64,
   AP_ERR_INVALID_DOUBLE,
   AP_ERR_UNEXPECTED_POSITIONAL,
 } ap_error_code;
@@ -207,6 +209,8 @@ bool ap_ns_get_int32(const ap_namespace *ns, const char *dest,
                      int32_t *out_value);
 bool ap_ns_get_int64(const ap_namespace *ns, const char *dest,
                      int64_t *out_value);
+bool ap_ns_get_uint64(const ap_namespace *ns, const char *dest,
+                      uint64_t *out_value);
 bool ap_ns_get_double(const ap_namespace *ns, const char *dest,
                       double *out_value);
 int ap_ns_get_count(const ap_namespace *ns, const char *dest);
@@ -216,6 +220,8 @@ bool ap_ns_get_int32_at(const ap_namespace *ns, const char *dest, int index,
                         int32_t *out_value);
 bool ap_ns_get_int64_at(const ap_namespace *ns, const char *dest, int index,
                         int64_t *out_value);
+bool ap_ns_get_uint64_at(const ap_namespace *ns, const char *dest, int index,
+                         uint64_t *out_value);
 bool ap_ns_get_double_at(const ap_namespace *ns, const char *dest, int index,
                          double *out_value);
 

@@ -5,6 +5,7 @@
 - `AP_TYPE_STRING`
 - `AP_TYPE_INT32`
 - `AP_TYPE_INT64`
+- `AP_TYPE_UINT64`
 - `AP_TYPE_DOUBLE`
 - `AP_TYPE_BOOL`
 
@@ -29,6 +30,17 @@ ap_add_argument(parser, "--offset", offset, &err);
 ```
 
 64bit 整数に変換できない入力は `AP_ERR_INVALID_INT64` になります。
+
+## `uint64` の例
+
+```c
+ap_arg_options size = ap_arg_options_default();
+size.type = AP_TYPE_UINT64;
+size.help = "64-bit unsigned value";
+ap_add_argument(parser, "--size", size, &err);
+```
+
+符号なし64bit整数に変換できない入力は `AP_ERR_INVALID_UINT64` になります。
 
 ## `double` の例
 
@@ -93,4 +105,4 @@ weights.action = AP_ACTION_APPEND;
 ap_add_argument(parser, "--weight", weights, &err);
 ```
 
-追加された値は `ap_ns_get_int64_at(...)` / `ap_ns_get_double_at(...)` で順番に取り出せます。
+追加された値は `ap_ns_get_int64_at(...)` / `ap_ns_get_uint64_at(...)` / `ap_ns_get_double_at(...)` で順番に取り出せます。

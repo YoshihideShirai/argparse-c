@@ -284,6 +284,7 @@ TEST(NamespaceGetterFailurePathsReturnFalseOrNull) {
   bool bool_out = false;
   int32_t int_out = 0;
   int64_t int64_out = 0;
+  uint64_t uint64_out = 0;
   double double_out = 0.0;
   const char *str_out = NULL;
   char *argv[] = {(char *)"prog",   (char *)"--verbose", (char *)"--count",
@@ -307,6 +308,7 @@ TEST(NamespaceGetterFailurePathsReturnFalseOrNull) {
   CHECK(!ap_ns_get_int32(ns, "name", &int_out));
   CHECK(!ap_ns_get_int32(ns, "count", NULL));
   CHECK(!ap_ns_get_int64(ns, "count", &int64_out));
+  CHECK(!ap_ns_get_uint64(ns, "count", &uint64_out));
   CHECK(!ap_ns_get_double(ns, "count", &double_out));
   LONGS_EQUAL(-1, ap_ns_get_count(ns, "missing"));
   CHECK(ap_ns_get_string_at(ns, "missing", 0) == NULL);
@@ -315,6 +317,7 @@ TEST(NamespaceGetterFailurePathsReturnFalseOrNull) {
   CHECK(!ap_ns_get_int32_at(ns, "count", 1, &int_out));
   CHECK(!ap_ns_get_int32_at(ns, "count", 0, NULL));
   CHECK(!ap_ns_get_int64_at(ns, "count", 0, &int64_out));
+  CHECK(!ap_ns_get_uint64_at(ns, "count", 0, &uint64_out));
   CHECK(!ap_ns_get_double_at(ns, "count", 0, &double_out));
 
   ap_namespace_free(ns);
@@ -1280,5 +1283,31 @@ TEST(DefinitionErrorsRejectUnsupportedActionTypeCombinations) {
   LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
   STRCMP_EQUAL("store_const does not support default_value/choices/custom nargs", err.message);
 
+  ap_parser_free(p);
+}
+
+
+TEST(NamespaceGettersSupportUint64) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options sizes = ap_arg_options_default();
+  uint64_t size0 = 0;
+  uint64_t size1 = 0;
+  char *argv[] = {(char *)"prog", (char *)"--sizes", (char *)"1",
+                  (char *)"--sizes", (char *)"2", NULL};
+
+  CHECK(p != NULL);
+  sizes.type = AP_TYPE_UINT64;
+  sizes.action = AP_ACTION_APPEND;
+  LONGS_EQUAL(0, ap_add_argument(p, "--sizes", sizes, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 5, argv, &ns, &err));
+  CHECK(ap_ns_get_uint64_at(ns, "sizes", 0, &size0));
+  CHECK(ap_ns_get_uint64_at(ns, "sizes", 1, &size1));
+  LONGS_EQUAL(1ULL, size0);
+  LONGS_EQUAL(2ULL, size1);
+
+  ap_namespace_free(ns);
   ap_parser_free(p);
 }

@@ -13,6 +13,7 @@ This document describes the public API defined in `include/argparse-c.h`.
 - `AP_TYPE_STRING`: string
 - `AP_TYPE_INT32`: 32-bit integer
 - `AP_TYPE_INT64`: 64-bit integer
+- `AP_TYPE_UINT64`: 64-bit unsigned integer
 - `AP_TYPE_DOUBLE`: double-precision floating point
 - `AP_TYPE_BOOL`: boolean
 
@@ -46,6 +47,7 @@ This document describes the public API defined in `include/argparse-c.h`.
 | `AP_ERR_INVALID_CHOICE` | Parsed/defaulted value is outside `choices` | the primary flag for optionals, declared name for positionals | `invalid choice 'X' for option '...'` / `... for argument '...'` |
 | `AP_ERR_INVALID_INT32` | 32-bit integer conversion fails | the primary flag for optionals, declared name for positionals | `argument '...' must be a valid int32: 'X'` |
 | `AP_ERR_INVALID_INT64` | 64-bit integer conversion fails | the primary flag for optionals, declared name for positionals | `argument '...' must be a valid int64: 'X'` |
+| `AP_ERR_INVALID_UINT64` | 64-bit unsigned integer conversion fails | the primary flag for optionals, declared name for positionals | `argument '...' must be a valid uint64: 'X'` |
 | `AP_ERR_INVALID_DOUBLE` | Floating-point conversion fails | the primary flag for optionals, declared name for positionals | `argument '...' must be a valid double: 'X'` |
 | `AP_ERR_UNEXPECTED_POSITIONAL` | Extra positional token remains in strict mode | the unexpected token itself | `unexpected positional argument 'TOKEN'` |
 
@@ -258,6 +260,7 @@ Returned strings are heap-allocated. Free them with `free()`.
 - `bool ap_ns_get_string(const ap_namespace *ns, const char *dest, const char **out_value)`
 - `bool ap_ns_get_int32(const ap_namespace *ns, const char *dest, int32_t *out_value)`
 - `bool ap_ns_get_int64(const ap_namespace *ns, const char *dest, int64_t *out_value)`
+- `bool ap_ns_get_uint64(const ap_namespace *ns, const char *dest, uint64_t *out_value)`
 - `bool ap_ns_get_double(const ap_namespace *ns, const char *dest, double *out_value)`
 
 ### Multi-value access (`nargs=*` / `+`, etc.)
@@ -265,6 +268,7 @@ Returned strings are heap-allocated. Free them with `free()`.
 - `const char *ap_ns_get_string_at(const ap_namespace *ns, const char *dest, int index)`
 - `bool ap_ns_get_int32_at(const ap_namespace *ns, const char *dest, int index, int32_t *out_value)`
 - `bool ap_ns_get_int64_at(const ap_namespace *ns, const char *dest, int index, int64_t *out_value)`
+- `bool ap_ns_get_uint64_at(const ap_namespace *ns, const char *dest, int index, uint64_t *out_value)`
 - `bool ap_ns_get_double_at(const ap_namespace *ns, const char *dest, int index, double *out_value)`
 
 ### `void ap_namespace_free(ap_namespace *ns)`

@@ -42,6 +42,21 @@ static int parse_int64(const char *text, int64_t *out_value) {
   return 0;
 }
 
+static int parse_uint64(const char *text, uint64_t *out_value) {
+  char *end = NULL;
+  unsigned long long value;
+  if (!text || !out_value) {
+    return -1;
+  }
+  errno = 0;
+  value = strtoull(text, &end, 10);
+  if (*text == '\0' || *end != '\0' || errno == ERANGE || text[0] == '-') {
+    return -1;
+  }
+  *out_value = (uint64_t)value;
+  return 0;
+}
+
 static int parse_double(const char *text, double *out_value) {
   char *end = NULL;
   double value;
@@ -144,6 +159,31 @@ static int copy_int64_values(const ap_arg_def *def, const ap_strvec *src,
     if (parse_int64(src->items[i], &dst->as.int64s[i]) != 0) {
       ap_error_set(err, AP_ERR_INVALID_INT64, ap_error_argument_name(def),
                    "argument '%s' must be a valid int64: '%s'",
+                   ap_error_argument_name(def), src->items[i]);
+      return -1;
+    }
+  }
+  return 0;
+}
+
+static int copy_uint64_values(const ap_arg_def *def, const ap_strvec *src,
+                              ap_ns_entry *dst, ap_error *err) {
+  int i;
+  if (src->count == 0) {
+    dst->as.uint64s = NULL;
+    dst->count = 0;
+    return 0;
+  }
+  dst->as.uint64s = calloc((size_t)src->count, sizeof(uint64_t));
+  if (!dst->as.uint64s) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, dst->dest, "out of memory");
+    return -1;
+  }
+  dst->count = src->count;
+  for (i = 0; i < src->count; i++) {
+    if (parse_uint64(src->items[i], &dst->as.uint64s[i]) != 0) {
+      ap_error_set(err, AP_ERR_INVALID_UINT64, ap_error_argument_name(def),
+                   "argument '%s' must be a valid uint64: '%s'",
                    ap_error_argument_name(def), src->items[i]);
       return -1;
     }
@@ -321,6 +361,13 @@ int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
     } else if (def->opts.type == AP_TYPE_INT64) {
       entry->type = AP_NS_VALUE_INT64;
       if (copy_int64_values(def, &merged, entry, err) != 0) {
+        ap_strvec_free(&merged);
+        ap_namespace_free(ns);
+        return -1;
+      }
+    } else if (def->opts.type == AP_TYPE_UINT64) {
+      entry->type = AP_NS_VALUE_UINT64;
+      if (copy_uint64_values(def, &merged, entry, err) != 0) {
         ap_strvec_free(&merged);
         ap_namespace_free(ns);
         return -1;

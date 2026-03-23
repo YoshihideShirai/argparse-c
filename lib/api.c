@@ -894,6 +894,14 @@ static int append_namespace_entries(ap_namespace *dst, const ap_namespace *src,
       }
       memcpy(entry->as.int64s, src_entry->as.int64s,
              sizeof(int64_t) * (size_t)src_entry->count);
+    } else if (src_entry->type == AP_NS_VALUE_UINT64 && src_entry->count > 0) {
+      entry->as.uint64s = calloc((size_t)src_entry->count, sizeof(uint64_t));
+      if (!entry->as.uint64s) {
+        ap_error_set(err, AP_ERR_NO_MEMORY, src_entry->dest, "out of memory");
+        return -1;
+      }
+      memcpy(entry->as.uint64s, src_entry->as.uint64s,
+             sizeof(uint64_t) * (size_t)src_entry->count);
     } else if (src_entry->type == AP_NS_VALUE_DOUBLE && src_entry->count > 0) {
       entry->as.doubles = calloc((size_t)src_entry->count, sizeof(double));
       if (!entry->as.doubles) {
@@ -1537,6 +1545,8 @@ void ap_namespace_free(ap_namespace *ns) {
       free(ns->entries[i].as.ints);
     } else if (ns->entries[i].type == AP_NS_VALUE_INT64) {
       free(ns->entries[i].as.int64s);
+    } else if (ns->entries[i].type == AP_NS_VALUE_UINT64) {
+      free(ns->entries[i].as.uint64s);
     } else if (ns->entries[i].type == AP_NS_VALUE_DOUBLE) {
       free(ns->entries[i].as.doubles);
     }
@@ -1598,6 +1608,17 @@ bool ap_ns_get_int64(const ap_namespace *ns, const char *dest,
   return true;
 }
 
+bool ap_ns_get_uint64(const ap_namespace *ns, const char *dest,
+                      uint64_t *out_value) {
+  const ap_ns_entry *entry = find_entry(ns, dest);
+  if (!entry || entry->type != AP_NS_VALUE_UINT64 || entry->count < 1 ||
+      !out_value) {
+    return false;
+  }
+  *out_value = entry->as.uint64s[0];
+  return true;
+}
+
 bool ap_ns_get_double(const ap_namespace *ns, const char *dest,
                       double *out_value) {
   const ap_ns_entry *entry = find_entry(ns, dest);
@@ -1649,6 +1670,17 @@ bool ap_ns_get_int64_at(const ap_namespace *ns, const char *dest, int index,
     return false;
   }
   *out_value = entry->as.int64s[index];
+  return true;
+}
+
+bool ap_ns_get_uint64_at(const ap_namespace *ns, const char *dest, int index,
+                         uint64_t *out_value) {
+  const ap_ns_entry *entry = find_entry(ns, dest);
+  if (!entry || entry->type != AP_NS_VALUE_UINT64 || index < 0 ||
+      index >= entry->count || !out_value) {
+    return false;
+  }
+  *out_value = entry->as.uint64s[index];
   return true;
 }
 
