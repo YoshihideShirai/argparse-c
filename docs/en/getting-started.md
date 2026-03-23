@@ -20,6 +20,24 @@ cmake --install build --prefix /usr/local
 
 If you want to install into a temporary staging directory first, replace `/usr/local` with your preferred prefix.
 
+## Use from another project
+
+### CMake package
+
+```cmake
+find_package(argparse-c CONFIG REQUIRED)
+target_link_libraries(your_app PRIVATE argparse-c::argparse-c)
+```
+
+### pkg-config
+
+```bash
+pkg-config --cflags --libs argparse-c
+cc main.c $(pkg-config --cflags --libs argparse-c) -o your_app
+```
+
+The install step places `argparse-cConfig.cmake`, `argparse-cConfigVersion.cmake`, and `argparse-c.pc` under the installation prefix so downstream projects can discover the library without manual include/lib path wiring.
+
 ## Sample program
 
 The repository includes `sample/example1.c`.
