@@ -30,7 +30,7 @@ It is designed for applications that want modern CLI behavior while keeping cont
 - Optional arguments, positional arguments, defaults, required flags, and `choices`
 - `nargs`, append/count/store-const actions, and mutually exclusive groups
 - Nested subcommands
-- Shell completion and manpage generation from the same parser definition
+- Shell completion for bash/fish/zsh and manpage generation from the same parser definition
 - `ap_parse_known_args(...)` for forwarding unknown arguments
 - Non-exit error handling so your app decides what to print and when to return
 
@@ -61,7 +61,7 @@ Examples that are easy to assemble with `argparse-c`:
 - a single-command tool with required flags and positional files
 - a Git-style multi-command CLI with nested subcommands
 - a wrapper command that parses known flags and forwards the rest
-- a CLI that generates bash/fish completion scripts and a manpage from one definition
+- a CLI that generates bash/fish/zsh completion scripts and a manpage from one definition
 
 See these runnable samples in this repository:
 
@@ -128,7 +128,7 @@ Want the full setup, build commands, and next APIs to learn? Go to:
 
 GitHub Releases also publish an install-tree tarball for library consumers. The README keeps this short on purpose; use Getting Started for the exact commands and layout details.
 
-## Completion, manpages, and API reference
+## Completion (bash/fish/zsh), manpages, and API reference
 
 The README no longer carries the detailed setup steps. Use the docs site for complete guidance:
 

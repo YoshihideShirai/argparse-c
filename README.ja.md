@@ -26,7 +26,7 @@
 - option、positional、default、required、`choices`
 - `nargs`、append/count/store-const action、mutually exclusive group
 - ネストした subcommand
-- 同じ parser 定義から shell completion と manpage を生成
+- 同じ parser 定義から bash / fish / zsh の shell completion と manpage を生成
 - `ap_parse_known_args(...)` による未知引数の転送
 - parse 失敗時も `exit()` を強制せず、アプリ側でエラー処理を制御
 

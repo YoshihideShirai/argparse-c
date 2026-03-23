@@ -207,6 +207,17 @@ help文字列を生成します。
 ### `char *ap_format_error(const ap_parser *parser, const ap_error *err)`
 `error + usage` 形式の文字列を生成します。
 
+### Shell completion formatter API
+- `char *ap_format_bash_completion(const ap_parser *parser)`
+  - parser メタデータから bash completion script を生成します。
+  - 公開導線の代表例は `sample/example_completion.c` / `sample/example_manpage.c` の `--generate-bash-completion` です。
+- `char *ap_format_fish_completion(const ap_parser *parser)`
+  - 同じ parser 定義から fish completion script を生成します。
+  - 公開導線の代表例は `sample/example_completion.c` / `sample/example_manpage.c` の `--generate-fish-completion` です。
+- `char *ap_format_zsh_completion(const ap_parser *parser)`
+  - 同じ parser 定義から zsh completion script を生成します。
+  - 公開導線の代表例は `sample/example_completion.c` / `sample/example_manpage.c` の `--generate-zsh-completion` です。
+
 #### メモリ所有権（共通）
 上記3関数の戻り値はヒープ確保された文字列です。呼び出し側で `free()` してください。
 
@@ -282,7 +293,7 @@ CLI 出力では、この「`error:` 行 + usage ブロック」の2段構成を
 ## 8.5 実例への逆リンク
 - 基本的なパースとエラー整形: [`README.md`](../README.md), [`sample/example1.c`](../sample/example1.c)
 - ネストした subcommand と `subcommand_path`: [`README.md`](../README.md), [`sample/example_subcommands.c`](../sample/example_subcommands.c)
-- formatter API（`ap_format_help`、`ap_format_manpage`、shell completion formatter）: [`README.md`](../README.md), [`sample/example_completion.c`](../sample/example_completion.c), [`sample/example_manpage.c`](../sample/example_manpage.c)
+- formatter API（`ap_format_help`、`ap_format_manpage`、`ap_format_bash_completion`、`ap_format_fish_completion`、`ap_format_zsh_completion`）: [`README.md`](../README.md), [`sample/example_completion.c`](../sample/example_completion.c), [`sample/example_manpage.c`](../sample/example_manpage.c)
 - introspection API（`ap_parser_get_info`、`ap_parser_get_argument`、`ap_parser_get_subcommand`）: [`README.md`](../README.md), [`sample/example_introspection.c`](../sample/example_introspection.c)
 
 ## 9. 最小利用例

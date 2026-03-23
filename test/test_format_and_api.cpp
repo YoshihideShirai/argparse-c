@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <unistd.h>
 
@@ -1485,6 +1486,32 @@ TEST(GeneratedZshCompletionScriptPassesZshSyntaxCheck) {
   if (run_command("command -v zsh > /dev/null 2>&1") == 0) {
     CHECK(run_command("zsh -n " + shell_quote(script_path.string())) == 0);
   }
+
+  std::filesystem::remove_all(temp_dir);
+}
+
+TEST(ExampleManpageExposesZshCompletionGenerator) {
+  const std::string temp_dir = make_temp_dir();
+  const std::filesystem::path script_path =
+      std::filesystem::path(temp_dir) / "_example_manpage";
+  const std::string generate_command = shell_quote(AP_EXAMPLE_MANPAGE_PATH) +
+                                       " --generate-zsh-completion > " +
+                                       shell_quote(script_path.string());
+  std::string script;
+
+  CHECK(run_command(generate_command) == 0);
+  CHECK(std::filesystem::exists(script_path));
+
+  {
+    std::ifstream in(script_path);
+    CHECK(in.good());
+    script.assign((std::istreambuf_iterator<char>(in)),
+                  std::istreambuf_iterator<char>());
+  }
+
+  CHECK(script.find("#compdef example_manpage") != std::string::npos);
+  CHECK(script.find("--generate-zsh-completion") != std::string::npos);
+  CHECK(script.find("'__complete' --shell zsh --") != std::string::npos);
 
   std::filesystem::remove_all(temp_dir);
 }
