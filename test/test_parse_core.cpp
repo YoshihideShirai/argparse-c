@@ -413,6 +413,140 @@ TEST(ParseArgsReportsUnexpectedPositionalAfterDoubleDashBoundary) {
   ap_parser_free(p);
 }
 
+TEST(ParseArgsPreservesAppendCountAndPositionalOrderAcrossVeryLongSequence) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options tag = ap_arg_options_default();
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options files = ap_arg_options_default();
+  ap_arg_options target = ap_arg_options_default();
+  int32_t verbose_count = 0;
+  const char *target_value = NULL;
+  char *argv[] = {(char *)"prog",     (char *)"--tag",
+                  (char *)"alpha",    (char *)"-v",
+                  (char *)"file-01",  (char *)"--tag",
+                  (char *)"beta",     (char *)"file-02",
+                  (char *)"-v",       (char *)"file-03",
+                  (char *)"--tag",    (char *)"gamma",
+                  (char *)"file-04",  (char *)"-v",
+                  (char *)"file-05",  (char *)"file-06",
+                  (char *)"--tag",    (char *)"delta",
+                  (char *)"file-07",  (char *)"-v",
+                  (char *)"dest.out", NULL};
+
+  CHECK(p != NULL);
+  tag.action = AP_ACTION_APPEND;
+  verbose.type = AP_TYPE_INT32;
+  verbose.action = AP_ACTION_COUNT;
+  files.nargs = AP_NARGS_ZERO_OR_MORE;
+  files.action = AP_ACTION_APPEND;
+  LONGS_EQUAL(0, ap_add_argument(p, "--tag", tag, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "-v, --verbose", verbose, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "files", files, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "target", target, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 21, argv, &ns, &err));
+  LONGS_EQUAL(4, ap_ns_get_count(ns, "tag"));
+  STRCMP_EQUAL("alpha", ap_ns_get_string_at(ns, "tag", 0));
+  STRCMP_EQUAL("beta", ap_ns_get_string_at(ns, "tag", 1));
+  STRCMP_EQUAL("gamma", ap_ns_get_string_at(ns, "tag", 2));
+  STRCMP_EQUAL("delta", ap_ns_get_string_at(ns, "tag", 3));
+  CHECK(ap_ns_get_int32(ns, "verbose", &verbose_count));
+  LONGS_EQUAL(4, verbose_count);
+  LONGS_EQUAL(7, ap_ns_get_count(ns, "files"));
+  STRCMP_EQUAL("file-01", ap_ns_get_string_at(ns, "files", 0));
+  STRCMP_EQUAL("file-02", ap_ns_get_string_at(ns, "files", 1));
+  STRCMP_EQUAL("file-03", ap_ns_get_string_at(ns, "files", 2));
+  STRCMP_EQUAL("file-04", ap_ns_get_string_at(ns, "files", 3));
+  STRCMP_EQUAL("file-05", ap_ns_get_string_at(ns, "files", 4));
+  STRCMP_EQUAL("file-06", ap_ns_get_string_at(ns, "files", 5));
+  STRCMP_EQUAL("file-07", ap_ns_get_string_at(ns, "files", 6));
+  CHECK(ap_ns_get_string(ns, "target", &target_value));
+  STRCMP_EQUAL("dest.out", target_value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseArgsKeepsRequiredPositionalsStableInLongMixedSequence) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options extras = ap_arg_options_default();
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  ap_arg_options target = ap_arg_options_default();
+  const char *maybe_value = NULL;
+  const char *target_value = NULL;
+  char *argv[] = {(char *)"prog",
+                  (char *)"extra-01",
+                  (char *)"extra-02",
+                  (char *)"extra-03",
+                  (char *)"extra-04",
+                  (char *)"--maybe",
+                  (char *)"maybe.txt",
+                  (char *)"left.bin",
+                  (char *)"right.bin",
+                  (char *)"dest.out",
+                  NULL};
+
+  CHECK(p != NULL);
+  extras.nargs = AP_NARGS_ZERO_OR_MORE;
+  extras.action = AP_ACTION_APPEND;
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "extras", extras, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "pair", pair, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "target", target, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 10, argv, &ns, &err));
+  LONGS_EQUAL(4, ap_ns_get_count(ns, "extras"));
+  STRCMP_EQUAL("extra-01", ap_ns_get_string_at(ns, "extras", 0));
+  STRCMP_EQUAL("extra-02", ap_ns_get_string_at(ns, "extras", 1));
+  STRCMP_EQUAL("extra-03", ap_ns_get_string_at(ns, "extras", 2));
+  STRCMP_EQUAL("extra-04", ap_ns_get_string_at(ns, "extras", 3));
+  CHECK(ap_ns_get_string(ns, "maybe", &maybe_value));
+  STRCMP_EQUAL("maybe.txt", maybe_value);
+  LONGS_EQUAL(2, ap_ns_get_count(ns, "pair"));
+  STRCMP_EQUAL("left.bin", ap_ns_get_string_at(ns, "pair", 0));
+  STRCMP_EQUAL("right.bin", ap_ns_get_string_at(ns, "pair", 1));
+  CHECK(ap_ns_get_string(ns, "target", &target_value));
+  STRCMP_EQUAL("dest.out", target_value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseArgsAllowsOnlyExpectedPositionalsAfterDoubleDashBoundary) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  const char *target_value = NULL;
+  char *argv_ok[] = {(char *)"prog", (char *)"--", (char *)"target.txt", NULL};
+  char *argv_extra[] = {(char *)"prog",       (char *)"--",
+                        (char *)"target.txt", (char *)"extra.txt",
+                        (char *)"extra2.txt", NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "target", ap_arg_options_default(), &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv_ok, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "target", &target_value));
+  STRCMP_EQUAL("target.txt", target_value);
+  ap_namespace_free(ns);
+  ns = NULL;
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 5, argv_extra, &ns, &err));
+  LONGS_EQUAL(AP_ERR_UNEXPECTED_POSITIONAL, err.code);
+  STRCMP_EQUAL("extra.txt", err.argument);
+  STRCMP_EQUAL("unexpected positional argument 'extra.txt'", err.message);
+
+  ap_parser_free(p);
+}
+
 TEST(ParseArgsTracksAppendCountAndPositionalsAcrossLongSequence) {
   ap_error err = {};
   ap_namespace *ns = NULL;
