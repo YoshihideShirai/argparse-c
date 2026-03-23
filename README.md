@@ -184,6 +184,8 @@ Use the sample that matches the API surface you want to learn first:
 - [sample/example1.c](./sample/example1.c): minimal parse / validation / `ap_format_error(...)` example for options, positionals, and namespace reads
 - [sample/example_subcommands.c](./sample/example_subcommands.c): nested subcommands, `subcommand`, and `subcommand_path`
 - [sample/example_completion.c](./sample/example_completion.c): formatter APIs for bash / fish / manpage output plus runtime completion callbacks via `__complete`
+- [docs/en/guides/completion-callbacks.md](./docs/en/guides/completion-callbacks.md): explains `ap_complete(...)`, `ap_completion_callback`, the hidden `__complete` entrypoint, shell integration, and fallback behavior
+- [docs/ja/guides/completion-callbacks.md](./docs/ja/guides/completion-callbacks.md): 日本語版の completion callback ガイド
 - [sample/example_manpage.c](./sample/example_manpage.c): subcommand-heavy formatter example for manpage and completion generation from one parser definition
 - [sample/example_introspection.c](./sample/example_introspection.c): introspection APIs such as `ap_parser_get_info`, `ap_parser_get_argument`, and `ap_parser_get_subcommand`
 

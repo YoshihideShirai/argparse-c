@@ -126,7 +126,7 @@ source ./example_completion.bash
 ./build/sample/example_completion --generate-fish-completion   > ~/.config/fish/completions/example_completion.fish
 ```
 
-実行時の状態に応じた completion callback を組み込みたい場合は、次に [Completion callback ガイド](guides/completion-callbacks.md) を参照してください。
+実行時の状態に応じた completion callback を組み込みたい場合は、次に [Completion callback ガイド](guides/completion-callbacks.md) を参照してください。`ap_arg_options.completion_callback`、`ap_arg_options.completion_kind`、`ap_complete(...)`、隠し `__complete` エントリポイントの接続方法をまとめています。
 
 ### man page を生成する
 

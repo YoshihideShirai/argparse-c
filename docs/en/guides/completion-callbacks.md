@@ -1,32 +1,30 @@
 # Completion callbacks
 
-This guide covers the **application-side completion entrypoint** used together with `ap_complete(...)` and `ap_completion_callback`.
+This guide explains how to enable runtime-aware shell completion with the public APIs declared in `include/argparse-c.h`: `ap_complete(...)`, `ap_completion_callback`, `ap_completion_request`, `ap_completion_result`, `ap_completion_result_init(...)`, `ap_completion_result_add(...)`, `ap_completion_result_free(...)`, and the completion-related fields on `ap_arg_options`. The end-to-end reference implementation is `sample/example_completion.c`.
 
-If you only need to generate shell scripts, start with the generator APIs in `README.md`. If you want runtime-aware completions, such as filtering candidates from application state or a remote source, add a `__complete` entrypoint and completion callbacks. The reference implementation is `sample/example_completion.c`.
+If you only need static shell scripts, start with `ap_format_bash_completion(...)` or `ap_format_fish_completion(...)`. If you want completions that depend on application state, add a hidden `__complete` entrypoint and wire one or more arguments with `ap_arg_options.completion_callback`.
 
-## Design overview
+## Which APIs enable completion?
 
-The public completion APIs live in `include/argparse-c.h`:
+When users ask “which API turns completion on?”, the answer is usually this sequence:
 
-- `ap_complete(...)` runs the library-side completion resolver.
-- `ap_completion_callback` lets one argument append dynamic candidates.
-- `ap_completion_request` tells your callback which token is being completed.
-- `ap_completion_result_init(...)`, `ap_completion_result_add(...)`, and `ap_completion_result_free(...)` manage the candidate list.
-- `ap_arg_options.completion_kind`, `ap_arg_options.completion_hint`, `ap_arg_options.completion_callback`, and `ap_arg_options.completion_user_data` let each argument opt into completion behavior.
+1. Create your parser with `ap_parser_new(...)`.
+2. Configure each completable argument through `ap_arg_options`.
+   - `completion_kind` advertises built-in behavior such as `AP_COMPLETION_KIND_FILE` or `AP_COMPLETION_KIND_COMMAND`.
+   - `completion_hint` provides a short human-readable hint.
+   - `completion_callback` registers a dynamic candidate producer.
+   - `completion_user_data` passes application-owned state into that callback.
+   - `choices` remains useful for static enumerations.
+3. Register the argument with `ap_add_argument(...)`.
+4. Add an internal `__complete` entrypoint in `main(...)`.
+5. Call `ap_completion_result_init(...)`, then `ap_complete(...)`, print `ap_completion_result.items[i].value`, and finally call `ap_completion_result_free(...)`.
+6. Expose shell integration with `ap_format_bash_completion(...)` or `ap_format_fish_completion(...)`.
 
-A practical design is:
+Those names match the public header exactly, so users can jump directly between this guide and `include/argparse-c.h`.
 
-1. Keep your normal CLI behavior unchanged.
-2. Reserve `argv[1] == "__complete"` as an internal entrypoint.
-3. Strip wrapper-only flags such as `--shell bash` before calling `ap_complete(...)`.
-4. Print one candidate per line to stdout.
-5. Exit with a non-zero code only when completion handling itself fails.
+## Minimal implementation based on `sample/example_completion.c`
 
-That layout matches `sample/example_completion.c`, so the sample can be used as a copy-paste baseline.
-
-## Minimal parser setup
-
-The smallest useful setup combines static metadata with one callback-backed argument.
+The sample uses one static `choices` argument, one file-completing positional, and one callback-backed option. That is also a good minimal template for application code.
 
 ```c
 #include <stdio.h>
@@ -90,11 +88,11 @@ static ap_parser *build_parser(ap_error *err) {
 }
 ```
 
-This example deliberately mirrors the generator-oriented sample in `sample/example_completion.c`, so readers can compare the guide and a full program side by side.
+This mirrors `sample/example_completion.c`, so the guide and the sample can be read side by side.
 
 ## `__complete` entrypoint design
 
-The library does not force a transport protocol between your shell script and your executable. The recommended convention is a private subcommand-like entrypoint:
+The library does not prescribe a transport protocol between generated shell code and your executable. A practical application-side convention is a private entrypoint such as `argv[1] == "__complete"`.
 
 ```c
 static int maybe_handle_completion_request(ap_parser *parser, int argc,
@@ -134,18 +132,24 @@ static int maybe_handle_completion_request(ap_parser *parser, int argc,
 }
 ```
 
-Why this structure works well:
+Why this layout works well:
 
 - `__complete` is easy to detect before `ap_parse_args(...)` runs.
-- `--shell` stays outside your public CLI contract.
+- Wrapper-only flags such as `--shell` remain outside your public CLI contract.
 - `--` cleanly separates wrapper metadata from the original command line.
-- The same binary can serve normal execution, generator flags, and completion requests.
+- The same binary can handle normal execution, generated completion scripts, and live completion requests.
+- The implementation maps directly to `sample/example_completion.c`.
 
-## How shell integration calls the entrypoint
+## How shell integration reaches `__complete`
 
-The generated bash/fish scripts produced by `ap_format_bash_completion(...)` and `ap_format_fish_completion(...)` are the stable integration point you should expose publicly. Those scripts can invoke your binary’s `__complete` entrypoint and pass through the current command line.
+The public integration surface for end users is still the generated shell script:
 
-A simple manual invocation looks like this:
+- `ap_format_bash_completion(...)`
+- `ap_format_fish_completion(...)`
+
+Those APIs return shell code that can call your binary’s hidden `__complete` entrypoint and forward the current command line. In other words, users install a generated script, but your executable still owns candidate generation through `ap_complete(...)`.
+
+Manual smoke tests look like this:
 
 ```bash
 ./build/sample/example_completion __complete --shell bash -- --mode f
@@ -157,36 +161,31 @@ In that contract:
 
 - `__complete` selects completion mode.
 - `--shell bash` or `--shell fish` tells `ap_complete(...)` which shell behavior to emulate.
-- `--` marks the beginning of the original command line tokens.
-- The remaining argv slice is passed to `ap_complete(...)` unchanged.
+- `--` marks the start of the original argv slice.
+- The remaining tokens are passed to `ap_complete(...)` unchanged.
 
-For end users, the usual workflow is still:
+For actual installation, keep the user-facing path simple:
 
 ```bash
 ./build/sample/example_completion --generate-bash-completion > example_completion.bash
 source ./example_completion.bash
 ```
 
-Then the shell script performs the hidden `__complete` call for them.
+The generated script hides the `__complete` transport details from end users.
 
-## Fallback policy when no candidates can be returned
+## Fallback policy when candidate generation fails or yields nothing
 
-Treat “no completions available” as a normal outcome, not an error.
+Treat “no candidates” as a normal result, and reserve hard failures for broken completion processing.
 
-Recommended fallback rules:
+Recommended fallback policy:
 
-1. **If your callback has no dynamic data**, return `0` and add nothing.
-2. **If prefix filtering removes every candidate**, return `0` and add nothing.
-3. **If the argument already has `choices` or `completion_kind` metadata**, keep those declarations even when the callback produces nothing.
-4. **Only return `-1` when completion processing itself failed**, such as an allocation failure reported through `ap_completion_result_add(...)`.
+1. If your callback has no dynamic data, return `0` and add nothing.
+2. If prefix filtering removes every candidate, return `0` and add nothing.
+3. If `choices` or `completion_kind` is already declared on the argument, keep that metadata in place even when the callback contributes nothing.
+4. Return `-1` only when completion processing itself failed, for example when `ap_completion_result_add(...)` reports an allocation problem.
+5. Let empty stdout mean “the application has no extra candidates right now,” so the shell or static metadata can fall back naturally.
 
-This policy gives shells a clean fallback path:
-
-- static `choices` can still appear when available;
-- built-in kinds such as `AP_COMPLETION_KIND_FILE` or `AP_COMPLETION_KIND_COMMAND` can still hint at file/command completion;
-- an empty stdout result simply means “no extra candidates from the app right now.”
-
-In practice, that means your callback should prefer this pattern:
+That usually means this is the right shape:
 
 ```c
 if (!commands) {
@@ -194,15 +193,16 @@ if (!commands) {
 }
 ```
 
-instead of manufacturing placeholder values.
+instead of fabricating placeholder values.
 
 ## Relationship to the sample
 
-Use `sample/example_completion.c` as the canonical end-to-end example:
+Use `sample/example_completion.c` as the canonical end-to-end example of the full completion flow:
 
-- generator flags: `--generate-bash-completion`, `--generate-fish-completion`, `--generate-manpage`
-- hidden completion entrypoint: `__complete`
-- static completion metadata: `choices`, `AP_COMPLETION_KIND_FILE`, `AP_COMPLETION_KIND_COMMAND`
-- dynamic completion source: `exec_completion_callback(...)`
+- parser setup with `ap_arg_options.completion_kind`, `ap_arg_options.completion_hint`, `ap_arg_options.completion_callback`, and `ap_arg_options.completion_user_data`
+- hidden `__complete` entrypoint via `maybe_handle_completion_request(...)`
+- library-side resolution through `ap_complete(...)`
+- candidate list management through `ap_completion_result_init(...)`, `ap_completion_result_add(...)`, and `ap_completion_result_free(...)`
+- generated shell integration through `--generate-bash-completion` and `--generate-fish-completion`
 
-If you want the smallest adoption path, start by copying the sample’s `maybe_handle_completion_request(...)` function, then replace the static `exec_candidates` array with your own application data source.
+If you want the shortest adoption path, copy the sample’s `maybe_handle_completion_request(...)`, keep the same `ap_complete(...)` call pattern, and replace `exec_candidates` with your own data source.
