@@ -250,6 +250,17 @@ Builds help text.
 ### `char *ap_format_error(const ap_parser *parser, const ap_error *err)`
 Builds combined `error + usage` text.
 
+### Shell completion formatter APIs
+- `char *ap_format_bash_completion(const ap_parser *parser)`
+  - Generates a bash completion script from parser metadata.
+  - Typical public entrypoints: `--generate-bash-completion` in `sample/example_completion.c` and `sample/example_manpage.c`.
+- `char *ap_format_fish_completion(const ap_parser *parser)`
+  - Generates a fish completion script from the same parser definition.
+  - Typical public entrypoints: `--generate-fish-completion` in `sample/example_completion.c` and `sample/example_manpage.c`.
+- `char *ap_format_zsh_completion(const ap_parser *parser)`
+  - Generates a zsh completion script from the same parser definition.
+  - Typical public entrypoints: `--generate-zsh-completion` in `sample/example_completion.c` and `sample/example_manpage.c`.
+
 #### Memory ownership (all above)
 Returned strings are heap-allocated. Free them with `free()`.
 
@@ -325,7 +336,7 @@ When extending tests, assert all three fields together where practical: `err.cod
 ## 8.5 Practical examples and reverse links
 - Parse basics and error formatting: [`README.md`](../README.md), [`sample/example1.c`](../sample/example1.c)
 - Nested subcommands and `subcommand_path`: [`README.md`](../README.md), [`sample/example_subcommands.c`](../sample/example_subcommands.c)
-- Formatter APIs (`ap_format_help`, `ap_format_manpage`, shell completion formatters): [`README.md`](../README.md), [`sample/example_completion.c`](../sample/example_completion.c), [`sample/example_manpage.c`](../sample/example_manpage.c)
+- Formatter APIs (`ap_format_help`, `ap_format_manpage`, `ap_format_bash_completion`, `ap_format_fish_completion`, `ap_format_zsh_completion`): [`README.md`](../README.md), [`sample/example_completion.c`](../sample/example_completion.c), [`sample/example_manpage.c`](../sample/example_manpage.c)
 - Introspection APIs (`ap_parser_get_info`, `ap_parser_get_argument`, `ap_parser_get_subcommand`): [`README.md`](../README.md), [`sample/example_introspection.c`](../sample/example_introspection.c)
 
 ## 9. Minimal Example

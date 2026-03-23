@@ -131,7 +131,7 @@ ap_ns_get_string(ns, "text", &text);
 
 The repository now includes generator-oriented samples in addition to `sample/example1.c`.
 
-- `sample/example_completion.c`: standard minimal implementation of `--generate-bash-completion`, `--generate-fish-completion`, `--generate-manpage`, and `ap_try_handle_completion(...)` with the default hidden `__complete` entrypoint
+- `sample/example_completion.c`: standard minimal implementation of `--generate-bash-completion`, `--generate-fish-completion`, `--generate-zsh-completion`, `--generate-manpage`, and `ap_try_handle_completion(...)` with the default hidden `__complete` entrypoint
 - `sample/example_manpage.c`: subcommand-based parser that emits a man page and shell completions from the same parser definition
 
 ### Implement generator flags in your application
@@ -149,6 +149,12 @@ fish.action = AP_ACTION_STORE_TRUE;
 fish.help = "print a fish completion script";
 ap_add_argument(parser, "--generate-fish-completion", fish, &err);
 
+ap_arg_options zsh = ap_arg_options_default();
+zsh.type = AP_TYPE_BOOL;
+zsh.action = AP_ACTION_STORE_TRUE;
+zsh.help = "print a zsh completion script";
+ap_add_argument(parser, "--generate-zsh-completion", zsh, &err);
+
 ap_arg_options manpage = ap_arg_options_default();
 manpage.type = AP_TYPE_BOOL;
 manpage.action = AP_ACTION_STORE_TRUE;
@@ -157,6 +163,12 @@ ap_add_argument(parser, "--generate-manpage", manpage, &err);
 
 if (bash_completion) {
   char *script = ap_format_bash_completion(parser);
+  printf("%s", script);
+  free(script);
+  return 0;
+}
+if (zsh_completion) {
+  char *script = ap_format_zsh_completion(parser);
   printf("%s", script);
   free(script);
   return 0;
@@ -174,6 +186,14 @@ source ./example_completion.bash
 
 ```bash
 ./build/sample/example_completion --generate-fish-completion   > ~/.config/fish/completions/example_completion.fish
+```
+
+### Generate zsh completion
+
+```bash
+./build/sample/example_completion --generate-zsh-completion > _example_completion
+fpath=("$PWD" $fpath)
+autoload -Uz compinit && compinit
 ```
 
 For runtime-aware completion callbacks, continue with [Completion callbacks](guides/completion-callbacks.md), which shows the exact APIs to wire: `ap_arg_options.completion_callback`, `ap_arg_options.completion_kind`, `ap_complete(...)`, and the hidden `__complete` entrypoint.
@@ -207,7 +227,7 @@ man ./example_manpage.1
 
 ## Enable shell completion immediately after install
 
-Completion is enabled on every new parser by default. The release asset does not include a generic completion script because each downstream CLI generates its own script after linking against `argparse-c`. In the common case you only need to call `ap_try_handle_completion(...)` before `ap_parse_args(...)`, then expose generator flags that print `ap_format_bash_completion(...)` or `ap_format_fish_completion(...)`.
+Completion is enabled on every new parser by default. The release asset does not include a generic completion script because each downstream CLI generates its own script after linking against `argparse-c`. In the common case you only need to call `ap_try_handle_completion(...)` before `ap_parse_args(...)`, then expose generator flags that print `ap_format_bash_completion(...)`, `ap_format_fish_completion(...)`, or `ap_format_zsh_completion(...)`.
 
 ```c
 ap_completion_result completion = {0};
@@ -249,4 +269,13 @@ source ~/.local/share/bash-completion/completions/example_completion
 mkdir -p ~/.config/fish/completions
 ./build/sample/example_completion --generate-fish-completion \
   > ~/.config/fish/completions/example_completion.fish
+```
+
+### Zsh setup
+
+```bash
+mkdir -p ~/.local/share/zsh/site-functions
+./build/sample/example_completion --generate-zsh-completion \
+  > ~/.local/share/zsh/site-functions/_example_completion
+printf 'fpath=(~/.local/share/zsh/site-functions $fpath)\nautoload -Uz compinit && compinit\n' >> ~/.zshrc
 ```
