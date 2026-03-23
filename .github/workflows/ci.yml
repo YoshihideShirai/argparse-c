@@ -78,7 +78,7 @@ jobs:
           ctest --test-dir build-coverage --output-on-failure
           python -m gcovr \
             --root "$GITHUB_WORKSPACE" \
-            --filter "$GITHUB_WORKSPACE" \
+            --filter "$GITHUB_WORKSPACE/lib" \
             --object-directory "$GITHUB_WORKSPACE/build-coverage" \
             --exclude '.*/test/.*' \
             --exclude '.*/sample/.*' \
