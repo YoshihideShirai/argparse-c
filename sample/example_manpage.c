@@ -5,6 +5,8 @@
 
 #include "argparse-c.h"
 
+static const char *section_choices[] = {"core", "ui", "network"};
+
 static int print_generated_text(const char *text) {
   if (!text) {
     fprintf(stderr, "failed to generate output\n");
@@ -123,8 +125,6 @@ int main(int argc, char **argv) {
   {
     ap_arg_options section = ap_arg_options_default();
     ap_arg_options value = ap_arg_options_default();
-    const char *section_choices[] = {"core", "ui", "network"};
-
     section.help = "configuration section";
     section.choices.items = section_choices;
     section.choices.count = 3;
