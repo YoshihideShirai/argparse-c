@@ -547,6 +547,77 @@ TEST(ParseArgsAllowsOnlyExpectedPositionalsAfterDoubleDashBoundary) {
   ap_parser_free(p);
 }
 
+TEST(ParseArgsHandlesLongMixedSequenceWithOptionalPositionalAndFixedTail) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options prefix = ap_arg_options_default();
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  ap_arg_options target = ap_arg_options_default();
+  const char *maybe_value = NULL;
+  const char *target_value = NULL;
+  char *argv[] = {(char *)"prog",     (char *)"lead-01",   (char *)"lead-02",
+                  (char *)"lead-03",  (char *)"lead-04",   (char *)"lead-05",
+                  (char *)"--maybe",  (char *)"maybe.txt", (char *)"left-01",
+                  (char *)"right-01", (char *)"dest.out",  NULL};
+
+  CHECK(p != NULL);
+  prefix.nargs = AP_NARGS_ZERO_OR_MORE;
+  prefix.action = AP_ACTION_APPEND;
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "prefix", prefix, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "pair", pair, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "target", target, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 11, argv, &ns, &err));
+  LONGS_EQUAL(5, ap_ns_get_count(ns, "prefix"));
+  STRCMP_EQUAL("lead-01", ap_ns_get_string_at(ns, "prefix", 0));
+  STRCMP_EQUAL("lead-02", ap_ns_get_string_at(ns, "prefix", 1));
+  STRCMP_EQUAL("lead-03", ap_ns_get_string_at(ns, "prefix", 2));
+  STRCMP_EQUAL("lead-04", ap_ns_get_string_at(ns, "prefix", 3));
+  STRCMP_EQUAL("lead-05", ap_ns_get_string_at(ns, "prefix", 4));
+  CHECK(ap_ns_get_string(ns, "maybe", &maybe_value));
+  STRCMP_EQUAL("maybe.txt", maybe_value);
+  LONGS_EQUAL(2, ap_ns_get_count(ns, "pair"));
+  STRCMP_EQUAL("left-01", ap_ns_get_string_at(ns, "pair", 0));
+  STRCMP_EQUAL("right-01", ap_ns_get_string_at(ns, "pair", 1));
+  CHECK(ap_ns_get_string(ns, "target", &target_value));
+  STRCMP_EQUAL("dest.out", target_value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseArgsReportsUnexpectedPositionalAtFirstOverflowAfterDoubleDash) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options first = ap_arg_options_default();
+  ap_arg_options second = ap_arg_options_default();
+  char *argv[] = {(char *)"prog",
+                  (char *)"--",
+                  (char *)"first.txt",
+                  (char *)"second.txt",
+                  (char *)"overflow-01",
+                  (char *)"overflow-02",
+                  NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "first", first, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "second", second, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 6, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_UNEXPECTED_POSITIONAL, err.code);
+  STRCMP_EQUAL("overflow-01", err.argument);
+  STRCMP_EQUAL("unexpected positional argument 'overflow-01'", err.message);
+
+  ap_parser_free(p);
+}
+
 TEST(ParseArgsTracksAppendCountAndPositionalsAcrossLongSequence) {
   ap_error err = {};
   ap_namespace *ns = NULL;
