@@ -1226,7 +1226,8 @@ int ap_complete(const ap_parser *parser, int argc, char **argv,
     if (strcmp(token, "--") == 0) {
       break;
     }
-    if (active_def && !completion_action_takes_no_value(active_def->opts.action)) {
+    if (active_def &&
+        !completion_action_takes_no_value(active_def->opts.action)) {
       active_def = NULL;
       active_option = NULL;
       continue;
@@ -1300,9 +1301,9 @@ int ap_complete(const ap_parser *parser, int argc, char **argv,
   request.argv = argv;
 
   if (active_def->opts.completion_callback) {
-    if (active_def->opts.completion_callback(&request, out_result,
-                                            active_def->opts.completion_user_data,
-                                            err) != 0) {
+    if (active_def->opts.completion_callback(
+            &request, out_result, active_def->opts.completion_user_data, err) !=
+        0) {
       ap_completion_result_free(out_result);
       return -1;
     }

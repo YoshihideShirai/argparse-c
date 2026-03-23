@@ -57,8 +57,15 @@ if(AP_CLANG_FORMAT_EXECUTABLE)
     USES_TERMINAL
     COMMENT "Formatting sources with clang-format"
   )
+  add_custom_target(format-check
+    COMMAND ${AP_CLANG_FORMAT_EXECUTABLE} --dry-run --Werror
+      ${AP_CLANG_TOOL_SOURCES}
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    USES_TERMINAL
+    COMMENT "Checking source formatting with clang-format"
+  )
 else()
-  message(STATUS "clang-format not found; 'format' target will be unavailable")
+  message(STATUS "clang-format not found; 'format' and 'format-check' targets will be unavailable")
 endif()
 
 find_program(AP_CLANG_TIDY_EXECUTABLE clang-tidy)
