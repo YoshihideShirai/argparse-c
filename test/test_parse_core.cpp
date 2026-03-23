@@ -357,3 +357,106 @@ TEST(FormatErrorIncludesMessageAndUsage) {
   free(text);
   ap_parser_free(p);
 }
+
+TEST(ParseArgsDistributesLongMixedPositionalOptionalSequence) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options extras = ap_arg_options_default();
+  ap_arg_options tail = ap_arg_options_default();
+  const char *maybe_value = NULL;
+  const char *tail_value = NULL;
+  char *argv[] = {
+      (char *)"prog", (char *)"a", (char *)"b",        (char *)"--maybe",
+      (char *)"seen", (char *)"c", (char *)"tail.txt", NULL};
+
+  CHECK(p != NULL);
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  extras.nargs = AP_NARGS_ZERO_OR_MORE;
+  extras.action = AP_ACTION_APPEND;
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "extras", extras, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "tail", tail, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 7, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "maybe", &maybe_value));
+  STRCMP_EQUAL("seen", maybe_value);
+  LONGS_EQUAL(3, ap_ns_get_count(ns, "extras"));
+  STRCMP_EQUAL("a", ap_ns_get_string_at(ns, "extras", 0));
+  STRCMP_EQUAL("b", ap_ns_get_string_at(ns, "extras", 1));
+  STRCMP_EQUAL("c", ap_ns_get_string_at(ns, "extras", 2));
+  CHECK(ap_ns_get_string(ns, "tail", &tail_value));
+  STRCMP_EQUAL("tail.txt", tail_value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseArgsReportsUnexpectedPositionalAfterDoubleDashBoundary) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options target = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--", (char *)"target.txt",
+                  (char *)"extra.txt", NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "target", target, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 4, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_UNEXPECTED_POSITIONAL, err.code);
+  STRCMP_EQUAL("extra.txt", err.argument);
+  STRCMP_EQUAL("unexpected positional argument 'extra.txt'", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(ParseArgsTracksAppendCountAndPositionalsAcrossLongSequence) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options tag = ap_arg_options_default();
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options files = ap_arg_options_default();
+  ap_arg_options target = ap_arg_options_default();
+  int32_t verbose_count = 0;
+  const char *target_value = NULL;
+  char *argv[] = {(char *)"prog",
+                  (char *)"--tag",
+                  (char *)"alpha",
+                  (char *)"-v",
+                  (char *)"f1",
+                  (char *)"--tag",
+                  (char *)"beta",
+                  (char *)"-v",
+                  (char *)"f2",
+                  (char *)"dest",
+                  NULL};
+
+  CHECK(p != NULL);
+  tag.action = AP_ACTION_APPEND;
+  verbose.type = AP_TYPE_INT32;
+  verbose.action = AP_ACTION_COUNT;
+  files.nargs = AP_NARGS_ZERO_OR_MORE;
+  files.action = AP_ACTION_APPEND;
+  LONGS_EQUAL(0, ap_add_argument(p, "--tag", tag, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "-v, --verbose", verbose, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "files", files, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "target", target, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 10, argv, &ns, &err));
+  LONGS_EQUAL(2, ap_ns_get_count(ns, "tag"));
+  STRCMP_EQUAL("alpha", ap_ns_get_string_at(ns, "tag", 0));
+  STRCMP_EQUAL("beta", ap_ns_get_string_at(ns, "tag", 1));
+  CHECK(ap_ns_get_int32(ns, "verbose", &verbose_count));
+  LONGS_EQUAL(2, verbose_count);
+  LONGS_EQUAL(2, ap_ns_get_count(ns, "files"));
+  STRCMP_EQUAL("f1", ap_ns_get_string_at(ns, "files", 0));
+  STRCMP_EQUAL("f2", ap_ns_get_string_at(ns, "files", 1));
+  CHECK(ap_ns_get_string(ns, "target", &target_value));
+  STRCMP_EQUAL("dest", target_value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}

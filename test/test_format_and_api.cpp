@@ -876,6 +876,114 @@ TEST(FormatBashCompletionIncludesRootSubcommandsAndChoices) {
   ap_parser_free(p);
 }
 
+TEST(FormatGeneratorsEscapeSpecialCharactersAndDeepNestedCompletionPaths) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("my-prog.v1", "desc");
+  ap_parser *build = NULL;
+  ap_parser *lint = NULL;
+  ap_parser *check = NULL;
+  ap_parser *leaf = NULL;
+  ap_arg_options bash_choice = ap_arg_options_default();
+  ap_arg_options fish_opt = ap_arg_options_default();
+  ap_arg_options man_opt = ap_arg_options_default();
+  ap_arg_options leaf_mode = ap_arg_options_default();
+  const char *bash_choices[] = {"two words", "it's"};
+  const char *fish_choices[] = {"quote\"", "path\\dir", "$HOME",
+                                "line1\nline2"};
+  const char *man_choices[] = {"-dash", "\\slash", ".dot", "'tick"};
+  const char *leaf_choices[] = {"fast", "slow"};
+  char *bash = NULL;
+  char *fish = NULL;
+  char *manpage = NULL;
+  const char *fish_help_fragment =
+      "-l fish-opt -d \"say \\\"hi\\\"\\\\\\$USER next\" -r -a "
+      "'(__ap_my_prog_v1_value_choices root:--fish-opt)'";
+
+  CHECK(p != NULL);
+  bash_choice.choices.items = bash_choices;
+  bash_choice.choices.count = 2;
+  fish_opt.help = "say \"hi\"\\$USER\nnext";
+  fish_opt.choices.items = fish_choices;
+  fish_opt.choices.count = 4;
+  man_opt.help = ".lead\n'quote\n-dash\\trail";
+  man_opt.default_value = "-default\\value";
+  man_opt.choices.items = man_choices;
+  man_opt.choices.count = 4;
+  leaf_mode.help = "leaf mode";
+  leaf_mode.choices.items = leaf_choices;
+  leaf_mode.choices.count = 2;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--bash-choice", bash_choice, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--fish-opt", fish_opt, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--man-opt", man_opt, &err));
+  build = ap_add_subcommand(p, "build-tools", "build helpers", &err);
+  CHECK(build != NULL);
+  lint = ap_add_subcommand(build, "lint.v2", "lint helpers", &err);
+  CHECK(lint != NULL);
+  check = ap_add_subcommand(lint, "check-x", "check helpers", &err);
+  CHECK(check != NULL);
+  leaf = ap_add_subcommand(check, "final.step", "final leaf", &err);
+  CHECK(leaf != NULL);
+  LONGS_EQUAL(0, ap_add_argument(leaf, "--leaf-mode", leaf_mode, &err));
+
+  bash = ap_format_bash_completion(p);
+  fish = ap_format_fish_completion(p);
+  manpage = ap_format_manpage(p);
+
+  CHECK(bash != NULL);
+  CHECK(fish != NULL);
+  CHECK(manpage != NULL);
+
+  CHECK(strstr(bash, "complete -F _my_prog_v1 'my-prog.v1'") != NULL);
+  CHECK(strstr(bash, "parser_subcommands='build-tools'") != NULL);
+  CHECK(strstr(bash, "root:--bash-choice)") != NULL);
+  CHECK(strstr(bash, "'two words' 'it'\\''s'") != NULL);
+  CHECK(strstr(bash, "root/build-tools/lint.v2/check-x)") != NULL);
+  CHECK(strstr(bash, "parser_subcommands='final.step'") != NULL);
+  CHECK(strstr(bash, "root/build-tools/lint.v2/check-x/final.step)") != NULL);
+  CHECK(strstr(bash, "parser_options='-h --help --leaf-mode'") != NULL);
+  CHECK(strstr(bash,
+               "root/build-tools/lint.v2/check-x/final.step:--leaf-mode)") !=
+        NULL);
+  CHECK(strstr(bash, "'fast' 'slow'") != NULL);
+
+  CHECK(strstr(fish, "complete -c \"my-prog.v1\" -f") != NULL);
+  CHECK(strstr(fish, "function __ap_my_prog_v1_parser_key") != NULL);
+  CHECK(strstr(fish, fish_help_fragment) != NULL);
+  CHECK(strstr(fish, "case \"root:--fish-opt\"") != NULL);
+  CHECK(strstr(fish,
+               "\"quote\\\"\" \"path\\\\dir\" \"\\$HOME\" \"line1 line2\"") !=
+        NULL);
+  CHECK(strstr(fish, "case \"root:build-tools\"") != NULL);
+  CHECK(strstr(fish, "set key \"root/build-tools\"") != NULL);
+  CHECK(strstr(fish, "case \"root/build-tools:lint.v2\"") != NULL);
+  CHECK(strstr(fish, "set key \"root/build-tools/lint.v2\"") != NULL);
+  CHECK(strstr(fish, "case \"root/build-tools/lint.v2:check-x\"") != NULL);
+  CHECK(strstr(fish, "set key \"root/build-tools/lint.v2/check-x\"") != NULL);
+  CHECK(strstr(fish, "case \"root/build-tools/lint.v2/check-x:final.step\"") !=
+        NULL);
+  CHECK(
+      strstr(fish, "set key \"root/build-tools/lint.v2/check-x/final.step\"") !=
+      NULL);
+  CHECK(strstr(fish,
+               "root/build-tools/lint.v2/check-x/final.step' -l leaf-mode -d "
+               "\"leaf mode\" -r -a '(__ap_my_prog_v1_value_choices "
+               "root/build-tools/lint.v2/check-x/final.step:--leaf-mode)'") !=
+        NULL);
+
+  CHECK(strstr(manpage, "\\&.lead") != NULL);
+  CHECK(strstr(manpage, "\\&'quote") != NULL);
+  CHECK(strstr(manpage, "\\-dash\\\\trail") != NULL);
+  CHECK(strstr(manpage, "default: \\-default\\\\value") != NULL);
+  CHECK(strstr(manpage, "choices: \\-dash, \\\\slash, \\&.dot, \\&'tick") !=
+        NULL);
+
+  free(bash);
+  free(fish);
+  free(manpage);
+  ap_parser_free(p);
+}
+
 TEST(ArgumentInfoExposesCompletionMetadata) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
