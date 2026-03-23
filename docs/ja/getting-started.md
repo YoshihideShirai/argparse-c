@@ -81,7 +81,7 @@ ap_ns_get_string(ns, "text", &text);
 
 `sample/example1.c` に加えて、generator API をすぐ試せるサンプルも含まれています。
 
-- `sample/example_completion.c`: `--generate-bash-completion` / `--generate-fish-completion` / `--generate-manpage` をアプリ側で実装する最小例
+- `sample/example_completion.c`: `--generate-bash-completion` / `--generate-fish-completion` / `--generate-manpage` と completion callback 用の隠し `__complete` エントリポイントをアプリ側で実装する最小例
 - `sample/example_manpage.c`: subcommand を含む parser 定義から man page と shell completion を生成する例
 
 ### アプリ側で generator フラグを実装する例
@@ -125,6 +125,8 @@ source ./example_completion.bash
 ```bash
 ./build/sample/example_completion --generate-fish-completion   > ~/.config/fish/completions/example_completion.fish
 ```
+
+実行時の状態に応じた completion callback を組み込みたい場合は、次に [Completion callback ガイド](guides/completion-callbacks.md) を参照してください。
 
 ### man page を生成する
 
