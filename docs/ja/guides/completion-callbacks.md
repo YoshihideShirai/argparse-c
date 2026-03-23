@@ -19,7 +19,7 @@ completion は追加機能ではなく標準導線として扱います。新し
 3. `ap_arg_options` で completable な引数を登録する。
 4. `ap_parse_args(...)` の前に `ap_try_handle_completion(...)` を呼ぶ。
 5. `handled` が真のときだけ候補を出力する。
-6. shell script は `ap_format_bash_completion(...)` / `ap_format_fish_completion(...)` で生成する。
+6. shell script は `ap_format_bash_completion(...)` / `ap_format_fish_completion(...)` / `ap_format_zsh_completion(...)` で生成する。
 
 ```c
 static int maybe_handle_completion_request(ap_parser *parser, int argc,
@@ -134,7 +134,18 @@ source ~/.local/share/bash-completion/completions/example_completion
 
 ```bash
 mkdir -p ~/.config/fish/completions
-./build/sample/example_completion --generate-fish-completion   > ~/.config/fish/completions/example_completion.fish
+./build/sample/example_completion --generate-fish-completion \
+  > ~/.config/fish/completions/example_completion.fish
+```
+
+### zsh
+
+```bash
+mkdir -p ~/.zsh/completions
+./build/sample/example_completion --generate-zsh-completion \
+  > ~/.zsh/completions/_example_completion
+fpath=(~/.zsh/completions $fpath)
+autoload -Uz compinit && compinit
 ```
 
 生成された script が configured hidden entrypoint を内部的に呼び出すため、エンドユーザーは `__complete` やカスタム名を意識する必要はありません。

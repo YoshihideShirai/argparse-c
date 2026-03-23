@@ -75,11 +75,13 @@ static int maybe_handle_generator_flags(ap_parser *parser, ap_namespace *ns) {
   bool is_help = false;
   bool bash_completion = false;
   bool fish_completion = false;
+  bool zsh_completion = false;
   bool manpage = false;
 
   ap_ns_get_bool(ns, "help", &is_help);
   ap_ns_get_bool(ns, "generate_bash_completion", &bash_completion);
   ap_ns_get_bool(ns, "generate_fish_completion", &fish_completion);
+  ap_ns_get_bool(ns, "generate_zsh_completion", &zsh_completion);
   ap_ns_get_bool(ns, "generate_manpage", &manpage);
 
   if (is_help) {
@@ -90,6 +92,9 @@ static int maybe_handle_generator_flags(ap_parser *parser, ap_namespace *ns) {
   }
   if (fish_completion) {
     return print_generated_text(ap_format_fish_completion(parser));
+  }
+  if (zsh_completion) {
+    return print_generated_text(ap_format_zsh_completion(parser));
   }
   if (manpage) {
     return print_generated_text(ap_format_manpage(parser));
@@ -103,7 +108,7 @@ int main(int argc, char **argv) {
   ap_namespace *ns = NULL;
   ap_parser *parser = ap_parser_new(
       "example_completion",
-      "demo app that can generate bash/fish completions and a man page.");
+      "demo app that can generate bash/fish/zsh completions and a man page.");
   const char *mode_choices[] = {"fast", "slow"};
   const char *format_choices[] = {"json", "yaml", "toml"};
   static const char *const exec_candidates[] = {"git", "grep", "ls", "sed",
@@ -119,6 +124,7 @@ int main(int argc, char **argv) {
   {
     ap_arg_options bash = ap_arg_options_default();
     ap_arg_options fish = ap_arg_options_default();
+    ap_arg_options zsh = ap_arg_options_default();
     ap_arg_options manpage = ap_arg_options_default();
     ap_arg_options mode = ap_arg_options_default();
     ap_arg_options input = ap_arg_options_default();
@@ -133,6 +139,10 @@ int main(int argc, char **argv) {
     fish.type = AP_TYPE_BOOL;
     fish.action = AP_ACTION_STORE_TRUE;
     fish.help = "print a fish completion script";
+
+    zsh.type = AP_TYPE_BOOL;
+    zsh.action = AP_ACTION_STORE_TRUE;
+    zsh.help = "print a zsh completion script";
 
     manpage.type = AP_TYPE_BOOL;
     manpage.action = AP_ACTION_STORE_TRUE;
@@ -164,6 +174,7 @@ int main(int argc, char **argv) {
 
     if (ap_add_argument(parser, "--generate-bash-completion", bash, &err) != 0 ||
         ap_add_argument(parser, "--generate-fish-completion", fish, &err) != 0 ||
+        ap_add_argument(parser, "--generate-zsh-completion", zsh, &err) != 0 ||
         ap_add_argument(parser, "--generate-manpage", manpage, &err) != 0 ||
         ap_add_argument(parser, "--mode", mode, &err) != 0 ||
         ap_add_argument(parser, "--exec", exec, &err) != 0 ||

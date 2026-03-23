@@ -983,6 +983,7 @@ TEST(FormatGeneratorsKeepDeepNestedCompletionAndManpageKeysAligned) {
   const char *leaf_choices[] = {"fast", "slow"};
   char *bash = NULL;
   char *fish = NULL;
+  char *zsh = NULL;
   char *manpage = NULL;
 
   CHECK(p != NULL);
@@ -1316,6 +1317,58 @@ TEST(FormatCompletionUsesStaticCompletionMetadata) {
   ap_parser_free(p);
 }
 
+TEST(FormatZshCompletionIncludesSubcommandsAndCompletionKinds) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *config = NULL;
+  ap_arg_options output = ap_arg_options_default();
+  ap_arg_options input = ap_arg_options_default();
+  ap_arg_options dir = ap_arg_options_default();
+  ap_arg_options exec = ap_arg_options_default();
+  ap_arg_options mode = ap_arg_options_default();
+  static const char *const commands[] = {"git", nullptr};
+  const char *formats[] = {"json", "yaml"};
+  char *script = NULL;
+
+  CHECK(p != NULL);
+  output.choices.items = formats;
+  output.choices.count = 2;
+  input.completion_kind = AP_COMPLETION_KIND_FILE;
+  dir.completion_kind = AP_COMPLETION_KIND_DIRECTORY;
+  exec.completion_kind = AP_COMPLETION_KIND_COMMAND;
+  exec.completion_callback = dynamic_exec_completion;
+  exec.completion_user_data = (void *)commands;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--output", output, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--input", input, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--dir", dir, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--exec", exec, &err));
+  config = ap_add_subcommand(p, "config", "config commands", &err);
+  CHECK(config != NULL);
+  mode.choices.items = formats;
+  mode.choices.count = 2;
+  LONGS_EQUAL(0, ap_add_argument(config, "--mode", mode, &err));
+
+  script = ap_format_zsh_completion(p);
+  CHECK(script != NULL);
+  CHECK(strstr(script, "#compdef prog") != NULL);
+  CHECK(strstr(script, "parser_subcommands=( 'config' )") != NULL);
+  CHECK(strstr(script, "parser_options=( '-h' '--help' '--output' '--input' "
+                       "'--dir' '--exec' )") != NULL);
+  CHECK(strstr(script, "root:--output) reply=( 'json' 'yaml' )") != NULL);
+  CHECK(strstr(script, "root:--input) printf '%s\\n' 'file'") != NULL);
+  CHECK(strstr(script, "root:--dir) printf '%s\\n' 'directory'") != NULL);
+  CHECK(strstr(script, "root:--exec) printf '%s\\n' 'dynamic'") != NULL);
+  CHECK(strstr(script, "root/config:--mode) reply=( 'json' 'yaml' )") != NULL);
+  CHECK(strstr(script, "_files -/") != NULL);
+  CHECK(strstr(script, "_command_names") != NULL);
+  CHECK(strstr(script, "'__complete' --shell zsh --") != NULL);
+  CHECK(strstr(script, "compdef _prog 'prog'") != NULL);
+
+  free(script);
+  ap_parser_free(p);
+}
+
 TEST(FormatCompletionScriptsCallApplicationForDynamicCallbacks) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -1401,6 +1454,23 @@ TEST(GeneratedBashCompletionScriptPassesBashSyntaxCheck) {
   CHECK(run_command(generate_command) == 0);
   CHECK(std::filesystem::exists(script_path));
   CHECK(run_command("bash -n " + shell_quote(script_path.string())) == 0);
+
+  std::filesystem::remove_all(temp_dir);
+}
+
+TEST(GeneratedZshCompletionScriptPassesZshSyntaxCheck) {
+  const std::string temp_dir = make_temp_dir();
+  const std::filesystem::path script_path =
+      std::filesystem::path(temp_dir) / "_example_completion";
+  const std::string generate_command = shell_quote(AP_EXAMPLE_COMPLETION_PATH) +
+                                       " --generate-zsh-completion > " +
+                                       shell_quote(script_path.string());
+
+  CHECK(run_command(generate_command) == 0);
+  CHECK(std::filesystem::exists(script_path));
+  if (run_command("command -v zsh > /dev/null 2>&1") == 0) {
+    CHECK(run_command("zsh -n " + shell_quote(script_path.string())) == 0);
+  }
 
   std::filesystem::remove_all(temp_dir);
 }

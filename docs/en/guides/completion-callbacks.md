@@ -19,7 +19,7 @@ The recommended wiring is now:
 3. Register completable arguments through `ap_arg_options`.
 4. Call `ap_try_handle_completion(...)` before `ap_parse_args(...)`.
 5. Print completion candidates only when `out_handled` is true.
-6. Generate shell scripts with `ap_format_bash_completion(...)` or `ap_format_fish_completion(...)`.
+6. Generate shell scripts with `ap_format_bash_completion(...)`, `ap_format_fish_completion(...)`, or `ap_format_zsh_completion(...)`.
 
 ```c
 static int maybe_handle_completion_request(ap_parser *parser, int argc,
@@ -133,7 +133,18 @@ source ~/.local/share/bash-completion/completions/example_completion
 
 ```bash
 mkdir -p ~/.config/fish/completions
-./build/sample/example_completion --generate-fish-completion   > ~/.config/fish/completions/example_completion.fish
+./build/sample/example_completion --generate-fish-completion \
+  > ~/.config/fish/completions/example_completion.fish
+```
+
+### Zsh
+
+```bash
+mkdir -p ~/.zsh/completions
+./build/sample/example_completion --generate-zsh-completion \
+  > ~/.zsh/completions/_example_completion
+fpath=(~/.zsh/completions $fpath)
+autoload -Uz compinit && compinit
 ```
 
 These scripts call the configured hidden entrypoint automatically, so end users do not need to know about `__complete` or a custom replacement name.

@@ -7,6 +7,7 @@ add_library(argparse-c SHARED
   format_manpage.c
   format_completion_bash.c
   format_completion_fish.c
+  format_completion_zsh.c
 )
 
 set_target_properties(argparse-c PROPERTIES

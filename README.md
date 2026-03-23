@@ -250,9 +250,13 @@ install -Dm644 your_app.bash ~/.local/share/bash-completion/completions/your_app
 # fish
 ./your_app --generate-fish-completion > your_app.fish
 install -Dm644 your_app.fish ~/.config/fish/completions/your_app.fish
+
+# zsh
+./your_app --generate-zsh-completion > _your_app
+install -Dm644 _your_app ~/.zsh/completions/_your_app
 ```
 
-If your application uses only the default hidden completion entrypoint, make sure `main(...)` calls `ap_try_handle_completion(...)` before `ap_parse_args(...)`, then expose generator flags that print `ap_format_bash_completion(...)` or `ap_format_fish_completion(...)`.
+If your application uses only the default hidden completion entrypoint, make sure `main(...)` calls `ap_try_handle_completion(...)` before `ap_parse_args(...)`, then expose generator flags that print `ap_format_bash_completion(...)`, `ap_format_fish_completion(...)`, or `ap_format_zsh_completion(...)`.
 
 ## Completion is part of the default CLI path
 

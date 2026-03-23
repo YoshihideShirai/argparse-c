@@ -197,6 +197,7 @@ char *ap_format_help(const ap_parser *parser);
 char *ap_format_manpage(const ap_parser *parser);
 char *ap_format_bash_completion(const ap_parser *parser);
 char *ap_format_fish_completion(const ap_parser *parser);
+char *ap_format_zsh_completion(const ap_parser *parser);
 char *ap_format_error(const ap_parser *parser, const ap_error *err);
 int ap_complete(const ap_parser *parser, int argc, char **argv,
                 const char *shell, ap_completion_result *out_result,

@@ -1236,6 +1236,10 @@ char *ap_format_fish_completion(const ap_parser *parser) {
   return ap_fish_completion_build(parser);
 }
 
+char *ap_format_zsh_completion(const ap_parser *parser) {
+  return ap_zsh_completion_build(parser);
+}
+
 int ap_try_handle_completion(const ap_parser *parser, int argc, char **argv,
                              const char *default_shell, int *out_handled,
                              ap_completion_result *out_result, ap_error *err) {
