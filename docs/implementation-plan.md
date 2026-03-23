@@ -185,22 +185,22 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 ### String-generation edge cases by formatter
 
 #### `lib/format_completion_bash.c`
-- choice 値に空白を含むケース（`"two words"`）
-- choice 値に単一引用符を含むケース（`"it's"`）
-- `prog` / subcommand / option 名に `-` や `.` が含まれ、identifier 化で `_` へ置換されるケース
-- help ではなく choices / parser key / dispatch key 中に特殊文字が入るケース
+- choice 値に空白を含むケース（`"two words"`）。✅ `test/test_format_and_api.cpp` で実装済み。
+- choice 値に単一引用符を含むケース（`"it's"`）。✅ `test/test_format_and_api.cpp` で実装済み。
+- `prog` / subcommand / option 名に `-` や `.` が含まれ、identifier 化で `_` へ置換されるケース。✅ `test/test_format_and_api.cpp` で実装済み。
+- help ではなく choices / parser key / dispatch key 中に特殊文字が入るケース。✅ `test/test_format_and_api.cpp` で実装済み。
 
 #### `lib/format_completion_fish.c`
-- help 文に空白、`"`, `\`, `$`, 改行を含むケース
-- choice 値に空白や `$HOME` のような展開文字列を含むケース
-- metavar fallback が `dest` の `_` を `-` に戻すケース
-- 深い parser key と説明文が同時に出るケース
+- help 文に空白、`"`, `\`, `$`, 改行を含むケース。✅ `test/test_format_and_api.cpp` で実装済み。
+- choice 値に空白や `$HOME` のような展開文字列を含むケース。✅ `test/test_format_and_api.cpp` で実装済み。
+- metavar fallback が `dest` の `_` を `-` に戻すケース。✅ `test/test_format_and_api.cpp` で関連ケース実装済み。
+- 深い parser key と説明文が同時に出るケース。✅ `test/test_format_and_api.cpp` で実装済み。
 
 #### `lib/format_manpage.c`
-- help / default / choice に `-`, `\`, 行頭 `.` / `'`、改行を含むケース
+- help / default / choice に `-`, `\`, 行頭 `.` / `'`、改行を含むケース。✅ `test/test_format_and_api.cpp` で実装済み。
 - option signature の metavar に空白や引用符を含めた場合の roff 出力確認
 - positional / optional が混在し、`nargs` 展開と roff escape が同時に入るケース
-- nested subcommand の help/synopsis に特殊文字が含まれるケース
+- nested subcommand の help/synopsis に特殊文字が含まれるケース。✅ `test/test_format_and_api.cpp` で実装済み。
 
 ### Parser edge cases to add (`lib/core_parser.c`)
 
