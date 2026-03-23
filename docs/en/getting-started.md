@@ -20,6 +20,28 @@ cmake --install build --prefix /usr/local
 
 If you want to install into a temporary staging directory first, replace `/usr/local` with your preferred prefix.
 
+## Install from the release asset
+
+GitHub Releases publish `argparse-c-<version>-linux-install-tree.tar.gz`, which packages the `cmake --install` output for library consumers instead of sample executables.
+
+```bash
+curl -L -o argparse-c-linux-install-tree.tar.gz \
+  https://github.com/yoshihideshirai/argparse-c/releases/download/vX.Y.Z/argparse-c-vX.Y.Z-linux-install-tree.tar.gz
+mkdir -p /tmp/argparse-c
+sudo mkdir -p /usr/local
+
+tar -xzf argparse-c-linux-install-tree.tar.gz -C /tmp/argparse-c
+sudo cp -a /tmp/argparse-c/include /usr/local/
+sudo cp -a /tmp/argparse-c/lib /usr/local/
+```
+
+This tarball includes:
+
+- `include/argparse-c.h`
+- the shared library under `lib/`
+- the CMake package files under `lib/cmake/argparse-c/`
+- the pkg-config file under `lib/pkgconfig/argparse-c.pc`
+
 ## Use from another project
 
 ### CMake package
@@ -175,7 +197,7 @@ man ./example_manpage.1
 
 ## Enable shell completion immediately after install
 
-Completion is enabled on every new parser by default. In the common case you only need to call `ap_try_handle_completion(...)` before `ap_parse_args(...)`, then expose generator flags that print `ap_format_bash_completion(...)` or `ap_format_fish_completion(...)`.
+Completion is enabled on every new parser by default. The release asset does not include a generic completion script because each downstream CLI generates its own script after linking against `argparse-c`. In the common case you only need to call `ap_try_handle_completion(...)` before `ap_parse_args(...)`, then expose generator flags that print `ap_format_bash_completion(...)` or `ap_format_fish_completion(...)`.
 
 ```c
 ap_completion_result completion = {0};

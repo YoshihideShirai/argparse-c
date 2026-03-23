@@ -20,6 +20,28 @@ cmake --install build --prefix /usr/local
 
 一度ステージング用ディレクトリへ入れたい場合は、`/usr/local` を任意の prefix に置き換えてください。
 
+## Release asset からインストールする
+
+GitHub Releases では、sample 実行ファイル中心ではなく、`cmake --install` の出力をそのまま固めた `argparse-c-<version>-linux-install-tree.tar.gz` を配布します。
+
+```bash
+curl -L -o argparse-c-linux-install-tree.tar.gz \
+  https://github.com/yoshihideshirai/argparse-c/releases/download/vX.Y.Z/argparse-c-vX.Y.Z-linux-install-tree.tar.gz
+mkdir -p /tmp/argparse-c
+sudo mkdir -p /usr/local
+
+tar -xzf argparse-c-linux-install-tree.tar.gz -C /tmp/argparse-c
+sudo cp -a /tmp/argparse-c/include /usr/local/
+sudo cp -a /tmp/argparse-c/lib /usr/local/
+```
+
+この tarball には次が含まれます。
+
+- `include/argparse-c.h`
+- `lib/` 配下の shared library
+- `lib/cmake/argparse-c/` 配下の CMake package files
+- `lib/pkgconfig/argparse-c.pc` の pkg-config file
+
 ## 別プロジェクトから使う
 
 ### CMake package
@@ -172,3 +194,55 @@ man ./example_manpage.1
 - [Completion callback](guides/completion-callbacks.md)
 - [API仕様](../api-spec.ja.md)
 - [English Getting Started](../en/getting-started.md)
+
+## すぐに shell completion を有効化する
+
+release asset 自体には汎用 completion script は含まれません。completion script は `argparse-c` にリンクした各 CLI アプリケーションが、自身の parser 定義から生成する前提です。
+
+Completion は新しい parser でデフォルト有効です。通常は `ap_parse_args(...)` の前に `ap_try_handle_completion(...)` を呼び、その上で `ap_format_bash_completion(...)` または `ap_format_fish_completion(...)` を出力する generator フラグを CLI に追加します。
+
+```c
+ap_completion_result completion = {0};
+int completion_handled = 0;
+
+if (ap_try_handle_completion(parser, argc, argv, "bash", &completion_handled,
+                             &completion, &err) != 0) {
+  fprintf(stderr, "%s\n", err.message);
+  ap_completion_result_free(&completion);
+  return 1;
+}
+if (completion_handled) {
+  for (int i = 0; i < completion.count; i++) {
+    printf("%s\n", completion.items[i].value);
+  }
+  ap_completion_result_free(&completion);
+  return 0;
+}
+```
+
+明示的な subcommand 名と衝突させたい場合や、隠し completion entrypoint 自体を無効化したい場合だけ opt out してください。
+
+```c
+ap_parser_set_completion(parser, false, NULL, &err);
+```
+
+### Bash の設定
+
+```bash
+./build/sample/example_completion --generate-bash-completion > ./example_completion.bash
+mkdir -p ~/.local/share/bash-completion/completions
+cp ./example_completion.bash ~/.local/share/bash-completion/completions/example_completion
+source ~/.local/share/bash-completion/completions/example_completion
+```
+
+release asset から導入した場合も、手順は同じで、自分の CLI バイナリから script を生成して配置します。
+
+### Fish の設定
+
+```bash
+mkdir -p ~/.config/fish/completions
+./build/sample/example_completion --generate-fish-completion \
+  > ~/.config/fish/completions/example_completion.fish
+```
+
+こちらも release asset から導入した場合は、`example_completion` の代わりに自分の CLI バイナリを使って script を生成してください。
