@@ -11,24 +11,26 @@ ap_parser *set = ap_add_subcommand(config, "set", "set a value", &err);
 
 ## パース結果
 
-パース成功時、namespace の組み込みキーとして `"subcommand"` が使えます。
+パース成功時、namespace の組み込みキーとして `"subcommand"` と `"subcommand_path"` が使えます。
 
-- 保存されるのは **最終的に選ばれた leaf subcommand 名**
+- `subcommand` には **最終的に選ばれた leaf subcommand 名** が入ります
 - 中間階層は別キーとして保存されません
-- `subcommand_path` は現在の公開 contract には含まれません
+- `subcommand_path` には選択されたサブコマンド列全体が入ります
 
 ## 例
 
 ```c
 const char *subcommand = NULL;
+const char *subcommand_path = NULL;
 ap_ns_get_string(ns, "subcommand", &subcommand);
+ap_ns_get_string(ns, "subcommand_path", &subcommand_path);
 ```
 
 ```bash
 prog config set theme dark
 ```
 
-この場合、`subcommand` には `set` が入ります。
+この場合、`subcommand` には `set`、`subcommand_path` には `config set` が入ります。
 
 ## help 表示
 
