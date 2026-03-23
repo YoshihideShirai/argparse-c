@@ -890,12 +890,13 @@ TEST(FormatBashCompletionEscapesChoiceBoundaryCharacters) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("my-prog.v1", "desc");
   ap_arg_options choice = ap_arg_options_default();
-  const char *values[] = {"two words", "it's", "x=y", "lint.v2", "check-x"};
+  const char *values[] = {"two words", "it's",       "x=y",       "lint.v2",
+                          "check-x",   "semi;colon", "brackets[]"};
   char *script = NULL;
 
   CHECK(p != NULL);
   choice.choices.items = values;
-  choice.choices.count = 5;
+  choice.choices.count = 7;
 
   LONGS_EQUAL(0, ap_add_argument(p, "--bash-choice", choice, &err));
 
@@ -903,8 +904,8 @@ TEST(FormatBashCompletionEscapesChoiceBoundaryCharacters) {
   CHECK(script != NULL);
   CHECK(strstr(script, "complete -F _my_prog_v1 'my-prog.v1'") != NULL);
   CHECK(strstr(script, "root:--bash-choice)") != NULL);
-  CHECK(strstr(script, "'two words' 'it'\\''s' 'x=y' 'lint.v2' 'check-x'") !=
-        NULL);
+  CHECK(strstr(script, "'two words' 'it'\\''s' 'x=y' 'lint.v2' 'check-x' "
+                       "'semi;colon' 'brackets[]'") != NULL);
 
   free(script);
   ap_parser_free(p);
@@ -944,6 +945,7 @@ TEST(FormatFishCompletionEscapesHelpAndChoiceBoundaryCharacters) {
 TEST(FormatManpageEscapesRoffBoundaryCharacters) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("tool", "desc");
+  ap_parser *sub = NULL;
   ap_arg_options man_opt = ap_arg_options_default();
   const char *choices[] = {"-dash", "\\slash", ".dot", "'tick", "line1\nline2"};
   char *manpage = NULL;
@@ -955,6 +957,8 @@ TEST(FormatManpageEscapesRoffBoundaryCharacters) {
   man_opt.choices.count = 5;
 
   LONGS_EQUAL(0, ap_add_argument(p, "--man-opt", man_opt, &err));
+  sub = ap_add_subcommand(p, ".lint", "'sub\n-dash", &err);
+  CHECK(sub != NULL);
 
   manpage = ap_format_manpage(p);
   CHECK(manpage != NULL);
@@ -967,6 +971,9 @@ TEST(FormatManpageEscapesRoffBoundaryCharacters) {
                "choices: \\-dash, \\\\slash, \\&.dot, \\&'tick, line1") !=
         NULL);
   CHECK(strstr(manpage, "line2") != NULL);
+  CHECK(strstr(manpage, "\\&.lint") != NULL);
+  CHECK(strstr(manpage, "\\&'sub") != NULL);
+  CHECK(strstr(manpage, "\\-dash") != NULL);
 
   free(manpage);
   ap_parser_free(p);
@@ -983,7 +990,7 @@ TEST(FormatGeneratorsKeepDeepNestedCompletionAndManpageKeysAligned) {
   const char *leaf_choices[] = {"fast", "slow"};
   char *bash = NULL;
   char *fish = NULL;
-  char *zsh = NULL;
+  char *help = NULL;
   char *manpage = NULL;
 
   CHECK(p != NULL);
@@ -1003,10 +1010,12 @@ TEST(FormatGeneratorsKeepDeepNestedCompletionAndManpageKeysAligned) {
 
   bash = ap_format_bash_completion(p);
   fish = ap_format_fish_completion(p);
+  help = ap_format_help(p);
   manpage = ap_format_manpage(p);
 
   CHECK(bash != NULL);
   CHECK(fish != NULL);
+  CHECK(help != NULL);
   CHECK(manpage != NULL);
 
   CHECK(strstr(bash, "parser_subcommands='build-tools'") != NULL);
@@ -1036,6 +1045,10 @@ TEST(FormatGeneratorsKeepDeepNestedCompletionAndManpageKeysAligned) {
                "root/build-tools/lint.v2/check-x/final.step:--leaf-mode)'") !=
         NULL);
 
+  CHECK(strstr(help, "usage: my-prog.v1") != NULL);
+  CHECK(strstr(help, "build-tools") != NULL);
+  CHECK(strstr(help, "build helpers") != NULL);
+
   CHECK(strstr(manpage, ".SH SYNOPSIS") != NULL);
   CHECK(strstr(manpage, "my\\-prog.v1 build\\-tools lint.v2 check\\-x [\\-h] "
                         "[SUBCOMMAND]") != NULL);
@@ -1046,6 +1059,7 @@ TEST(FormatGeneratorsKeepDeepNestedCompletionAndManpageKeysAligned) {
 
   free(bash);
   free(fish);
+  free(help);
   free(manpage);
   ap_parser_free(p);
 }
