@@ -80,6 +80,6 @@ int main(int argc, char **argv) {
 1. [Getting Started](getting-started.md)
 2. [基本の使い方](guides/basic-usage.md)
 3. [オプションと型](guides/options-and-types.md)
-4. [Completion callback ガイド](guides/completion-callbacks.md)
+4. [Completion callback ガイド](guides/completion-callbacks.md) — `ap_complete(...)` / `ap_completion_callback` / `__complete` / shell 統合 / fallback 方針
 5. [API Reference（日本語）](../api-spec.ja.md)
 6. [English documentation](../en/index.md)

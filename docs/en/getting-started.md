@@ -126,7 +126,7 @@ source ./example_completion.bash
 ./build/sample/example_completion --generate-fish-completion   > ~/.config/fish/completions/example_completion.fish
 ```
 
-For runtime-aware completion callbacks, continue with [Completion callbacks](guides/completion-callbacks.md).
+For runtime-aware completion callbacks, continue with [Completion callbacks](guides/completion-callbacks.md), which shows the exact APIs to wire: `ap_arg_options.completion_callback`, `ap_arg_options.completion_kind`, `ap_complete(...)`, and the hidden `__complete` entrypoint.
 
 ### Generate a man page
 
