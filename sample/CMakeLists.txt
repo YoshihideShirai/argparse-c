@@ -9,3 +9,6 @@ target_link_libraries(example_completion argparse-c)
 
 add_executable(example_manpage example_manpage.c)
 target_link_libraries(example_manpage argparse-c)
+
+add_executable(example_introspection example_introspection.c)
+target_link_libraries(example_introspection argparse-c)

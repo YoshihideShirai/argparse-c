@@ -263,6 +263,12 @@ Frees unknown token arrays returned by `ap_parse_known_args`.
 - `ap_format_usage/help/error` return values -> `free`
 - `ap_parse_known_args` unknown array -> `ap_free_tokens`
 
+## 8.5 Practical examples and reverse links
+- Parse basics and error formatting: [`README.md`](../README.md), [`sample/example1.c`](../sample/example1.c)
+- Nested subcommands and `subcommand_path`: [`README.md`](../README.md), [`sample/example_subcommands.c`](../sample/example_subcommands.c)
+- Formatter APIs (`ap_format_help`, `ap_format_manpage`, shell completion formatters): [`README.md`](../README.md), [`sample/example_completion.c`](../sample/example_completion.c), [`sample/example_manpage.c`](../sample/example_manpage.c)
+- Introspection APIs (`ap_parser_get_info`, `ap_parser_get_argument`, `ap_parser_get_subcommand`): [`README.md`](../README.md), [`sample/example_introspection.c`](../sample/example_introspection.c)
+
 ## 9. Minimal Example
 
 ```c
