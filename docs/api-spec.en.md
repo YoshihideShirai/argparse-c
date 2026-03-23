@@ -65,8 +65,8 @@ Options passed to `ap_add_argument`.
 - `choices`: allowed values (`ap_choices`)
 - `completion_kind`: completion metadata kind (`ap_completion_kind`)
 - `completion_hint`: optional generator-specific hint string for completions
-- `completion_callback`: optional application callback for dynamic completion candidates (planned extension)
-- `completion_user_data`: opaque pointer passed to `completion_callback` (planned extension)
+- `completion_callback`: optional application callback for dynamic completion candidates
+- `completion_user_data`: opaque pointer passed to `completion_callback`
 - `dest`: key used for lookup (auto-generated when omitted)
 
 Use `ap_arg_options_default()` first, then override needed fields.
@@ -84,12 +84,13 @@ Use `ap_arg_options_default()` first, then override needed fields.
 - when `completion_kind == AP_COMPLETION_KIND_NONE` and `choices` is present, generators treat it as the default `CHOICES` behavior
 - static metadata remains the baseline contract for parse-time validation and offline generator output
 - `completion_hint` is reserved for generator-specific hints and does not change parse-time validation
-- callback-style dynamic completion is the planned extension point described below; it augments, but does not replace, the static metadata rules above
+- callback-style dynamic completion augments, but does not replace, the static metadata rules above
 
-#### Planned dynamic completion extension
-The current public contract exposes only static completion metadata through `ap_completion_kind`, `choices`, and `completion_hint`. The next-stage design extends that contract so applications can return candidates at runtime without changing parse behavior.
+#### Dynamic completion callback contract
+The public API also supports runtime completion through `completion_callback`,
+`completion_user_data`, and `ap_complete(...)`.
 
-**Planned typedef**
+**Callback typedef**
 
 ```c
 typedef int (*ap_completion_callback)(const ap_completion_request *request,
@@ -104,12 +105,12 @@ The exact helper structs can evolve, but the callback contract should preserve t
 - return value follows the library convention (`0` success, `-1` failure) with details in `ap_error`
 - `user_data` is opaque application state; the library stores and forwards it without interpretation
 
-**Planned `ap_arg_options` extension**
-- add `completion_callback` and `completion_user_data`
-- keep `completion_kind` / `choices` / `completion_hint` valid even when a callback is present
-- define precedence as:
+**`ap_arg_options` callback fields**
+- `completion_callback` and `completion_user_data` are part of the public argument definition contract
+- `completion_kind` / `choices` / `completion_hint` remain valid even when a callback is present
+- precedence is:
   1. if `completion_callback` is set, shells that support dynamic completion query it first
-  2. if the callback declines or returns no candidates, generators may fall back to static metadata
+  2. if the callback returns no candidates, completion may fall back to static metadata
   3. parse-time validation still depends only on argument definition fields such as `choices`, not on callback output
 
 **Compatibility rules**
@@ -117,21 +118,21 @@ The exact helper structs can evolve, but the callback contract should preserve t
 - generators that cannot execute application callbacks still emit useful scripts from static metadata alone
 - introspection APIs should continue to expose the static fields; callback exposure is optional and should be documented separately because function pointers are not portable serialization data
 
-**Generator strategy under consideration**
-Two implementation directions are being compared for bash / fish.
+**Generator strategy**
+For bash / fish, generated scripts call back into the application through a completion subcommand.
 
 1. **Embed callback behavior directly into generated scripts**
-   - not preferred for the public API
+   - not used by the current public API
    - generated shell code cannot safely serialize a C function pointer
    - shell-specific glue would have to invent a second transport protocol anyway
 
 2. **Call back into the application through a completion subcommand**
-   - preferred direction for bash / fish generators
+   - this is the current direction used by the bash / fish generators
    - generated scripts remain thin wrappers that invoke something like `prog __complete ...`
    - the application reconstructs parse context, calls `ap_completion_callback`, and prints candidates in a shell-neutral format
    - this keeps dynamic policy inside the application binary and lets static metadata remain available for offline fallback
 
-**Recommended contract split**
+**Contract split**
 - library definition layer: declare callback types and store them in `ap_arg_options`
 - application/runtime layer: provide a completion entrypoint/subcommand that shells can execute
 - generator layer: emit shell adapters that prefer the subcommand path for dynamic candidates and fall back to static metadata when unavailable

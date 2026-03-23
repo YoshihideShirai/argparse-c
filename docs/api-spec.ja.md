@@ -65,6 +65,8 @@
 - `choices`: 許容値一覧（`ap_choices`）
 - `completion_kind`: 静的な補完メタデータ（`ap_completion_kind`）
 - `completion_hint`: 補完生成器向けの任意ヒント文字列
+- `completion_callback`: 動的補完候補を返す任意のアプリケーションコールバック
+- `completion_user_data`: `completion_callback` にそのまま渡される任意ポインタ
 - `dest`: 取得キー名（未指定時は自動生成）
 
 `ap_arg_options_default()` で初期化してから必要項目を上書きする使い方を推奨します。
@@ -80,8 +82,19 @@
 - bash / fish 生成器は `completion_kind` が `AP_COMPLETION_KIND_NONE` 以外ならそれを優先します
 - `completion_kind == AP_COMPLETION_KIND_CHOICES` の場合、補完元として `choices` を使います
 - `completion_kind == AP_COMPLETION_KIND_NONE` で `choices` が設定されている場合は、デフォルトの `CHOICES` 挙動として扱います
-- 現段階では静的メタデータのみで、コールバック型の動的補完APIは公開しません
+- コールバック型の動的補完APIは公開されており、静的メタデータを補完する仕組みとして使えます
 - `completion_hint` は生成器固有ヒントのための予約フィールドで、parse時の検証動作は変えません
+
+#### 動的補完コールバック契約
+公開 API では、`completion_callback`、`completion_user_data`、`ap_complete(...)`
+による実行時補完もサポートします。
+
+- コールバック入力は読み取り専用で、parser path・対象 option/argument・現在のトークン接頭辞・shell 文脈を表します
+- コールバック出力は append-only な候補列で、返却後の所有権は呼び出し側にあります
+- 戻り値はライブラリ共通規約どおり、成功で `0`、失敗で `-1`、詳細は `ap_error` に入ります
+- `completion_user_data` はライブラリが解釈せず、そのまま保存・転送するアプリケーション状態です
+- `completion_kind` / `choices` / `completion_hint` は、コールバック併用時も静的フォールバックとして有効です
+- 優先順位は、`completion_callback` による動的候補が先、候補が無い場合は静的メタデータへのフォールバックです
 
 #### `dest` 自動生成ルール
 - optional 引数では、最初に見つかった long flag（例: `--dry-run`）を優先します
