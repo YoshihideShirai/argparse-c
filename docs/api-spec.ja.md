@@ -110,7 +110,7 @@
   - ネストしたサブコマンドを追加できます
   - パース成功時、最終的に選択された **leaf の** サブコマンド名が namespace の `"subcommand"` に格納されます
   - 途中階層のサブコマンド名は別 namespace key として追加されません
-  - `"subcommand_path"` のような別キーは現在の公開 contract には含まれません
+  - namespace には `"subcommand_path"` も格納され、選択されたサブコマンド列全体（例: `"config set"`）を保持します
   - ネストしたサブコマンド parser に対する `ap_format_help()` は、usage/help にフルコマンドパスを表示します
 
 ### `void ap_parser_free(ap_parser *parser)`

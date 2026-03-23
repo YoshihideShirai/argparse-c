@@ -165,7 +165,7 @@ Adds a child parser for a subcommand.
   - nested subcommands are supported
   - on success, the final selected leaf subcommand name is stored in namespace key `"subcommand"`
   - intermediate subcommand names are not added as separate namespace entries
-  - a separate `"subcommand_path"` key is not part of the current public contract
+  - the namespace also stores `"subcommand_path"`, which contains the full selected subcommand chain (for example `"config set"`)
   - `ap_format_help()` for a nested subcommand parser uses the full command path in usage/help text
 
 ### `void ap_parser_free(ap_parser *parser)`
