@@ -48,6 +48,16 @@ set(AP_CLANG_TOOL_SOURCES
   test/test_subcommands_and_validation.cpp
 )
 
+set(AP_CLANG_TIDY_SOURCES
+  lib/api.c
+  lib/ap_internal.h
+  lib/core_convert.c
+  lib/core_parser.c
+  lib/core_validate.c
+  lib/format_help.c
+  lib/format_completion_fish.c
+)
+
 find_program(AP_CLANG_FORMAT_EXECUTABLE clang-format)
 if(AP_CLANG_FORMAT_EXECUTABLE)
   add_custom_target(format
@@ -73,7 +83,7 @@ if(AP_CLANG_TIDY_EXECUTABLE)
   add_custom_target(tidy
     COMMAND ${AP_CLANG_TIDY_EXECUTABLE}
       -p ${CMAKE_BINARY_DIR}
-      ${AP_CLANG_TOOL_SOURCES}
+      ${AP_CLANG_TIDY_SOURCES}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     USES_TERMINAL
     COMMENT "Running clang-tidy checks"
