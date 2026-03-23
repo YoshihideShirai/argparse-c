@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cerrno>
+#include <cstring>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -49,6 +50,22 @@ int run_command(const std::string &command) {
   }
 
   return rc;
+}
+
+int dynamic_exec_completion(const ap_completion_request *request,
+                            ap_completion_result *result, void *user_data,
+                            ap_error *err) {
+  const char *const *items = static_cast<const char *const *>(user_data);
+  const char *prefix =
+      request && request->current_token ? request->current_token : "";
+
+  for (int i = 0; items && items[i] != nullptr; i++) {
+    if (std::strncmp(items[i], prefix, std::strlen(prefix)) == 0 &&
+        ap_completion_result_add(result, items[i], "dynamic", err) != 0) {
+      return -1;
+    }
+  }
+  return 0;
 }
 
 }  // namespace
@@ -849,15 +866,58 @@ TEST(ArgumentInfoExposesCompletionMetadata) {
   ap_parser *p = ap_parser_new("prog", "desc");
   ap_arg_options cmd = ap_arg_options_default();
   ap_arg_info info = {};
+  static const char *const commands[] = {"git", nullptr};
 
   CHECK(p != NULL);
   cmd.completion_kind = AP_COMPLETION_KIND_COMMAND;
   cmd.completion_hint = "shell command";
+  cmd.completion_callback = dynamic_exec_completion;
+  cmd.completion_user_data = (void *)commands;
 
   LONGS_EQUAL(0, ap_add_argument(p, "--exec", cmd, &err));
   LONGS_EQUAL(0, ap_parser_get_argument(p, 1, &info));
   LONGS_EQUAL(AP_COMPLETION_KIND_COMMAND, info.completion_kind);
   STRCMP_EQUAL("shell command", info.completion_hint);
+  CHECK(info.has_completion_callback);
+
+  ap_parser_free(p);
+}
+
+TEST(CompleteUsesDynamicCallbackAndStaticChoiceFallback) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options exec = ap_arg_options_default();
+  ap_arg_options mode = ap_arg_options_default();
+  ap_completion_result result = {};
+  static const char *const commands[] = {"git", "grep", "ls", nullptr};
+  const char *modes[] = {"fast", "slow"};
+  char arg0[] = "--exec";
+  char arg1[] = "gr";
+  char *argv1[] = {arg0, arg1};
+  char arg2[] = "--mode";
+  char arg3[] = "s";
+  char *argv2[] = {arg2, arg3};
+
+  CHECK(p != NULL);
+  exec.completion_callback = dynamic_exec_completion;
+  exec.completion_user_data = (void *)commands;
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--exec", exec, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  LONGS_EQUAL(0, ap_complete(p, 2, argv1, "bash", &result, &err));
+  LONGS_EQUAL(1, result.count);
+  STRCMP_EQUAL("grep", result.items[0].value);
+  STRCMP_EQUAL("gr", arg1);
+  ap_completion_result_free(&result);
+
+  LONGS_EQUAL(0, ap_complete(p, 2, argv2, "bash", &result, &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("fast", result.items[0].value);
+  STRCMP_EQUAL("slow", result.items[1].value);
+  ap_completion_result_free(&result);
 
   ap_parser_free(p);
 }
@@ -901,6 +961,37 @@ TEST(FormatCompletionUsesStaticCompletionMetadata) {
   CHECK(strstr(fish, "-l dir -d \"DIR\" -r -a '(__fish_complete_directories)'") != NULL);
   CHECK(strstr(fish, "-l exec -d \"EXEC\" -r -a '(__fish_complete_command)'") != NULL);
   CHECK(strstr(fish, "-l mode -d \"MODE\" -r -a '(__ap_prog_value_choices root:--mode)'") != NULL);
+
+  free(bash);
+  free(fish);
+  ap_parser_free(p);
+}
+
+TEST(FormatCompletionScriptsCallApplicationForDynamicCallbacks) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options exec = ap_arg_options_default();
+  char *bash = NULL;
+  char *fish = NULL;
+  static const char *const commands[] = {"git", nullptr};
+
+  CHECK(p != NULL);
+  exec.completion_callback = dynamic_exec_completion;
+  exec.completion_user_data = (void *)commands;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--exec", exec, &err));
+
+  bash = ap_format_bash_completion(p);
+  fish = ap_format_fish_completion(p);
+  CHECK(bash != NULL);
+  CHECK(fish != NULL);
+  CHECK(strstr(bash, "__complete --shell bash -- \"${COMP_WORDS[@]:1}\"") !=
+        NULL);
+  CHECK(strstr(bash, "root:--exec) printf '%s\\n' 'dynamic' ;;") != NULL);
+  CHECK(strstr(fish, "\"prog\" __complete --shell fish -- $tokens $current") !=
+        NULL);
+  CHECK(strstr(fish, "-l exec -d \"EXEC\" -r -a '(__ap_prog_dynamic_complete)'") !=
+        NULL);
 
   free(bash);
   free(fish);

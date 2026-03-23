@@ -64,6 +64,38 @@ typedef enum {
   AP_COMPLETION_KIND_COMMAND,
 } ap_completion_kind;
 
+typedef struct ap_completion_request ap_completion_request;
+typedef struct ap_completion_result ap_completion_result;
+typedef struct ap_parser ap_parser;
+typedef struct ap_mutually_exclusive_group ap_mutually_exclusive_group;
+typedef struct ap_namespace ap_namespace;
+
+typedef struct {
+  const char *value;
+  const char *help;
+} ap_completion_candidate;
+
+struct ap_completion_result {
+  ap_completion_candidate *items;
+  int count;
+  int cap;
+};
+
+typedef int (*ap_completion_callback)(const ap_completion_request *request,
+                                      ap_completion_result *result,
+                                      void *user_data, ap_error *err);
+
+struct ap_completion_request {
+  const ap_parser *parser;
+  const char *shell;
+  const char *current_token;
+  const char *active_option;
+  const char *subcommand_path;
+  const char *dest;
+  int argc;
+  char **argv;
+};
+
 typedef struct {
   ap_type type;
   ap_action action;
@@ -77,12 +109,10 @@ typedef struct {
   ap_choices choices;
   ap_completion_kind completion_kind;
   const char *completion_hint;
+  ap_completion_callback completion_callback;
+  void *completion_user_data;
   const char *dest;
 } ap_arg_options;
-
-typedef struct ap_parser ap_parser;
-typedef struct ap_mutually_exclusive_group ap_mutually_exclusive_group;
-typedef struct ap_namespace ap_namespace;
 
 typedef enum {
   AP_ARG_KIND_POSITIONAL = 0,
@@ -106,6 +136,7 @@ typedef struct {
   ap_choices choices;
   ap_completion_kind completion_kind;
   const char *completion_hint;
+  bool has_completion_callback;
   bool required;
   ap_nargs nargs;
   int nargs_count;
@@ -147,6 +178,13 @@ char *ap_format_manpage(const ap_parser *parser);
 char *ap_format_bash_completion(const ap_parser *parser);
 char *ap_format_fish_completion(const ap_parser *parser);
 char *ap_format_error(const ap_parser *parser, const ap_error *err);
+int ap_complete(const ap_parser *parser, int argc, char **argv,
+                const char *shell, ap_completion_result *out_result,
+                ap_error *err);
+void ap_completion_result_init(ap_completion_result *result);
+void ap_completion_result_free(ap_completion_result *result);
+int ap_completion_result_add(ap_completion_result *result, const char *value,
+                             const char *help, ap_error *err);
 
 int ap_parser_get_info(const ap_parser *parser, ap_parser_info *out_info);
 int ap_parser_get_argument(const ap_parser *parser, int index,

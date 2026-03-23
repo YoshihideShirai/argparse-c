@@ -355,6 +355,63 @@ ap_arg_options ap_arg_options_default(void) {
   return options;
 }
 
+void ap_completion_result_init(ap_completion_result *result) {
+  if (!result) {
+    return;
+  }
+  memset(result, 0, sizeof(*result));
+}
+
+void ap_completion_result_free(ap_completion_result *result) {
+  int i;
+
+  if (!result) {
+    return;
+  }
+  for (i = 0; i < result->count; i++) {
+    free((void *)result->items[i].value);
+    free((void *)result->items[i].help);
+  }
+  free(result->items);
+  ap_completion_result_init(result);
+}
+
+int ap_completion_result_add(ap_completion_result *result, const char *value,
+                             const char *help, ap_error *err) {
+  ap_completion_candidate *next;
+  int next_cap;
+
+  if (!result || !value || value[0] == '\0') {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "",
+                 "completion value is required");
+    return -1;
+  }
+  if (result->count == result->cap) {
+    next_cap = result->cap == 0 ? 4 : result->cap * 2;
+    next = realloc(result->items,
+                   sizeof(ap_completion_candidate) * (size_t)next_cap);
+    if (!next) {
+      ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+      return -1;
+    }
+    result->items = next;
+    result->cap = next_cap;
+  }
+  result->items[result->count].value = ap_strdup(value);
+  result->items[result->count].help = help ? ap_strdup(help) : NULL;
+  if (!result->items[result->count].value ||
+      (help && !result->items[result->count].help)) {
+    free((void *)result->items[result->count].value);
+    free((void *)result->items[result->count].help);
+    result->items[result->count].value = NULL;
+    result->items[result->count].help = NULL;
+    ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+    return -1;
+  }
+  result->count++;
+  return 0;
+}
+
 static int add_builtin_help(ap_parser *parser) {
   ap_arg_options opts;
   ap_error ignored_err;
@@ -1050,6 +1107,215 @@ char *ap_format_fish_completion(const ap_parser *parser) {
   return ap_fish_completion_build(parser);
 }
 
+static bool completion_action_takes_no_value(ap_action action) {
+  return action == AP_ACTION_STORE_TRUE || action == AP_ACTION_STORE_FALSE ||
+         action == AP_ACTION_COUNT || action == AP_ACTION_STORE_CONST;
+}
+
+static const ap_arg_def *find_def_by_flag(const ap_parser *parser,
+                                          const char *flag) {
+  int i;
+  int j;
+
+  if (!parser || !flag) {
+    return NULL;
+  }
+  for (i = 0; i < parser->defs_count; i++) {
+    const ap_arg_def *def = &parser->defs[i];
+    if (!def->is_optional) {
+      continue;
+    }
+    for (j = 0; j < def->flags_count; j++) {
+      if (strcmp(def->flags[j], flag) == 0) {
+        return def;
+      }
+    }
+  }
+  return NULL;
+}
+
+static const ap_subcommand_def *find_subcommand_def(const ap_parser *parser,
+                                                    const char *name) {
+  int i;
+
+  if (!parser || !name) {
+    return NULL;
+  }
+  for (i = 0; i < parser->subcommands_count; i++) {
+    if (strcmp(parser->subcommands[i].name, name) == 0) {
+      return &parser->subcommands[i];
+    }
+  }
+  return NULL;
+}
+
+static int append_completion_path(char *buf, size_t buf_size,
+                                  const char *current_path,
+                                  const char *segment) {
+  if (!buf || buf_size == 0) {
+    return -1;
+  }
+  if (!segment || segment[0] == '\0') {
+    return snprintf(buf, buf_size, "%s", current_path ? current_path : "");
+  }
+  if (!current_path || current_path[0] == '\0') {
+    return snprintf(buf, buf_size, "%s", segment);
+  }
+  return snprintf(buf, buf_size, "%s %s", current_path, segment);
+}
+
+static int add_static_completion_items(const ap_arg_def *def,
+                                       ap_completion_result *result,
+                                       ap_error *err) {
+  int i;
+  ap_completion_kind kind;
+
+  if (!def || !result) {
+    return 0;
+  }
+  kind = def->opts.completion_kind;
+  if (kind == AP_COMPLETION_KIND_NONE && def->opts.choices.items &&
+      def->opts.choices.count > 0) {
+    kind = AP_COMPLETION_KIND_CHOICES;
+  }
+  if (kind != AP_COMPLETION_KIND_CHOICES) {
+    return 0;
+  }
+  for (i = 0; i < def->opts.choices.count; i++) {
+    if (ap_completion_result_add(result, def->opts.choices.items[i], NULL,
+                                 err) != 0) {
+      return -1;
+    }
+  }
+  return 0;
+}
+
+int ap_complete(const ap_parser *parser, int argc, char **argv,
+                const char *shell, ap_completion_result *out_result,
+                ap_error *err) {
+  const ap_parser *active_parser = parser;
+  const ap_arg_def *active_def = NULL;
+  const char *active_option = NULL;
+  const char *current_token = "";
+  int scan_count;
+  int i;
+  char subcommand_path[256];
+  ap_completion_request request;
+
+  if (!parser || argc < 0 || !out_result) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "",
+                 "parser and completion result are required");
+    return -1;
+  }
+
+  ap_completion_result_init(out_result);
+  subcommand_path[0] = '\0';
+  scan_count = argc > 0 ? argc - 1 : 0;
+  if (argc > 0 && argv && argv[argc - 1]) {
+    current_token = argv[argc - 1];
+  }
+
+  for (i = 0; i < scan_count; i++) {
+    const char *token = argv[i];
+    const ap_subcommand_def *sub;
+    const ap_arg_def *def;
+
+    if (!token) {
+      continue;
+    }
+    if (strcmp(token, "--") == 0) {
+      break;
+    }
+    if (active_def && !completion_action_takes_no_value(active_def->opts.action)) {
+      active_def = NULL;
+      active_option = NULL;
+      continue;
+    }
+    if (token[0] == '-') {
+      const char *eq = strchr(token, '=');
+      char option_name[128];
+
+      if (eq) {
+        size_t name_len = (size_t)(eq - token);
+        if (name_len >= sizeof(option_name)) {
+          name_len = sizeof(option_name) - 1;
+        }
+        memcpy(option_name, token, name_len);
+        option_name[name_len] = '\0';
+        def = find_def_by_flag(active_parser, option_name);
+      } else {
+        def = find_def_by_flag(active_parser, token);
+      }
+      if (def && !completion_action_takes_no_value(def->opts.action) && !eq) {
+        active_def = def;
+        active_option = token;
+      }
+      continue;
+    }
+
+    sub = find_subcommand_def(active_parser, token);
+    if (sub) {
+      char next_path[256];
+      if (append_completion_path(next_path, sizeof(next_path), subcommand_path,
+                                 sub->name) < 0) {
+        ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+        ap_completion_result_free(out_result);
+        return -1;
+      }
+      strcpy(subcommand_path, next_path);
+      active_parser = sub->parser;
+    }
+  }
+
+  if (scan_count > 0 && argv && argv[scan_count - 1]) {
+    const char *token = argv[scan_count - 1];
+    const char *eq = strchr(token, '=');
+
+    if (eq && token[0] == '-') {
+      char option_name[128];
+      size_t name_len = (size_t)(eq - token);
+      if (name_len >= sizeof(option_name)) {
+        name_len = sizeof(option_name) - 1;
+      }
+      memcpy(option_name, token, name_len);
+      option_name[name_len] = '\0';
+      active_def = find_def_by_flag(active_parser, option_name);
+      active_option = active_def ? option_name : NULL;
+      current_token = eq + 1;
+    }
+  }
+
+  if (!active_def) {
+    return 0;
+  }
+
+  memset(&request, 0, sizeof(request));
+  request.parser = active_parser;
+  request.shell = shell;
+  request.current_token = current_token ? current_token : "";
+  request.active_option = active_option;
+  request.subcommand_path = subcommand_path;
+  request.dest = active_def->dest;
+  request.argc = argc;
+  request.argv = argv;
+
+  if (active_def->opts.completion_callback) {
+    if (active_def->opts.completion_callback(&request, out_result,
+                                            active_def->opts.completion_user_data,
+                                            err) != 0) {
+      ap_completion_result_free(out_result);
+      return -1;
+    }
+  }
+
+  if (out_result->count == 0 &&
+      add_static_completion_items(active_def, out_result, err) != 0) {
+    ap_completion_result_free(out_result);
+    return -1;
+  }
+  return 0;
+}
+
 int ap_parser_get_info(const ap_parser *parser, ap_parser_info *out_info) {
   if (!parser || !out_info) {
     return -1;
@@ -1081,6 +1347,7 @@ int ap_parser_get_argument(const ap_parser *parser, int index,
   out_info->choices = def->opts.choices;
   out_info->completion_kind = def->opts.completion_kind;
   out_info->completion_hint = def->opts.completion_hint;
+  out_info->has_completion_callback = def->opts.completion_callback != NULL;
   out_info->required = def->opts.required;
   out_info->nargs = def->opts.nargs;
   out_info->nargs_count = def->opts.nargs_count;

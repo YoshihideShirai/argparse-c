@@ -26,6 +26,10 @@ static ap_completion_kind option_completion_kind(const ap_arg_def *def) {
   return AP_COMPLETION_KIND_NONE;
 }
 
+static bool option_has_dynamic_completion(const ap_arg_def *def) {
+  return option_takes_value(def) && def->opts.completion_callback != NULL;
+}
+
 static const char *metavar_for(const ap_arg_def *def) {
   static char fallback[64];
   size_t i;
@@ -214,6 +218,14 @@ static int append_option_complete(ap_string_builder *sb, const char *prog,
     if (ap_sb_appendf(sb, " -r") != 0) {
       return -1;
     }
+    if (option_has_dynamic_completion(def)) {
+      if (ap_sb_appendf(sb, " -a '(__ap_") != 0 ||
+          append_identifier(sb, prog) != 0 ||
+          ap_sb_appendf(sb, "_dynamic_complete)'") != 0) {
+        return -1;
+      }
+      return ap_sb_appendf(sb, "\n");
+    }
     switch (completion_kind) {
     case AP_COMPLETION_KIND_CHOICES:
       if (ap_sb_appendf(sb, " -a '(__ap_") != 0 || append_identifier(sb, prog) != 0 ||
@@ -353,6 +365,17 @@ char *ap_fish_completion_build(const ap_parser *parser) {
   if (append_choice_cases(&sb, parser) != 0 ||
       ap_sb_appendf(&sb,
                     "  end\n"
+                    "end\n\nfunction __ap_") != 0 ||
+      append_identifier(&sb, prog) != 0 ||
+      ap_sb_appendf(&sb,
+                    "_dynamic_complete\n"
+                    "  set -l tokens (commandline -opc)\n"
+                    "  set -e tokens[1]\n"
+                    "  set -l current (commandline -ct)\n"
+                    "  ") != 0 ||
+      append_fish_double_quoted(&sb, prog) != 0 ||
+      ap_sb_appendf(&sb,
+                    " __complete --shell fish -- $tokens $current\n"
                     "end\n\n") != 0 ||
       append_complete_commands(&sb, prog, parser) != 0) {
     ap_sb_free(&sb);
