@@ -140,7 +140,6 @@ static int copy_int_values(const ap_arg_def *def, const ap_strvec *src,
   return 0;
 }
 
-
 static int copy_int64_values(const ap_arg_def *def, const ap_strvec *src,
                              ap_ns_entry *dst, ap_error *err) {
   int i;

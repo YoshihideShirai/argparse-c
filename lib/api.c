@@ -461,10 +461,11 @@ static int validate_options(const ap_arg_options *options, bool is_optional,
                    "store_true/store_false requires bool type");
       return -1;
     }
-    if (options->choices.items || options->default_value || options->const_value ||
-        options->nargs != AP_NARGS_ONE) {
+    if (options->choices.items || options->default_value ||
+        options->const_value || options->nargs != AP_NARGS_ONE) {
       ap_error_set(err, AP_ERR_INVALID_DEFINITION, name_or_flags,
-                   "store_true/store_false do not support choices/default_value/const_value/custom nargs");
+                   "store_true/store_false do not support "
+                   "choices/default_value/const_value/custom nargs");
       return -1;
     }
     return 0;
@@ -475,10 +476,11 @@ static int validate_options(const ap_arg_options *options, bool is_optional,
                    "count action requires int32 type");
       return -1;
     }
-    if (options->choices.items || options->default_value || options->const_value ||
-        options->nargs != AP_NARGS_ONE) {
+    if (options->choices.items || options->default_value ||
+        options->const_value || options->nargs != AP_NARGS_ONE) {
       ap_error_set(err, AP_ERR_INVALID_DEFINITION, name_or_flags,
-                   "count action does not support choices/default_value/const_value/custom nargs");
+                   "count action does not support "
+                   "choices/default_value/const_value/custom nargs");
       return -1;
     }
     return 0;
@@ -491,8 +493,9 @@ static int validate_options(const ap_arg_options *options, bool is_optional,
     }
     if (options->default_value || options->choices.items ||
         options->nargs != AP_NARGS_ONE) {
-      ap_error_set(err, AP_ERR_INVALID_DEFINITION, name_or_flags,
-                   "store_const does not support default_value/choices/custom nargs");
+      ap_error_set(
+          err, AP_ERR_INVALID_DEFINITION, name_or_flags,
+          "store_const does not support default_value/choices/custom nargs");
       return -1;
     }
     return 0;

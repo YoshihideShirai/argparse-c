@@ -1223,7 +1223,6 @@ TEST(GeneratedManpageRendersWithMan) {
   std::filesystem::remove_all(temp_dir);
 }
 
-
 TEST(NamespaceGettersSupportInt64AndDoubleArrays) {
   ap_error err = {};
   ap_namespace *ns = NULL;
@@ -1234,9 +1233,11 @@ TEST(NamespaceGettersSupportInt64AndDoubleArrays) {
   int64_t id1 = 0;
   double weight0 = 0.0;
   double weight1 = 0.0;
-  char *argv[] = {(char *)"prog", (char *)"--ids", (char *)"7",
-                  (char *)"--ids", (char *)"9", (char *)"--weights",
-                  (char *)"0.5",  (char *)"--weights", (char *)"1.5", NULL};
+  char *argv[] = {(char *)"prog", (char *)"--ids",
+                  (char *)"7",    (char *)"--ids",
+                  (char *)"9",    (char *)"--weights",
+                  (char *)"0.5",  (char *)"--weights",
+                  (char *)"1.5",  NULL};
 
   CHECK(p != NULL);
   ids.type = AP_TYPE_INT64;
@@ -1272,7 +1273,9 @@ TEST(DefinitionErrorsRejectUnsupportedActionTypeCombinations) {
   count.default_value = "1";
   LONGS_EQUAL(-1, ap_add_argument(p, "--count", count, &err));
   LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
-  STRCMP_EQUAL("count action does not support choices/default_value/const_value/custom nargs", err.message);
+  STRCMP_EQUAL("count action does not support "
+               "choices/default_value/const_value/custom nargs",
+               err.message);
 
   store_const.type = AP_TYPE_DOUBLE;
   store_const.action = AP_ACTION_STORE_CONST;
@@ -1281,11 +1284,12 @@ TEST(DefinitionErrorsRejectUnsupportedActionTypeCombinations) {
   store_const.choices.count = 1;
   LONGS_EQUAL(-1, ap_add_argument(p, "--pi", store_const, &err));
   LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
-  STRCMP_EQUAL("store_const does not support default_value/choices/custom nargs", err.message);
+  STRCMP_EQUAL(
+      "store_const does not support default_value/choices/custom nargs",
+      err.message);
 
   ap_parser_free(p);
 }
-
 
 TEST(NamespaceGettersSupportUint64) {
   ap_error err = {};
@@ -1294,8 +1298,8 @@ TEST(NamespaceGettersSupportUint64) {
   ap_arg_options sizes = ap_arg_options_default();
   uint64_t size0 = 0;
   uint64_t size1 = 0;
-  char *argv[] = {(char *)"prog", (char *)"--sizes", (char *)"1",
-                  (char *)"--sizes", (char *)"2", NULL};
+  char *argv[] = {(char *)"prog",    (char *)"--sizes", (char *)"1",
+                  (char *)"--sizes", (char *)"2",       NULL};
 
   CHECK(p != NULL);
   sizes.type = AP_TYPE_UINT64;

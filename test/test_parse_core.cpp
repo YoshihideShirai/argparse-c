@@ -462,7 +462,6 @@ TEST(ParseArgsTracksAppendCountAndPositionalsAcrossLongSequence) {
   ap_parser_free(p);
 }
 
-
 TEST(ParseInt64AndDoubleValues) {
   ap_error err = {};
   ap_namespace *ns = NULL;
@@ -471,9 +470,9 @@ TEST(ParseInt64AndDoubleValues) {
   ap_arg_options ratio = ap_arg_options_default();
   int64_t big_value = 0;
   double ratio_value = 0.0;
-  char *argv[] = {(char *)"prog",      (char *)"--big",
-                  (char *)"9223372036854775806", (char *)"--ratio",
-                  (char *)"3.25",      NULL};
+  char *argv[] = {
+      (char *)"prog",    (char *)"--big", (char *)"9223372036854775806",
+      (char *)"--ratio", (char *)"3.25",  NULL};
 
   CHECK(p != NULL);
   big.type = AP_TYPE_INT64;
@@ -499,7 +498,8 @@ TEST(InvalidInt64RangeAndInvalidDouble) {
   ap_arg_options ratio = ap_arg_options_default();
   char *argv_big[] = {(char *)"prog", (char *)"--big",
                       (char *)"9223372036854775808", NULL};
-  char *argv_ratio[] = {(char *)"prog", (char *)"--ratio", (char *)"1.2.3", NULL};
+  char *argv_ratio[] = {(char *)"prog", (char *)"--ratio", (char *)"1.2.3",
+                        NULL};
 
   CHECK(p != NULL);
   big.type = AP_TYPE_INT64;
@@ -510,12 +510,14 @@ TEST(InvalidInt64RangeAndInvalidDouble) {
   LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_big, &ns, &err));
   LONGS_EQUAL(AP_ERR_INVALID_INT64, err.code);
   STRCMP_EQUAL("--big", err.argument);
-  STRCMP_EQUAL("argument '--big' must be a valid int64: '9223372036854775808'", err.message);
+  STRCMP_EQUAL("argument '--big' must be a valid int64: '9223372036854775808'",
+               err.message);
 
   LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_ratio, &ns, &err));
   LONGS_EQUAL(AP_ERR_INVALID_DOUBLE, err.code);
   STRCMP_EQUAL("--ratio", err.argument);
-  STRCMP_EQUAL("argument '--ratio' must be a valid double: '1.2.3'", err.message);
+  STRCMP_EQUAL("argument '--ratio' must be a valid double: '1.2.3'",
+               err.message);
 
   ap_parser_free(p);
 }
@@ -532,8 +534,8 @@ TEST(DefaultChoicesAndAppendForInt64AndDouble) {
   double level_value = 0.0;
   int64_t id0 = 0;
   int64_t id1 = 0;
-  char *argv[] = {(char *)"prog", (char *)"--ids", (char *)"10",
-                  (char *)"--ids", (char *)"20", NULL};
+  char *argv[] = {(char *)"prog",  (char *)"--ids", (char *)"10",
+                  (char *)"--ids", (char *)"20",    NULL};
 
   CHECK(p != NULL);
   limit.type = AP_TYPE_INT64;
@@ -563,7 +565,6 @@ TEST(DefaultChoicesAndAppendForInt64AndDouble) {
   ap_namespace_free(ns);
   ap_parser_free(p);
 }
-
 
 TEST(ParseUint64ValuesAndRejectNegativeInput) {
   ap_error err = {};
