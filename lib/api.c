@@ -453,10 +453,9 @@ static ap_parser *parser_alloc(const char *prog, const char *description,
   parser->description = ap_strdup(description ? description : "");
   parser->command_name = ap_strdup(command_name ? command_name : "");
   parser->completion_enabled = options.completion_enabled;
-  parser->completion_entrypoint =
-      ap_strdup(options.completion_entrypoint
-                    ? options.completion_entrypoint
-                    : default_completion_entrypoint());
+  parser->completion_entrypoint = ap_strdup(
+      options.completion_entrypoint ? options.completion_entrypoint
+                                    : default_completion_entrypoint());
   parser->parent = parent;
   if (!parser->prog || !parser->description || !parser->command_name ||
       !parser->completion_entrypoint) {
@@ -520,8 +519,9 @@ bool ap_parser_completion_enabled(const ap_parser *parser) {
 }
 
 const char *ap_parser_completion_entrypoint(const ap_parser *parser) {
-  return parser && parser->completion_entrypoint ? parser->completion_entrypoint
-                                                 : default_completion_entrypoint();
+  return parser && parser->completion_entrypoint
+             ? parser->completion_entrypoint
+             : default_completion_entrypoint();
 }
 
 static int validate_options(const ap_arg_options *options, bool is_optional,
@@ -738,9 +738,9 @@ ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
     return NULL;
   }
   if (is_reserved_completion_name(parser, name)) {
-    ap_error_set(err, AP_ERR_INVALID_DEFINITION, name,
-                 "subcommand '%s' conflicts with reserved completion entrypoint",
-                 name);
+    ap_error_set(
+        err, AP_ERR_INVALID_DEFINITION, name,
+        "subcommand '%s' conflicts with reserved completion entrypoint", name);
     return NULL;
   }
   for (i = 0; i < parser->subcommands_count; i++) {
@@ -766,8 +766,8 @@ ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
     ap_parser_options child_options = ap_parser_options_default();
     child_options.completion_enabled = parser->completion_enabled;
     child_options.completion_entrypoint = parser->completion_entrypoint;
-    def.parser = parser_alloc(prog, description ? description : "", name, parser,
-                              child_options);
+    def.parser = parser_alloc(prog, description ? description : "", name,
+                              parser, child_options);
   }
   free(prog);
   if (!def.name || !def.help || !def.parser) {
