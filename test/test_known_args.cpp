@@ -279,3 +279,88 @@ TEST(ShortOptionClusterRejectsValueOption) {
 
   ap_parser_free(p);
 }
+
+
+TEST(ParseKnownArgsCollectsLongRunsOfUnknownOptionsInOrder) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  const char *text = NULL;
+  const char *input = NULL;
+  char *argv[] = {(char *)"prog", (char *)"--u1", (char *)"--u2", (char *)"--u3",
+                  (char *)"-t",   (char *)"hello", (char *)"file.txt", NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parse_known_args(p, 7, argv, &ns, &unknown, &unknown_count, &err));
+  LONGS_EQUAL(3, unknown_count);
+  STRCMP_EQUAL("--u1", unknown[0]);
+  STRCMP_EQUAL("--u2", unknown[1]);
+  STRCMP_EQUAL("--u3", unknown[2]);
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("hello", text);
+  STRCMP_EQUAL("file.txt", input);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseKnownArgsCollectsUnknownOptionValuePairsWithoutStealingKnownTokens) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  const char *text = NULL;
+  const char *input = NULL;
+  char *argv[] = {(char *)"prog",  (char *)"--u1",   (char *)"v1",      (char *)"--u2",
+                  (char *)"v2",    (char *)"-t",     (char *)"hello",   (char *)"file.txt",
+                  NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parse_known_args(p, 8, argv, &ns, &unknown, &unknown_count, &err));
+  LONGS_EQUAL(4, unknown_count);
+  STRCMP_EQUAL("--u1", unknown[0]);
+  STRCMP_EQUAL("v1", unknown[1]);
+  STRCMP_EQUAL("--u2", unknown[2]);
+  STRCMP_EQUAL("v2", unknown[3]);
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("hello", text);
+  STRCMP_EQUAL("file.txt", input);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseKnownArgsCollectsAllTokensAfterDoubleDashInOrder) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  const char *text = NULL;
+  const char *input = NULL;
+  char *argv[] = {(char *)"prog",  (char *)"-t",      (char *)"hello",   (char *)"file.txt",
+                  (char *)"--",    (char *)"-x",      (char *)"--long",  (char *)"plain",
+                  NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parse_known_args(p, 8, argv, &ns, &unknown, &unknown_count, &err));
+  LONGS_EQUAL(3, unknown_count);
+  STRCMP_EQUAL("-x", unknown[0]);
+  STRCMP_EQUAL("--long", unknown[1]);
+  STRCMP_EQUAL("plain", unknown[2]);
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("hello", text);
+  STRCMP_EQUAL("file.txt", input);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
