@@ -38,7 +38,7 @@ sudo cp -a /tmp/argparse-c/lib /usr/local/
 This tarball includes:
 
 - `include/argparse-c.h`
-- the shared library under `lib/`
+- the shared library and static archive under `lib/`
 - the CMake package files under `lib/cmake/argparse-c/`
 - the pkg-config file under `lib/pkgconfig/argparse-c.pc`
 
@@ -48,17 +48,27 @@ This tarball includes:
 
 ```cmake
 find_package(argparse-c CONFIG REQUIRED)
+
+# Shared library
 target_link_libraries(your_app PRIVATE argparse-c::argparse-c)
+
+# Static library
+target_link_libraries(your_app PRIVATE argparse-c::argparse-c-static)
 ```
 
 ### pkg-config
 
 ```bash
+# Shared library
 pkg-config --cflags --libs argparse-c
 cc main.c $(pkg-config --cflags --libs argparse-c) -o your_app
+
+# Static library
+pkg-config --cflags --libs --static argparse-c
+cc main.c $(pkg-config --cflags --libs --static argparse-c) -o your_app
 ```
 
-The install step places `argparse-cConfig.cmake`, `argparse-cConfigVersion.cmake`, and `argparse-c.pc` under the installation prefix so downstream projects can discover the library without manual include/lib path wiring.
+The install step places `argparse-cConfig.cmake`, `argparse-cConfigVersion.cmake`, and `argparse-c.pc` under the installation prefix so downstream projects can discover the library without manual include/lib path wiring. The exported CMake package provides `argparse-c::argparse-c` for shared linking and `argparse-c::argparse-c-static` for static linking.
 
 ## Sample program
 

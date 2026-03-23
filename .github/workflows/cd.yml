@@ -34,6 +34,9 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
 
+      - name: Build static library explicitly
+        run: cmake --build build --target argparse-c-static
+
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
@@ -51,9 +54,12 @@ jobs:
             -C dist/install-root/usr/local \
             include \
             lib
+          cp dist/install-root/usr/local/lib/libargparse-c.a \
+            dist/argparse-c-${{ github.ref_name }}-linux-static.a
           sha256sum \
             dist/argparse-c-${{ github.ref_name }}-source.tar.gz \
             dist/argparse-c-${{ github.ref_name }}-linux-install-tree.tar.gz \
+            dist/argparse-c-${{ github.ref_name }}-linux-static.a \
             > dist/SHA256SUMS.txt
 
       - name: Publish release
@@ -63,4 +69,5 @@ jobs:
           files: |
             dist/argparse-c-${{ github.ref_name }}-source.tar.gz
             dist/argparse-c-${{ github.ref_name }}-linux-install-tree.tar.gz
+            dist/argparse-c-${{ github.ref_name }}-linux-static.a
             dist/SHA256SUMS.txt

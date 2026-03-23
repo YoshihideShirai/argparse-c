@@ -193,21 +193,33 @@ sudo cp -a /tmp/argparse-c/include /usr/local/
 sudo cp -a /tmp/argparse-c/lib /usr/local/
 ```
 
-The extracted `lib/` directory includes the shared library, `cmake/argparse-c/argparse-cConfig.cmake`, `argparse-cConfigVersion.cmake`, exported targets, and `pkgconfig/argparse-c.pc`.
+The extracted `lib/` directory includes both the shared library and the static archive, `cmake/argparse-c/argparse-cConfig.cmake`, `argparse-cConfigVersion.cmake`, exported targets, and `pkgconfig/argparse-c.pc`.
 
 ### Consume with CMake
 
 ```cmake
 find_package(argparse-c CONFIG REQUIRED)
+
+# Shared library
 target_link_libraries(your_app PRIVATE argparse-c::argparse-c)
+
+# Static library
+target_link_libraries(your_app PRIVATE argparse-c::argparse-c-static)
 ```
 
 ### Consume with pkg-config
 
 ```bash
+# Shared library
 pkg-config --cflags --libs argparse-c
 cc main.c $(pkg-config --cflags --libs argparse-c) -o your_app
+
+# Static library
+pkg-config --cflags --libs --static argparse-c
+cc main.c $(pkg-config --cflags --libs --static argparse-c) -o your_app
 ```
+
+For CMake packages, `argparse-c::argparse-c` is the shared target and `argparse-c::argparse-c-static` is the static target. The pkg-config file remains `argparse-c.pc`; use `pkg-config --static` when you want static-link flags.
 
 
 ## Documentation Site

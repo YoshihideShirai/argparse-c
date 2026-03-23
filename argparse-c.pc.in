@@ -7,4 +7,5 @@ Name: argparse-c
 Description: C99 command-line argument parsing library
 Version: @PROJECT_VERSION@
 Libs: -L${libdir} -largparse-c
+Libs.private: -L${libdir} -largparse-c
 Cflags: -I${includedir}
