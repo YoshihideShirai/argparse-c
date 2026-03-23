@@ -156,7 +156,18 @@ typedef struct {
   const ap_parser *parser;
 } ap_subcommand_info;
 
+typedef struct ap_parser_options {
+  bool completion_enabled;
+  const char *completion_entrypoint;
+} ap_parser_options;
+
 ap_parser *ap_parser_new(const char *prog, const char *description);
+ap_parser *ap_parser_new_with_options(const char *prog, const char *description,
+                                      ap_parser_options options);
+int ap_parser_set_completion(ap_parser *parser, bool enabled,
+                             const char *entrypoint, ap_error *err);
+bool ap_parser_completion_enabled(const ap_parser *parser);
+const char *ap_parser_completion_entrypoint(const ap_parser *parser);
 ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
                              const char *description, ap_error *err);
 ap_mutually_exclusive_group *ap_add_mutually_exclusive_group(ap_parser *parser,
@@ -187,6 +198,9 @@ char *ap_format_error(const ap_parser *parser, const ap_error *err);
 int ap_complete(const ap_parser *parser, int argc, char **argv,
                 const char *shell, ap_completion_result *out_result,
                 ap_error *err);
+int ap_try_handle_completion(const ap_parser *parser, int argc, char **argv,
+                             const char *default_shell, int *out_handled,
+                             ap_completion_result *out_result, ap_error *err);
 void ap_completion_result_init(ap_completion_result *result);
 void ap_completion_result_free(ap_completion_result *result);
 int ap_completion_result_add(ap_completion_result *result, const char *value,
@@ -226,6 +240,7 @@ bool ap_ns_get_double_at(const ap_namespace *ns, const char *dest, int index,
                          double *out_value);
 
 ap_arg_options ap_arg_options_default(void);
+ap_parser_options ap_parser_options_default(void);
 
 #ifdef __cplusplus
 }

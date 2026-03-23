@@ -51,6 +51,8 @@ struct ap_parser {
   char *prog;
   char *description;
   char *command_name;
+  char *completion_entrypoint;
+  bool completion_enabled;
   struct ap_parser *parent;
   ap_arg_def *defs;
   int defs_count;

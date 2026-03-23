@@ -99,7 +99,7 @@ ap_ns_get_string(ns, "text", &text);
 
 The repository now includes generator-oriented samples in addition to `sample/example1.c`.
 
-- `sample/example_completion.c`: minimal app-side implementation of `--generate-bash-completion`, `--generate-fish-completion`, `--generate-manpage`, and the hidden `__complete` entrypoint used by completion callbacks
+- `sample/example_completion.c`: standard minimal implementation of `--generate-bash-completion`, `--generate-fish-completion`, `--generate-manpage`, and `ap_try_handle_completion(...)` with the default hidden `__complete` entrypoint
 - `sample/example_manpage.c`: subcommand-based parser that emits a man page and shell completions from the same parser definition
 
 ### Implement generator flags in your application
@@ -172,3 +172,49 @@ man ./example_manpage.1
 - [Completion callbacks](guides/completion-callbacks.md)
 - [API Specification](../api-spec.en.md)
 - [日本語 Getting Started](../ja/getting-started.md)
+
+## Enable shell completion immediately after install
+
+Completion is enabled on every new parser by default. In the common case you only need to call `ap_try_handle_completion(...)` before `ap_parse_args(...)`, then expose generator flags that print `ap_format_bash_completion(...)` or `ap_format_fish_completion(...)`.
+
+```c
+ap_completion_result completion = {0};
+int completion_handled = 0;
+
+if (ap_try_handle_completion(parser, argc, argv, "bash", &completion_handled,
+                             &completion, &err) != 0) {
+  fprintf(stderr, "%s\n", err.message);
+  ap_completion_result_free(&completion);
+  return 1;
+}
+if (completion_handled) {
+  for (int i = 0; i < completion.count; i++) {
+    printf("%s\n", completion.items[i].value);
+  }
+  ap_completion_result_free(&completion);
+  return 0;
+}
+```
+
+Opt out only when you need a visible subcommand with the same name or you do not want the hidden completion entrypoint at all:
+
+```c
+ap_parser_set_completion(parser, false, NULL, &err);
+```
+
+### Bash setup
+
+```bash
+./build/sample/example_completion --generate-bash-completion > ./example_completion.bash
+mkdir -p ~/.local/share/bash-completion/completions
+cp ./example_completion.bash ~/.local/share/bash-completion/completions/example_completion
+source ~/.local/share/bash-completion/completions/example_completion
+```
+
+### Fish setup
+
+```bash
+mkdir -p ~/.config/fish/completions
+./build/sample/example_completion --generate-fish-completion \
+  > ~/.config/fish/completions/example_completion.fish
+```

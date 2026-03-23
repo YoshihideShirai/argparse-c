@@ -269,6 +269,52 @@ TEST(DuplicateSubcommandIsRejected) {
   ap_parser_free(p);
 }
 
+TEST(ReservedCompletionEntrypointSubcommandIsRejectedByDefault) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+
+  CHECK(p != NULL);
+  CHECK(ap_add_subcommand(p, "__complete", "hidden", &err) == NULL);
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("__complete", err.argument);
+  STRCMP_EQUAL(
+      "subcommand '__complete' conflicts with reserved completion entrypoint",
+      err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(ReservedCompletionEntrypointCanBeOptedOutBeforeAddingSubcommand) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *sub = NULL;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parser_set_completion(p, false, NULL, &err));
+  sub = ap_add_subcommand(p, "__complete", "user visible", &err);
+  CHECK(sub != NULL);
+
+  ap_parser_free(p);
+}
+
+TEST(ParserCompletionConfigRejectsExistingSubcommandConflict) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parser_set_completion(p, false, NULL, &err));
+  CHECK(ap_add_subcommand(p, "__complete", "user visible", &err) != NULL);
+  LONGS_EQUAL(0, ap_parser_set_completion(p, false, "__complete", &err));
+  LONGS_EQUAL(-1, ap_parser_set_completion(p, true, "__complete", &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("__complete", err.argument);
+  STRCMP_EQUAL(
+      "subcommand '__complete' conflicts with reserved completion entrypoint",
+      err.message);
+
+  ap_parser_free(p);
+}
+
 TEST(InvalidSubcommandNameIsRejected) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");

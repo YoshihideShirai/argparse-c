@@ -52,33 +52,23 @@ static int maybe_handle_completion_request(ap_parser *parser, int argc,
                                            char **argv) {
   ap_completion_result result;
   ap_error err = {0};
-  const char *shell = "bash";
-  int arg_index = 2;
+  int handled = 0;
+  int rc;
 
-  if (argc <= 1 || strcmp(argv[1], "__complete") != 0) {
-    return -1;
-  }
-
-  ap_completion_result_init(&result);
-  if (arg_index < argc && strcmp(argv[arg_index], "--shell") == 0 &&
-      arg_index + 1 < argc) {
-    shell = argv[arg_index + 1];
-    arg_index += 2;
-  }
-  if (arg_index < argc && strcmp(argv[arg_index], "--") == 0) {
-    arg_index++;
-  }
-
-  if (ap_complete(parser, argc - arg_index, argv + arg_index, shell, &result,
-                  &err) != 0) {
+  rc = ap_try_handle_completion(parser, argc, argv, "bash", &handled, &result,
+                                &err);
+  if (rc != 0) {
     fprintf(stderr, "%s\n", err.message);
     ap_completion_result_free(&result);
     return 1;
   }
+  if (!handled) {
+    return -1;
+  }
 
-  print_completion_candidates(&result);
+  rc = print_completion_candidates(&result);
   ap_completion_result_free(&result);
-  return 0;
+  return rc;
 }
 
 static int maybe_handle_generator_flags(ap_parser *parser, ap_namespace *ns) {
