@@ -9,6 +9,11 @@ add_library(argparse-c SHARED
   format_completion_fish.c
 )
 
+set_target_properties(argparse-c PROPERTIES
+  VERSION ${PROJECT_VERSION}
+  SOVERSION ${PROJECT_VERSION_MAJOR}
+)
+
 add_library(argparse-c::argparse-c ALIAS argparse-c)
 
 target_include_directories(argparse-c

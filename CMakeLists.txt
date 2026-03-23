@@ -1,11 +1,14 @@
 cmake_minimum_required(VERSION 3.16)
-project(argparse-c C CXX)
+project(argparse-c VERSION 0.1.0 LANGUAGES C CXX)
 
 option(AP_ENABLE_COVERAGE "Enable coverage instrumentation for gcovr" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+set(AP_CMAKE_PACKAGE_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/argparse-c")
 
 if(AP_ENABLE_COVERAGE)
   if(NOT CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
@@ -21,12 +24,41 @@ if(AP_ENABLE_COVERAGE)
   endif()
 endif()
 
+configure_package_config_file(
+  ${CMAKE_SOURCE_DIR}/cmake/argparse-cConfig.cmake.in
+  ${CMAKE_BINARY_DIR}/argparse-cConfig.cmake
+  INSTALL_DESTINATION ${AP_CMAKE_PACKAGE_DIR}
+)
+
+write_basic_package_version_file(
+  ${CMAKE_BINARY_DIR}/argparse-cConfigVersion.cmake
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion
+)
+
+configure_file(
+  ${CMAKE_SOURCE_DIR}/argparse-c.pc.in
+  ${CMAKE_BINARY_DIR}/argparse-c.pc
+  @ONLY
+)
+
 include_directories(./include)
 add_subdirectory(lib)
 add_subdirectory(sample)
 
 enable_testing()
 add_subdirectory(test)
+
+install(FILES
+  ${CMAKE_BINARY_DIR}/argparse-cConfig.cmake
+  ${CMAKE_BINARY_DIR}/argparse-cConfigVersion.cmake
+  DESTINATION ${AP_CMAKE_PACKAGE_DIR}
+)
+
+install(FILES
+  ${CMAKE_BINARY_DIR}/argparse-c.pc
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+)
 
 set(AP_CLANG_TOOL_SOURCES
   include/argparse-c.h

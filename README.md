@@ -168,6 +168,24 @@ cmake --build build-coverage --target coverage
 ```
 
 For installation steps aimed at library users, see the Getting Started guides in `docs/en/getting-started.md` and `docs/ja/getting-started.md`.
+## Installed package metadata
+
+After `cmake --install`, the install tree includes both a CMake package config and a pkg-config file.
+
+### Consume with CMake
+
+```cmake
+find_package(argparse-c CONFIG REQUIRED)
+target_link_libraries(your_app PRIVATE argparse-c::argparse-c)
+```
+
+### Consume with pkg-config
+
+```bash
+pkg-config --cflags --libs argparse-c
+cc main.c $(pkg-config --cflags --libs argparse-c) -o your_app
+```
+
 
 ## Documentation Site
 
