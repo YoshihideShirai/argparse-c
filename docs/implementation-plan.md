@@ -154,16 +154,16 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - **大量 unknown 連続**: known-args モードで unknown option と unknown value を連続投入し、脱落や誤結合がないこと。
 
 #### B. Deep completion-path nesting
-- **3〜5 段以上の subcommand 遷移**: `root/a/b/c/...` のような深い階層で parser key が正しく連結されること。
-- **深い階層 + option completion**: 葉 parser の choices / file / directory / command completion が親階層に漏れず出力されること。
+- **3〜5 段以上の subcommand 遷移**: `root/a/b/c/...` のような深い階層で parser key・dispatch case・manpage synopsis が正しく連結されること。✅ `test/test_format_and_api.cpp` で実装済み。
+- **深い階層 + option completion**: 葉 parser の choices / file / directory / command completion が親階層に漏れず出力されること。✅ choices ベースの葉 completion は `test/test_format_and_api.cpp` で実装済み。
 - **深い階層 + dynamic completion**: 葉 parser でのみ dynamic completion hook が有効になること。
 - **同名 option の階層分離**: 親と子で同名 flag を持つ場合でも completion dispatch key が衝突しないこと。
 
 #### C. Generator quoting / escaping
-- **bash single-quote escape**: choice 値や `prog` 名に `'` を含むケースで `append_single_quoted()` の展開が壊れないこと。
-- **fish double-quote escape**: help / choice / `prog` に `"`, `\`, `$` を含むケースで `append_fish_double_quoted()` が正しくエスケープすること。
-- **改行混在 help**: fish の説明文で改行が空白へ正規化され、script 構文を壊さないこと。
-- **roff escape**: manpage で `-`, `\`, 行頭の `.` / `'` を含む help や default が roff-safe に出力されること。
+- **bash single-quote escape**: choice 値や `prog` 名に `'` を含むケースで `append_single_quoted()` の展開が壊れないこと。✅ 空白・`'`・`=`・`.`・`-` を含む choice 境界を `test/test_format_and_api.cpp` で実装済み。
+- **fish double-quote escape**: help / choice / `prog` に `"`, `\`, `$` を含むケースで `append_fish_double_quoted()` が正しくエスケープすること。✅ `"`, `\`, `$`, 改行を含む help / choice の検証を `test/test_format_and_api.cpp` で実装済み。
+- **改行混在 help**: fish の説明文で改行が空白へ正規化され、script 構文を壊さないこと。✅ `test/test_format_and_api.cpp` で実装済み。
+- **roff escape**: manpage で `-`, `\`, 行頭の `.` / `'` を含む help や default が roff-safe に出力されること。✅ help / default / choice の roff-safe 出力検証を `test/test_format_and_api.cpp` で実装済み。
 
 ### String-generation edge cases by formatter
 
@@ -211,10 +211,10 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - **長い positional/optional 混在**: `nargs=*`, `nargs=?`, fixed positional の配分結果を件数・各 index 値で確認する。
 
 #### `test/test_format_and_api.cpp`
-- **bash completion quoting**: choice 値や `prog` 名に空白・`'` を含め、生成 script 内の quoting 断片を文字列一致で確認する。
-- **fish completion quoting**: help / choice に `"`, `\`, `$`, 改行を含め、エスケープ結果と改行→空白変換を確認する。
-- **manpage escaping**: help / default / choice / subcommand help に roff 特殊文字を含め、`\-`, `\&`, `\\` などの期待断片を確認する。
-- **deep nested completion**: 3〜5 段 subcommand を作り、parser key・dispatch case・leaf option completion の存在を確認する。
+- **bash completion quoting**: choice 値や `prog` 名に空白・`'` を含め、生成 script 内の quoting 断片を文字列一致で確認する。✅ `test/test_format_and_api.cpp` で実装済み。
+- **fish completion quoting**: help / choice に `"`, `\`, `$`, 改行を含め、エスケープ結果と改行→空白変換を確認する。✅ `test/test_format_and_api.cpp` で実装済み。
+- **manpage escaping**: help / default / choice / subcommand help に roff 特殊文字を含め、`\-`, `\&`, `\\` などの期待断片を確認する。✅ `test/test_format_and_api.cpp` で実装済み。
+- **deep nested completion**: 3〜5 段 subcommand を作り、parser key・dispatch case・leaf option completion・synopsis の存在を確認する。✅ `test/test_format_and_api.cpp` で実装済み。
 
 #### `test/test_known_args.cpp`
 - **大量 unknown 連続**: unknown 配列の件数と全要素順序を明示確認する。
