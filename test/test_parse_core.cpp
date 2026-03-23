@@ -358,7 +358,6 @@ TEST(FormatErrorIncludesMessageAndUsage) {
   ap_parser_free(p);
 }
 
-
 TEST(ParseArgsDistributesLongMixedPositionalOptionalSequence) {
   ap_error err = {};
   ap_namespace *ns = NULL;
@@ -368,8 +367,9 @@ TEST(ParseArgsDistributesLongMixedPositionalOptionalSequence) {
   ap_arg_options tail = ap_arg_options_default();
   const char *maybe_value = NULL;
   const char *tail_value = NULL;
-  char *argv[] = {(char *)"prog",   (char *)"a",       (char *)"b",      (char *)"--maybe",
-                  (char *)"seen",   (char *)"c",       (char *)"tail.txt", NULL};
+  char *argv[] = {
+      (char *)"prog", (char *)"a", (char *)"b",        (char *)"--maybe",
+      (char *)"seen", (char *)"c", (char *)"tail.txt", NULL};
 
   CHECK(p != NULL);
   maybe.nargs = AP_NARGS_OPTIONAL;
@@ -398,7 +398,8 @@ TEST(ParseArgsReportsUnexpectedPositionalAfterDoubleDashBoundary) {
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
   ap_arg_options target = ap_arg_options_default();
-  char *argv[] = {(char *)"prog", (char *)"--", (char *)"target.txt", (char *)"extra.txt", NULL};
+  char *argv[] = {(char *)"prog", (char *)"--", (char *)"target.txt",
+                  (char *)"extra.txt", NULL};
 
   CHECK(p != NULL);
   LONGS_EQUAL(0, ap_add_argument(p, "target", target, &err));
@@ -421,9 +422,17 @@ TEST(ParseArgsTracksAppendCountAndPositionalsAcrossLongSequence) {
   ap_arg_options target = ap_arg_options_default();
   int32_t verbose_count = 0;
   const char *target_value = NULL;
-  char *argv[] = {(char *)"prog",  (char *)"--tag",  (char *)"alpha", (char *)"-v",
-                  (char *)"f1",    (char *)"--tag",  (char *)"beta",  (char *)"-v",
-                  (char *)"f2",    (char *)"dest",   NULL};
+  char *argv[] = {(char *)"prog",
+                  (char *)"--tag",
+                  (char *)"alpha",
+                  (char *)"-v",
+                  (char *)"f1",
+                  (char *)"--tag",
+                  (char *)"beta",
+                  (char *)"-v",
+                  (char *)"f2",
+                  (char *)"dest",
+                  NULL};
 
   CHECK(p != NULL);
   tag.action = AP_ACTION_APPEND;
