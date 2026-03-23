@@ -431,7 +431,10 @@ char *ap_bash_completion_build(const ap_parser *parser) {
                     "    ") != 0 ||
       append_single_quoted(&sb, prog) != 0 ||
       ap_sb_appendf(&sb,
-                    " __complete --shell bash -- \"${COMP_WORDS[@]:1}\"\n"
+                    " ") != 0 ||
+      append_single_quoted(&sb, ap_parser_completion_entrypoint(parser)) != 0 ||
+      ap_sb_appendf(&sb,
+                    " --shell bash -- \"${COMP_WORDS[@]:1}\"\n"
                     "  }\n\n"
                     "  __ap_completion_load_parser \"$parser_key\" || return 0\n"
                     "  local i=1\n"

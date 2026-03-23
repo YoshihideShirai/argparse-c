@@ -70,6 +70,15 @@ static int mutex_group_push_arg(ap_mutex_group_def *group, int arg_index) {
   return 0;
 }
 
+static const char *default_completion_entrypoint(void) { return "__complete"; }
+
+static bool is_reserved_completion_name(const ap_parser *parser,
+                                        const char *name) {
+  return parser && parser->completion_enabled &&
+         parser->completion_entrypoint && name &&
+         strcmp(parser->completion_entrypoint, name) == 0;
+}
+
 static void arg_def_free(ap_arg_def *def) {
   int i;
   if (!def) {
@@ -345,6 +354,13 @@ fail:
   return -1;
 }
 
+ap_parser_options ap_parser_options_default(void) {
+  ap_parser_options options;
+  options.completion_enabled = true;
+  options.completion_entrypoint = default_completion_entrypoint();
+  return options;
+}
+
 ap_arg_options ap_arg_options_default(void) {
   ap_arg_options options;
   memset(&options, 0, sizeof(options));
@@ -426,7 +442,8 @@ static int add_builtin_help(ap_parser *parser) {
 }
 
 static ap_parser *parser_alloc(const char *prog, const char *description,
-                               const char *command_name, ap_parser *parent) {
+                               const char *command_name, ap_parser *parent,
+                               ap_parser_options options) {
   ap_parser *parser = calloc(1, sizeof(ap_parser));
   if (!parser) {
     return NULL;
@@ -435,8 +452,14 @@ static ap_parser *parser_alloc(const char *prog, const char *description,
   parser->prog = ap_strdup(prog ? prog : "program");
   parser->description = ap_strdup(description ? description : "");
   parser->command_name = ap_strdup(command_name ? command_name : "");
+  parser->completion_enabled = options.completion_enabled;
+  parser->completion_entrypoint =
+      ap_strdup(options.completion_entrypoint
+                    ? options.completion_entrypoint
+                    : default_completion_entrypoint());
   parser->parent = parent;
-  if (!parser->prog || !parser->description || !parser->command_name) {
+  if (!parser->prog || !parser->description || !parser->command_name ||
+      !parser->completion_entrypoint) {
     ap_parser_free(parser);
     return NULL;
   }
@@ -449,7 +472,56 @@ static ap_parser *parser_alloc(const char *prog, const char *description,
 }
 
 ap_parser *ap_parser_new(const char *prog, const char *description) {
-  return parser_alloc(prog, description, "", NULL);
+  return ap_parser_new_with_options(prog, description,
+                                    ap_parser_options_default());
+}
+
+ap_parser *ap_parser_new_with_options(const char *prog, const char *description,
+                                      ap_parser_options options) {
+  return parser_alloc(prog, description, "", NULL, options);
+}
+
+int ap_parser_set_completion(ap_parser *parser, bool enabled,
+                             const char *entrypoint, ap_error *err) {
+  int i;
+  char *next_entrypoint;
+
+  if (!parser) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "", "parser is required");
+    return -1;
+  }
+
+  next_entrypoint =
+      ap_strdup(entrypoint ? entrypoint : default_completion_entrypoint());
+  if (!next_entrypoint) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+    return -1;
+  }
+
+  for (i = 0; i < parser->subcommands_count; i++) {
+    if (enabled && strcmp(parser->subcommands[i].name, next_entrypoint) == 0) {
+      ap_error_set(
+          err, AP_ERR_INVALID_DEFINITION, next_entrypoint,
+          "subcommand '%s' conflicts with reserved completion entrypoint",
+          next_entrypoint);
+      free(next_entrypoint);
+      return -1;
+    }
+  }
+
+  free(parser->completion_entrypoint);
+  parser->completion_entrypoint = next_entrypoint;
+  parser->completion_enabled = enabled;
+  return 0;
+}
+
+bool ap_parser_completion_enabled(const ap_parser *parser) {
+  return parser && parser->completion_enabled;
+}
+
+const char *ap_parser_completion_entrypoint(const ap_parser *parser) {
+  return parser && parser->completion_entrypoint ? parser->completion_entrypoint
+                                                 : default_completion_entrypoint();
 }
 
 static int validate_options(const ap_arg_options *options, bool is_optional,
@@ -665,6 +737,12 @@ ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
                  "subcommand name must be a single non-flag token");
     return NULL;
   }
+  if (is_reserved_completion_name(parser, name)) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, name,
+                 "subcommand '%s' conflicts with reserved completion entrypoint",
+                 name);
+    return NULL;
+  }
   for (i = 0; i < parser->subcommands_count; i++) {
     if (strcmp(parser->subcommands[i].name, name) == 0) {
       ap_error_set(err, AP_ERR_INVALID_DEFINITION, name,
@@ -684,7 +762,13 @@ ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
   memset(&def, 0, sizeof(def));
   def.name = ap_strdup(name);
   def.help = ap_strdup(description ? description : "");
-  def.parser = parser_alloc(prog, description ? description : "", name, parser);
+  {
+    ap_parser_options child_options = ap_parser_options_default();
+    child_options.completion_enabled = parser->completion_enabled;
+    child_options.completion_entrypoint = parser->completion_entrypoint;
+    def.parser = parser_alloc(prog, description ? description : "", name, parser,
+                              child_options);
+  }
   free(prog);
   if (!def.name || !def.help || !def.parser) {
     free(def.name);
@@ -1152,6 +1236,46 @@ char *ap_format_fish_completion(const ap_parser *parser) {
   return ap_fish_completion_build(parser);
 }
 
+int ap_try_handle_completion(const ap_parser *parser, int argc, char **argv,
+                             const char *default_shell, int *out_handled,
+                             ap_completion_result *out_result, ap_error *err) {
+  int arg_index = 2;
+  const char *shell;
+
+  if (out_handled) {
+    *out_handled = 0;
+  }
+  if (!parser || argc < 0 || !out_result || (argc > 0 && !argv)) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "",
+                 "parser, argv, and completion result are required");
+    return -1;
+  }
+
+  ap_completion_result_init(out_result);
+  if (!parser->completion_enabled || argc <= 1 || !argv[1] ||
+      strcmp(argv[1], ap_parser_completion_entrypoint(parser)) != 0) {
+    return 0;
+  }
+
+  shell = default_shell ? default_shell : "bash";
+  if (arg_index < argc && argv[arg_index] &&
+      strcmp(argv[arg_index], "--shell") == 0 && arg_index + 1 < argc &&
+      argv[arg_index + 1]) {
+    shell = argv[arg_index + 1];
+    arg_index += 2;
+  }
+  if (arg_index < argc && argv[arg_index] &&
+      strcmp(argv[arg_index], "--") == 0) {
+    arg_index++;
+  }
+
+  if (out_handled) {
+    *out_handled = 1;
+  }
+  return ap_complete(parser, argc - arg_index, argv + arg_index, shell,
+                     out_result, err);
+}
+
 static bool completion_action_takes_no_value(ap_action action) {
   return action == AP_ACTION_STORE_TRUE || action == AP_ACTION_STORE_FALSE ||
          action == AP_ACTION_COUNT || action == AP_ACTION_STORE_CONST;
@@ -1528,6 +1652,7 @@ void ap_parser_free(ap_parser *parser) {
   free(parser->prog);
   free(parser->description);
   free(parser->command_name);
+  free(parser->completion_entrypoint);
   free(parser);
 }
 

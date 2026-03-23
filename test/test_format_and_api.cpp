@@ -1068,6 +1068,87 @@ TEST(CompleteRejectsNullArgvWhenArgcIsPositive) {
   ap_parser_free(p);
 }
 
+TEST(ParserCompletionIsEnabledByDefaultAndHelperHandlesRequests) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  ap_completion_result result = {};
+  int handled = 0;
+  const char *modes[] = {"fast", "slow"};
+  char arg0[] = "prog";
+  char arg1[] = "__complete";
+  char arg2[] = "--shell";
+  char arg3[] = "bash";
+  char arg4[] = "--";
+  char arg5[] = "--mode";
+  char arg6[] = "s";
+  char *argv[] = {arg0, arg1, arg2, arg3, arg4, arg5, arg6};
+
+  CHECK(p != NULL);
+  CHECK(ap_parser_completion_enabled(p));
+  STRCMP_EQUAL("__complete", ap_parser_completion_entrypoint(p));
+
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  LONGS_EQUAL(
+      0, ap_try_handle_completion(p, 7, argv, "fish", &handled, &result, &err));
+  LONGS_EQUAL(1, handled);
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("fast", result.items[0].value);
+  STRCMP_EQUAL("slow", result.items[1].value);
+
+  ap_completion_result_free(&result);
+  ap_parser_free(p);
+}
+
+TEST(ParserCompletionCanBeCustomizedAndScriptsUseConfiguredEntrypoint) {
+  ap_error err = {};
+  ap_parser_options options = ap_parser_options_default();
+  ap_parser *p = NULL;
+  char *bash = NULL;
+  char *fish = NULL;
+
+  options.completion_entrypoint = "__ap_complete";
+  p = ap_parser_new_with_options("prog", "desc", options);
+  CHECK(p != NULL);
+  STRCMP_EQUAL("__ap_complete", ap_parser_completion_entrypoint(p));
+
+  bash = ap_format_bash_completion(p);
+  fish = ap_format_fish_completion(p);
+  CHECK(bash != NULL);
+  CHECK(fish != NULL);
+  CHECK(strstr(bash, "'__ap_complete' --shell bash --") != NULL);
+  CHECK(strstr(fish, "\"__ap_complete\" --shell fish --") != NULL);
+
+  free(bash);
+  free(fish);
+  ap_parser_free(p);
+}
+
+TEST(ParserCompletionCanBeDisabledAndHelperIgnoresHiddenEntrypoint) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_completion_result result = {};
+  int handled = 0;
+  char arg0[] = "prog";
+  char arg1[] = "__complete";
+  char *argv[] = {arg0, arg1};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parser_set_completion(p, false, NULL, &err));
+  CHECK(!ap_parser_completion_enabled(p));
+
+  LONGS_EQUAL(
+      0, ap_try_handle_completion(p, 2, argv, "bash", &handled, &result, &err));
+  LONGS_EQUAL(0, handled);
+  LONGS_EQUAL(0, result.count);
+
+  ap_completion_result_free(&result);
+  ap_parser_free(p);
+}
+
 TEST(FormatCompletionUsesStaticCompletionMetadata) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -1135,10 +1216,11 @@ TEST(FormatCompletionScriptsCallApplicationForDynamicCallbacks) {
   fish = ap_format_fish_completion(p);
   CHECK(bash != NULL);
   CHECK(fish != NULL);
-  CHECK(strstr(bash, "__complete --shell bash -- \"${COMP_WORDS[@]:1}\"") !=
+  CHECK(strstr(bash, "'__complete' --shell bash -- \"${COMP_WORDS[@]:1}\"") !=
         NULL);
   CHECK(strstr(bash, "root:--exec) printf '%s\\n' 'dynamic' ;;") != NULL);
-  CHECK(strstr(fish, "\"prog\" __complete --shell fish -- $tokens $current") !=
+  CHECK(strstr(fish,
+               "\"prog\" \"__complete\" --shell fish -- $tokens $current") !=
         NULL);
   CHECK(strstr(fish,
                "-l exec -d \"EXEC\" -r -a '(__ap_prog_dynamic_complete)'") !=

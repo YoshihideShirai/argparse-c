@@ -375,7 +375,10 @@ char *ap_fish_completion_build(const ap_parser *parser) {
                          "  set -l current (commandline -ct)\n"
                          "  ") != 0 ||
       append_fish_double_quoted(&sb, prog) != 0 ||
-      ap_sb_appendf(&sb, " __complete --shell fish -- $tokens $current\n"
+      ap_sb_appendf(&sb, " ") != 0 ||
+      append_fish_double_quoted(&sb, ap_parser_completion_entrypoint(parser)) !=
+          0 ||
+      ap_sb_appendf(&sb, " --shell fish -- $tokens $current\n"
                          "end\n\n") != 0 ||
       append_complete_commands(&sb, prog, parser) != 0) {
     ap_sb_free(&sb);

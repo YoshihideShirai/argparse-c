@@ -207,11 +207,42 @@ Use the sample that matches the API surface you want to learn first:
 
 - [sample/example1.c](./sample/example1.c): minimal parse / validation / `ap_format_error(...)` example for options, positionals, and namespace reads
 - [sample/example_subcommands.c](./sample/example_subcommands.c): nested subcommands, `subcommand`, and `subcommand_path`
-- [sample/example_completion.c](./sample/example_completion.c): formatter APIs for bash / fish / manpage output plus runtime completion callbacks via `__complete`
-- [docs/en/guides/completion-callbacks.md](./docs/en/guides/completion-callbacks.md): explains `ap_complete(...)`, `ap_completion_callback`, the hidden `__complete` entrypoint, shell integration, and fallback behavior
+- [sample/example_completion.c](./sample/example_completion.c): standard minimal completion-enabled app using `ap_try_handle_completion(...)`, formatter APIs, and the default hidden completion entrypoint
+- [docs/en/guides/completion-callbacks.md](./docs/en/guides/completion-callbacks.md): explains the default-on completion flow, opt-out/custom entrypoint settings, `ap_try_handle_completion(...)`, shell integration, and fallback behavior
 - [docs/ja/guides/completion-callbacks.md](./docs/ja/guides/completion-callbacks.md): 日本語版の completion callback ガイド
 - [sample/example_manpage.c](./sample/example_manpage.c): subcommand-heavy formatter example for manpage and completion generation from one parser definition
 - [sample/example_introspection.c](./sample/example_introspection.c): introspection APIs such as `ap_parser_get_info`, `ap_parser_get_argument`, and `ap_parser_get_subcommand`
+
+## Completion is part of the default CLI path
+
+Completion is now treated as a standard integration path rather than an optional add-on. New parsers enable the hidden completion entrypoint by default:
+
+- default hidden entrypoint: `__complete`
+- helper API: `ap_try_handle_completion(...)`
+- opt out: `ap_parser_set_completion(parser, false, NULL, &err)`
+- custom entrypoint: `ap_parser_set_completion(parser, true, "__ap_complete", &err)` or `ap_parser_new_with_options(...)`
+- reserved-name rule: while completion is enabled, adding a subcommand with the same name as the hidden entrypoint fails with an explicit definition error
+
+Typical wiring in `main(...)` is now:
+
+```c
+ap_completion_result completion = {0};
+int completion_handled = 0;
+
+if (ap_try_handle_completion(parser, argc, argv, "bash", &completion_handled,
+                             &completion, &err) != 0) {
+  fprintf(stderr, "%s\n", err.message);
+  ap_completion_result_free(&completion);
+  return 1;
+}
+if (completion_handled) {
+  for (int i = 0; i < completion.count; i++) {
+    printf("%s\n", completion.items[i].value);
+  }
+  ap_completion_result_free(&completion);
+  return 0;
+}
+```
 
 ## Formatter API quick start
 
@@ -243,14 +274,18 @@ if (manpage) {
 ### Generate bash completion
 
 ```bash
-./build/sample/example_completion --generate-bash-completion   > example_completion.bash
-source ./example_completion.bash
+./build/sample/example_completion --generate-bash-completion > ./example_completion.bash
+mkdir -p ~/.local/share/bash-completion/completions
+cp ./example_completion.bash ~/.local/share/bash-completion/completions/example_completion
+source ~/.local/share/bash-completion/completions/example_completion
 ```
 
 ### Generate fish completion
 
 ```bash
-./build/sample/example_completion --generate-fish-completion   > ~/.config/fish/completions/example_completion.fish
+mkdir -p ~/.config/fish/completions
+./build/sample/example_completion --generate-fish-completion \
+  > ~/.config/fish/completions/example_completion.fish
 ```
 
 ### Generate a man page
