@@ -81,7 +81,7 @@ ap_ns_get_string(ns, "text", &text);
 
 The repository now includes generator-oriented samples in addition to `sample/example1.c`.
 
-- `sample/example_completion.c`: minimal app-side implementation of `--generate-bash-completion`, `--generate-fish-completion`, and `--generate-manpage`
+- `sample/example_completion.c`: minimal app-side implementation of `--generate-bash-completion`, `--generate-fish-completion`, `--generate-manpage`, and the hidden `__complete` entrypoint used by completion callbacks
 - `sample/example_manpage.c`: subcommand-based parser that emits a man page and shell completions from the same parser definition
 
 ### Implement generator flags in your application
@@ -125,6 +125,8 @@ source ./example_completion.bash
 ```bash
 ./build/sample/example_completion --generate-fish-completion   > ~/.config/fish/completions/example_completion.fish
 ```
+
+For runtime-aware completion callbacks, continue with [Completion callbacks](guides/completion-callbacks.md).
 
 ### Generate a man page
 

@@ -80,5 +80,6 @@ int main(int argc, char **argv) {
 1. [Getting Started](getting-started.md)
 2. [Basic usage](guides/basic-usage.md)
 3. [Options and types](guides/options-and-types.md)
-4. [API Reference (English)](../api-spec.en.md)
-5. [日本語ドキュメント](../ja/index.md)
+4. [Completion callbacks](guides/completion-callbacks.md)
+5. [API Reference (English)](../api-spec.en.md)
+6. [日本語ドキュメント](../ja/index.md)
