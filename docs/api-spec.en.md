@@ -30,25 +30,33 @@ This document describes the public API defined in `include/argparse-c.h`.
 - `AP_NARGS_FIXED`: exactly `nargs_count` values
 
 ### `ap_error_code`
-- `AP_ERR_NONE`
-- `AP_ERR_NO_MEMORY`
-- `AP_ERR_INVALID_DEFINITION`
-- `AP_ERR_UNKNOWN_OPTION`
-- `AP_ERR_DUPLICATE_OPTION`
-- `AP_ERR_MISSING_VALUE`
-- `AP_ERR_INVALID_NARGS`
-- `AP_ERR_MISSING_REQUIRED`
-- `AP_ERR_INVALID_CHOICE`
-- `AP_ERR_INVALID_INT32`
-- `AP_ERR_UNEXPECTED_POSITIONAL`
+
+| Code | Typical trigger | `err.argument` contract | `err.message` family |
+| --- | --- | --- | --- |
+| `AP_ERR_NONE` | No error recorded | empty string | empty string |
+| `AP_ERR_NO_MEMORY` | Allocation failure in parser/build/format paths | usually the owning `dest`, current token, or empty string for parser-wide failures | `out of memory` |
+| `AP_ERR_INVALID_DEFINITION` | Invalid API usage or parser definition | invalid flag/name/dest, first conflicting flag, or empty string for parser/group-wide precondition failures | fixed definition-time diagnostics such as `store_const requires const_value` |
+| `AP_ERR_UNKNOWN_OPTION` | Strict parse sees an unknown option | the option token exactly as written (for example `--bogus`, `-z`) | `unknown option '...'` |
+| `AP_ERR_DUPLICATE_OPTION` | Non-repeatable option is provided multiple times | the primary flag for that option | `duplicate option '...'` |
+| `AP_ERR_MISSING_VALUE` | An option/value-bearing argument was seen without a required value | the primary flag for optionals, declared name for positionals | `option '...' requires a value` / `argument '...' requires a value` |
+| `AP_ERR_INVALID_NARGS` | Value count violates `nargs` / short-cluster rules | the primary flag for optionals, declared name for positionals | `... requires at least one value`, `... requires exactly N values`, or `option '...' cannot be used in a short option cluster` |
+| `AP_ERR_MISSING_REQUIRED` | Required option/argument/subcommand/group missing | primary flag, declared positional name, `subcommand`, or empty string for group-wide failures | `option '...' is required`, `argument '...' is required`, `subcommand is required`, etc. |
+| `AP_ERR_INVALID_CHOICE` | Parsed/defaulted value is outside `choices` | the primary flag for optionals, declared name for positionals | `invalid choice 'X' for option '...'` / `... for argument '...'` |
+| `AP_ERR_INVALID_INT32` | Integer conversion fails | the primary flag for optionals, declared name for positionals | `argument '...' must be a valid int32: 'X'` |
+| `AP_ERR_UNEXPECTED_POSITIONAL` | Extra positional token remains in strict mode | the unexpected token itself | `unexpected positional argument 'TOKEN'` |
 
 ### `ap_error`
 - `code`: error code
 - `argument`: stable argument identifier related to the error
-  - optional arguments use the primary flag (for example `--mode` or `-t`)
-  - positional arguments use the declared argument name
-  - parser-level errors may leave this empty
-- `message`: human-readable message with consistent `option '...'` / `argument '...'` wording
+  - optional arguments use the primary flag (`flags[0]`) as stored in the parser definition
+  - positional arguments use the declared argument name (`dest` when no flags exist)
+  - subcommand-level errors use `subcommand`
+  - parser/group-wide errors may leave this empty
+  - out-of-memory paths may use a `dest`/token identifier instead of a user-facing label so callers can still correlate the failure source
+- `message`: human-readable message with a stable template family
+  - optional arguments use `option '...'`
+  - positional arguments use `argument '...'`
+  - parser/group-wide failures avoid argument wording and use a standalone sentence
 
 ### `ap_arg_options`
 Options passed to `ap_add_argument`.
@@ -262,6 +270,45 @@ Frees unknown token arrays returned by `ap_parse_known_args`.
 - `ap_parse_args` / `ap_parse_known_args` output namespace -> `ap_namespace_free`
 - `ap_format_usage/help/error` return values -> `free`
 - `ap_parse_known_args` unknown array -> `ap_free_tokens`
+
+## 8.1 Error generation and naming rules
+
+The current implementation in `lib/core_parser.c`, `lib/core_validate.c`, `lib/core_convert.c`, and `lib/api.c` follows these naming rules consistently:
+
+- Optional-argument parse/validation errors use the primary flag (`flags[0]`) for `err.argument`.
+  - This means `-t, --text` reports `-t` when the short flag is declared first, and `--mode` when the long flag is declared first.
+- Positional-argument parse/validation errors use the declared positional name.
+- `invalid choice` messages are label-driven and therefore render as `for option '...'` or `for argument '...'` depending on the argument kind.
+- `required`, `missing value`, and `invalid nargs` messages share the same label builder and therefore keep `option '...'` / `argument '...'` wording aligned across parse-time and validation-time failures.
+- Integer conversion currently always uses the template `argument '...' must be a valid int32: 'VALUE'` even for optional flags, so the noun is stable but slightly more generic than the other option-specific messages.
+- Definition-time API failures in `lib/api.c` often use raw names (`name_or_flags`, conflicting `dest`, subcommand name, or empty string) because the parser definition may not yet have a normalized argument object.
+- Parser-wide or mutually exclusive group failures intentionally leave `err.argument` empty and use a sentence-style message.
+
+### `ap_format_error` output contract
+`ap_format_error()` prepends `error: ` to `err.message`, appends a newline, and then appends the usage text returned by the same parser.
+
+Example (`prog demo`, missing required option `--mode`):
+
+```text
+error: option '--mode' is required
+usage: demo [-h] --mode MODE
+```
+
+Callers should treat this two-line structure (`error:` line + usage block) as the stable display contract for CLI output.
+
+## 8.2 Regression test plan for error-message consistency
+Maintain the following regression coverage so error naming stays stable across future refactors:
+
+- `test/test_parse_core.cpp`
+  - strict-parse errors for unknown options, invalid int32 conversion, invalid choice, missing required options, and short-cluster `nargs` failures
+- `test/test_known_args.cpp`
+  - known/unknown split behavior, especially required-option errors that must still report the primary flag even when unknown tokens are preserved
+- `test/test_subcommands_and_validation.cpp`
+  - validation-focused cases for missing values, `nargs` cardinality, unexpected positionals, duplicate options, mutually exclusive groups, and subcommand-specific required errors
+- `test/test_format_and_api.cpp`
+  - public API precondition/definition errors plus `ap_format_error()` golden-output checks that freeze the exact ``error: ...`` + ``usage: ...`` rendering
+
+When extending tests, assert all three fields together where practical: `err.code`, `err.argument`, and `err.message`.
 
 ## 8.5 Practical examples and reverse links
 - Parse basics and error formatting: [`README.md`](../README.md), [`sample/example1.c`](../sample/example1.c)
