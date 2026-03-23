@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(argparse-c VERSION 0.1.0 LANGUAGES C CXX)
 
 option(AP_ENABLE_COVERAGE "Enable coverage instrumentation for gcovr" OFF)
+option(AP_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -22,6 +23,21 @@ if(AP_ENABLE_COVERAGE)
   if(CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(AP_GCOV_EXECUTABLE "llvm-cov gcov")
   endif()
+endif()
+
+if(AP_ENABLE_SANITIZERS)
+  if(NOT CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    message(FATAL_ERROR "AP_ENABLE_SANITIZERS requires GCC or Clang")
+  endif()
+
+  set(AP_SANITIZER_FLAGS
+    -fsanitize=address
+    -fsanitize=undefined
+    -fno-omit-frame-pointer
+  )
+
+  add_compile_options(-O1 -g ${AP_SANITIZER_FLAGS})
+  add_link_options(${AP_SANITIZER_FLAGS})
 endif()
 
 configure_package_config_file(

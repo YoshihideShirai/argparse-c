@@ -447,10 +447,8 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
           if (!copy || !unknown_args ||
               ap_strvec_push(unknown_args, copy) != 0) {
             free(copy);
-            free(positional_defs);
-            free(parsed);
             ap_error_set(err, AP_ERR_NO_MEMORY, token, "out of memory");
-            return -1;
+            goto fail;
           }
           if (token_index + 1 < argc &&
               strcmp(argv[token_index + 1], "--") != 0 &&
@@ -459,10 +457,8 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
             char *next_copy = ap_strdup(argv[token_index + 1]);
             if (!next_copy || ap_strvec_push(unknown_args, next_copy) != 0) {
               free(next_copy);
-              free(positional_defs);
-              free(parsed);
               ap_error_set(err, AP_ERR_NO_MEMORY, token, "out of memory");
-              return -1;
+              goto fail;
             }
             token_index += 2;
             continue;
@@ -470,19 +466,15 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
           token_index++;
           continue;
         }
-        free(positional_defs);
-        free(parsed);
         ap_error_set(err, AP_ERR_UNKNOWN_OPTION, token, "unknown option '%s'",
                      token);
-        return -1;
+        goto fail;
       }
       if (parsed[def_index].seen && !action_allows_multiple_occurrences(
                                         parser->defs[def_index].opts.action)) {
-        free(positional_defs);
-        free(parsed);
         ap_error_set(err, AP_ERR_DUPLICATE_OPTION, token,
                      "duplicate option '%s'", token);
-        return -1;
+        goto fail;
       }
       if (consume_optional_values(parser, argc, argv, &token_index, def_index,
                                   inline_value, parsed, err) != 0) {

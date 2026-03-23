@@ -42,6 +42,33 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+  sanitizers:
+    name: Sanitizers (clang ASan/UBSan)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-sanitizers \
+            -G Ninja \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DAP_ENABLE_SANITIZERS=ON
+
+      - name: Build
+        run: cmake --build build-sanitizers --parallel
+
+      - name: Test
+        run: ctest --test-dir build-sanitizers --output-on-failure
+
   clang-tools:
     name: Clang format / tidy
     runs-on: ubuntu-latest
