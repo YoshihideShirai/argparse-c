@@ -78,7 +78,7 @@ return 0;
 
 ## Subcommands
 
-### Namespace / help contract
+### Parse-time subcommand contract
 
 - nested subcommands are supported
 - the namespace exposes only one built-in subcommand key: `"subcommand"`
@@ -109,6 +109,34 @@ if (ap_parse_args(p, argc, argv, &ns, &err) == 0) {
   ap_ns_get_string(ns, "config", &config_path);
 }
 ```
+
+For a runnable nested-subcommand example, see [sample/example_subcommands.c](./sample/example_subcommands.c).
+
+## Introspection API quick start
+
+Use the introspection APIs when you want to inspect parser metadata at runtime for custom docs, UI generation, or test assertions.
+
+```c
+ap_parser_info parser_info;
+ap_arg_info arg_info;
+ap_subcommand_info sub_info;
+
+if (ap_parser_get_info(parser, &parser_info) == 0) {
+  printf("prog=%s\n", parser_info.prog);
+  printf("arguments=%d\n", parser_info.argument_count);
+  printf("subcommands=%d\n", parser_info.subcommand_count);
+}
+
+if (ap_parser_get_argument(parser, 0, &arg_info) == 0) {
+  printf("first dest=%s\n", arg_info.dest);
+}
+
+if (ap_parser_get_subcommand(parser, 0, &sub_info) == 0) {
+  printf("first subcommand=%s\n", sub_info.name);
+}
+```
+
+For a complete sample that walks arguments and subcommands, see [sample/example_introspection.c](./sample/example_introspection.c).
 
 ## Developer Build (clang)
 
@@ -149,19 +177,17 @@ A bilingual GitHub Pages site skeleton for MkDocs + Material for MkDocs is inclu
 - coverage report: <https://yoshihideshirai.github.io/argparse-c/coverage/index.html>
 - coverage HTML report is published under `coverage/index.html` on the Pages site
 
-## Example Program
+## Example Programs
 
-See [sample/example1.c](./sample/example1.c).
+Use the sample that matches the API surface you want to learn first:
 
-For a nested subcommand example that prints both `subcommand` and
-`subcommand_path`, see [sample/example_subcommands.c](./sample/example_subcommands.c).
+- [sample/example1.c](./sample/example1.c): minimal parse / validation / `ap_format_error(...)` example for options, positionals, and namespace reads
+- [sample/example_subcommands.c](./sample/example_subcommands.c): nested subcommands, `subcommand`, and `subcommand_path`
+- [sample/example_completion.c](./sample/example_completion.c): formatter APIs for bash / fish / manpage output plus runtime completion callbacks via `__complete`
+- [sample/example_manpage.c](./sample/example_manpage.c): subcommand-heavy formatter example for manpage and completion generation from one parser definition
+- [sample/example_introspection.c](./sample/example_introspection.c): introspection APIs such as `ap_parser_get_info`, `ap_parser_get_argument`, and `ap_parser_get_subcommand`
 
-For generator-focused examples, see:
-
-- [sample/example_completion.c](./sample/example_completion.c) for bash / fish completion generation and an application-side implementation of `--generate-bash-completion`, `--generate-fish-completion`, and `--generate-manpage`
-- [sample/example_manpage.c](./sample/example_manpage.c) for a subcommand-oriented setup that produces a man page and shell completions from the same parser definition
-
-### Generator API quick start
+## Formatter API quick start
 
 The formatter APIs return heap-allocated strings, so applications can expose generator flags directly:
 

@@ -220,6 +220,12 @@ namespaceを解放します。
 - `ap_format_usage/help/error` の戻り値 -> `free`
 - `ap_parse_known_args` の `out_unknown_args` -> `ap_free_tokens`
 
+## 8.5 実例への逆リンク
+- 基本的なパースとエラー整形: [`README.md`](../README.md), [`sample/example1.c`](../sample/example1.c)
+- ネストした subcommand と `subcommand_path`: [`README.md`](../README.md), [`sample/example_subcommands.c`](../sample/example_subcommands.c)
+- formatter API（`ap_format_help`、`ap_format_manpage`、shell completion formatter）: [`README.md`](../README.md), [`sample/example_completion.c`](../sample/example_completion.c), [`sample/example_manpage.c`](../sample/example_manpage.c)
+- introspection API（`ap_parser_get_info`、`ap_parser_get_argument`、`ap_parser_get_subcommand`）: [`README.md`](../README.md), [`sample/example_introspection.c`](../sample/example_introspection.c)
+
 ## 9. 最小利用例
 
 ```c

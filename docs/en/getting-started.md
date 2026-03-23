@@ -135,9 +135,22 @@ For runtime-aware completion callbacks, continue with [Completion callbacks](gui
 man ./example_manpage.1
 ```
 
-## Recommended next pages
+## Recommended next sample programs / guides
+
+### Sample programs
+
+- [`sample/example1.c`](../../sample/example1.c): start here for required options, positionals, namespace reads, and `ap_format_error(...)`
+- [`sample/example_subcommands.c`](../../sample/example_subcommands.c): continue here for nested subcommands and `subcommand_path`
+- [`sample/example_completion.c`](../../sample/example_completion.c): formatter APIs plus runtime completion callbacks
+- [`sample/example_manpage.c`](../../sample/example_manpage.c): formatter APIs on a subcommand tree that is suitable for docs output
+- [`sample/example_introspection.c`](../../sample/example_introspection.c): parser metadata introspection via `ap_parser_get_info`, `ap_parser_get_argument`, and `ap_parser_get_subcommand`
+
+### Guides
 
 - [Basic usage](guides/basic-usage.md)
 - [Options and types](guides/options-and-types.md)
 - [nargs](guides/nargs.md)
+- [Subcommands](guides/subcommands.md)
+- [Completion callbacks](guides/completion-callbacks.md)
+- [API Specification](../api-spec.en.md)
 - [日本語 Getting Started](../ja/getting-started.md)
