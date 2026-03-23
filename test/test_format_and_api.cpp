@@ -1055,6 +1055,55 @@ TEST(CompleteUsesDynamicCallbackAndStaticChoiceFallback) {
   ap_parser_free(p);
 }
 
+TEST(CompleteUsesPositionalCompletionMetadataAndCallback) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options input = ap_arg_options_default();
+  ap_arg_options format = ap_arg_options_default();
+  ap_arg_options task = ap_arg_options_default();
+  ap_completion_result result = {};
+  const char *formats[] = {"json", "yaml"};
+  static const char *const tasks[] = {"build", "bench", "bundle", nullptr};
+  char arg0[] = "re";
+  char *argv0[] = {arg0};
+  char arg1[] = "report.txt";
+  char arg2[] = "y";
+  char *argv1[] = {arg1, arg2};
+  char arg3[] = "report.txt";
+  char arg4[] = "yaml";
+  char arg5[] = "bu";
+  char *argv2[] = {arg3, arg4, arg5};
+
+  CHECK(p != NULL);
+  input.completion_kind = AP_COMPLETION_KIND_FILE;
+  format.choices.items = formats;
+  format.choices.count = 2;
+  task.completion_callback = dynamic_exec_completion;
+  task.completion_user_data = (void *)tasks;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "input", input, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "format", format, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "task", task, &err));
+
+  LONGS_EQUAL(0, ap_complete(p, 1, argv0, "bash", &result, &err));
+  LONGS_EQUAL(0, result.count);
+  ap_completion_result_free(&result);
+
+  LONGS_EQUAL(0, ap_complete(p, 2, argv1, "bash", &result, &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("json", result.items[0].value);
+  STRCMP_EQUAL("yaml", result.items[1].value);
+  ap_completion_result_free(&result);
+
+  LONGS_EQUAL(0, ap_complete(p, 3, argv2, "bash", &result, &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("build", result.items[0].value);
+  STRCMP_EQUAL("bundle", result.items[1].value);
+  ap_completion_result_free(&result);
+
+  ap_parser_free(p);
+}
+
 TEST(CompleteRejectsNullArgvWhenArgcIsPositive) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -1156,6 +1205,8 @@ TEST(FormatCompletionUsesStaticCompletionMetadata) {
   ap_arg_options dir = ap_arg_options_default();
   ap_arg_options exec = ap_arg_options_default();
   ap_arg_options mode = ap_arg_options_default();
+  ap_arg_options positional_file = ap_arg_options_default();
+  ap_arg_options positional_mode = ap_arg_options_default();
   const char *modes[] = {"fast", "slow"};
   char *bash = NULL;
   char *fish = NULL;
@@ -1168,11 +1219,16 @@ TEST(FormatCompletionUsesStaticCompletionMetadata) {
   mode.choices.items = modes;
   mode.choices.count = 2;
   mode.completion_kind = AP_COMPLETION_KIND_CHOICES;
+  positional_file.completion_kind = AP_COMPLETION_KIND_FILE;
+  positional_mode.choices.items = modes;
+  positional_mode.choices.count = 2;
 
   LONGS_EQUAL(0, ap_add_argument(p, "--input", input, &err));
   LONGS_EQUAL(0, ap_add_argument(p, "--dir", dir, &err));
   LONGS_EQUAL(0, ap_add_argument(p, "--exec", exec, &err));
   LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "source", positional_file, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "mode_name", positional_mode, &err));
 
   bash = ap_format_bash_completion(p);
   fish = ap_format_fish_completion(p);
@@ -1184,6 +1240,9 @@ TEST(FormatCompletionUsesStaticCompletionMetadata) {
   CHECK(strstr(bash, "compgen -f -- \"$cur\"") != NULL);
   CHECK(strstr(bash, "compgen -d -- \"$cur\"") != NULL);
   CHECK(strstr(bash, "compgen -c -- \"$cur\"") != NULL);
+  CHECK(
+      strstr(bash, "mapfile -t COMPREPLY < <(__ap_completion_dynamic_query)") !=
+      NULL);
   CHECK(strstr(fish, "-l input -d \"INPUT\" -r -F") != NULL);
   CHECK(
       strstr(fish, "-l dir -d \"DIR\" -r -a '(__fish_complete_directories)'") !=
@@ -1192,6 +1251,10 @@ TEST(FormatCompletionUsesStaticCompletionMetadata) {
         NULL);
   CHECK(strstr(fish, "-l mode -d \"MODE\" -r -a '(__ap_prog_value_choices "
                      "root:--mode)'") != NULL);
+  CHECK(
+      strstr(fish,
+             "complete -c \"prog\" -f -a '(__ap_prog_positional_complete)'") !=
+      NULL);
 
   free(bash);
   free(fish);

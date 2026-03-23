@@ -1366,8 +1366,10 @@ int ap_complete(const ap_parser *parser, int argc, char **argv,
   const ap_arg_def *active_def = NULL;
   const char *active_option = NULL;
   const char *current_token = "";
+  int positional_count = 0;
   int scan_count;
   int i;
+  bool positional_only = false;
   char subcommand_path[256];
   ap_completion_request request;
 
@@ -1392,16 +1394,17 @@ int ap_complete(const ap_parser *parser, int argc, char **argv,
     if (!token) {
       continue;
     }
-    if (strcmp(token, "--") == 0) {
-      break;
-    }
     if (active_def &&
         !completion_action_takes_no_value(active_def->opts.action)) {
       active_def = NULL;
       active_option = NULL;
       continue;
     }
-    if (token[0] == '-') {
+    if (!positional_only && strcmp(token, "--") == 0) {
+      positional_only = true;
+      continue;
+    }
+    if (!positional_only && token[0] == '-') {
       const char *eq = strchr(token, '=');
       char option_name[128];
 
@@ -1423,25 +1426,31 @@ int ap_complete(const ap_parser *parser, int argc, char **argv,
       continue;
     }
 
-    sub = find_subcommand_def(active_parser, token);
-    if (sub) {
-      char next_path[256];
-      if (append_completion_path(next_path, sizeof(next_path), subcommand_path,
-                                 sub->name) < 0) {
-        ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
-        ap_completion_result_free(out_result);
-        return -1;
+    if (!positional_only) {
+      sub = find_subcommand_def(active_parser, token);
+      if (sub) {
+        char next_path[256];
+        if (append_completion_path(next_path, sizeof(next_path),
+                                   subcommand_path, sub->name) < 0) {
+          ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+          ap_completion_result_free(out_result);
+          return -1;
+        }
+        memcpy(subcommand_path, next_path, strlen(next_path) + 1);
+        active_parser = sub->parser;
+        positional_count = 0;
+        continue;
       }
-      memcpy(subcommand_path, next_path, strlen(next_path) + 1);
-      active_parser = sub->parser;
     }
+
+    positional_count++;
   }
 
   if (scan_count > 0 && argv && argv[scan_count - 1]) {
     const char *token = argv[scan_count - 1];
     const char *eq = strchr(token, '=');
 
-    if (eq && token[0] == '-') {
+    if (!positional_only && eq && token[0] == '-') {
       char option_name[128];
       size_t name_len = (size_t)(eq - token);
       if (name_len >= sizeof(option_name)) {
@@ -1453,6 +1462,10 @@ int ap_complete(const ap_parser *parser, int argc, char **argv,
       active_option = active_def ? option_name : NULL;
       current_token = eq + 1;
     }
+  }
+
+  if (!active_def && (positional_only || !ap_starts_with_dash(current_token))) {
+    active_def = ap_next_positional_def(active_parser, positional_count);
   }
 
   if (!active_def) {

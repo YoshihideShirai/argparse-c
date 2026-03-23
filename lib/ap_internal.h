@@ -119,6 +119,8 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
                     bool allow_unknown, ap_parsed_arg **out_parsed,
                     ap_strvec *positionals, ap_strvec *unknown_args,
                     ap_error *err);
+const ap_arg_def *ap_next_positional_def(const ap_parser *parser,
+                                         int consumed_positionals);
 int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
                      ap_error *err);
 int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
