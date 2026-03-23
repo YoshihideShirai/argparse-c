@@ -11,6 +11,8 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 
 ### Core API
 - `ap_parser_new(const char *prog, const char *description)`
+- `ap_parser_new_with_options(const char *prog, const char *description, ap_parser_options options)`
+- `ap_parser_set_completion(ap_parser*, bool enabled, const char *entrypoint, ap_error*)`
 - `ap_add_subcommand(ap_parser*, const char *name, const char *description, ap_error*)`
 - `ap_add_mutually_exclusive_group(ap_parser*, bool required, ap_error*)`
 - `ap_group_add_argument(ap_mutually_exclusive_group*, const char *name_or_flags, ap_arg_options, ap_error*)`
@@ -21,8 +23,10 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - `ap_namespace_free(ap_namespace*)`
 - `ap_free_tokens(char **tokens, int count)`
 - `ap_complete(const ap_parser*, int argc, char **argv, const char *shell, ap_completion_result*, ap_error*)`
+- `ap_try_handle_completion(const ap_parser*, int argc, char **argv, const char *default_shell, int *out_handled, ap_completion_result*, ap_error*)`
 
 ### Completion / Introspection API
+- `ap_parser_options`, `ap_parser_options_default`
 - `ap_completion_result_init`, `ap_completion_result_free`, `ap_completion_result_add`
 - `ap_parser_get_info`, `ap_parser_get_argument`, `ap_parser_get_subcommand`
 - `ap_arg_short_flag_count`, `ap_arg_short_flag_at`
@@ -37,15 +41,15 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - `ap_format_error(const ap_parser*, const ap_error*)`
 
 ### Namespace Accessors
-- `ap_ns_get_bool`, `ap_ns_get_string`, `ap_ns_get_int32`
-- `ap_ns_get_count`, `ap_ns_get_string_at`, `ap_ns_get_int32_at`
+- `ap_ns_get_bool`, `ap_ns_get_string`, `ap_ns_get_int32`, `ap_ns_get_int64`, `ap_ns_get_uint64`, `ap_ns_get_double`
+- `ap_ns_get_count`, `ap_ns_get_string_at`, `ap_ns_get_int32_at`, `ap_ns_get_int64_at`, `ap_ns_get_uint64_at`, `ap_ns_get_double_at`
 
 ## 3. Implemented MVP Scope
 
 ### Argument Model
 - optional / positional arguments
 - nested subcommands
-- types: `string`, `int32`, `bool`
+- types: `string`, `int32`, `int64`, `uint64`, `double`, `bool`
 - actions: `store`, `store_true`, `store_false`, `append`, `count`, `store_const`
 - options: `required`, `default_value`, `const_value`, `choices`, `metavar`, `help`, `dest`, `nargs(?/*/+ / fixed)`
 - completion metadata: `completion_kind`, `completion_hint`
@@ -73,13 +77,15 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - required validation
 - nargs validation
 - choices validation（デフォルト値にも適用）
-- int32 range/format validation
+- int32 / int64 / uint64 range・format validation
+- double format validation
 
 ### Help & Error Formatting
 - usage/help 生成
 - help に `choices/default/required` を表示
 - `ap_format_error` で `error + usage` を一括整形
 - manpage / bash completion / fish completion の生成
+- install 後に利用する package metadata として `argparse-cConfig.cmake`, `argparse-cConfigVersion.cmake`, `argparse-c.pc` を生成
 
 ### Namespace / Introspection
 - nested subcommand の leaf 名を `"subcommand"` に格納
@@ -99,6 +105,12 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 
 ## 5. Testing Plan and Current Status
 
+### Current status snapshot
+- parser / namespace の実装済み型は `string`, `int32`, `int64`, `uint64`, `double`, `bool`。
+- completion の public 導線は `ap_parser_options` / `ap_parser_new_with_options(...)` / `ap_parser_set_completion(...)` / `ap_try_handle_completion(...)` を含む。
+- install / release 向けには CMake package (`argparse-cConfig.cmake`, `argparse-cConfigVersion.cmake`) と pkg-config metadata (`argparse-c.pc`) を生成済み。
+
+
 ### Framework
 - custom self-contained test executable
 - `ctest` 経由で実行
@@ -109,7 +121,7 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 #### `test/test_parse_core.cpp`
 - 基本パース成功（必須 optional + positional の同時解決）
 - unknown option の即時エラー
-- `int32` 変換失敗
+- `int32` / `int64` / `uint64` / `double` 変換失敗
 - `choices` 検証
 - optional 引数の `nargs=+`
 - default value の注入
@@ -133,6 +145,7 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 
 #### `test/test_format_and_api.cpp`
 - help / usage / error / manpage の生成
+- `ap_parser_options`, `ap_parser_new_with_options(...)`, `ap_parser_set_completion(...)`, `ap_try_handle_completion(...)` の completion 導線
 - bool / const / append / positional `nargs` 各種の usage/help 表示
 - `required` な `store_true` / `store_const` の検証
 - `ap_parse_known_args` API の guard 条件
@@ -144,6 +157,10 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - dynamic completion callback と `ap_complete`
 - bash / fish completion script 生成
 - manpage の nested subcommand / choices / default / required 表示
+
+## 6. 次候補 (Enhancement Backlog)
+
+以下は未実装・追加検討の候補で、上記の実装済みスコープ／テストとは分離して管理する。
 
 ### Additional Test Candidates (Breakdown)
 
@@ -222,7 +239,7 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - **`--` 後の長い unknown 列**: 全件が未知配列へ順序保持で回収されることを確認する。
 - **長い mixed known/unknown**: known namespace 値と unknown 配列の両方を同時に検証し、誤消費がないことを確認する。
 
-## 6. CI/CD Plan (GitHub Actions)
+## 7. CI/CD Plan (GitHub Actions)
 
 ### CI (`.github/workflows/ci.yml`)
 - trigger: push (`main`/`master`), pull_request
@@ -232,9 +249,12 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 ### CD (`.github/workflows/cd.yml`)
 - trigger: tag push (`v*`) / workflow_dispatch
 - build: clang
+- installation metadata:
+  - install tree には `argparse-cConfig.cmake`, `argparse-cConfigVersion.cmake`, `argparse-c.pc` を含め、CMake / pkg-config の両方から downstream が検出できる状態を維持する
 - release assets:
   - source tarball
   - linux build tarball (`libargparse-c.so`, `example1`)
+  - installable package metadata（`argparse-cConfig.cmake`, `argparse-cConfigVersion.cmake`, `argparse-c.pc`）を tarball または install 手順で追従可能にする
   - `SHA256SUMS.txt`
 - publish: GitHub Release
 
@@ -243,7 +263,7 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - build: MkDocs site + coverage build/test + `gcovr --html-details`
 - publish: GitHub Pages (`/coverage/` で HTML レポートを公開)
 
-## 7. Next Phase Plan (Recommended)
+## 8. Next Phase Plan (Recommended)
 - completion callback の利用者向けガイド追加（`__complete` エントリポイント設計、shell 統合例、fallback 方針）
 - introspection / formatter API の利用例拡充（README / Getting Started / sample の相互参照整理）
 - error code/message の一貫性改善（`err.argument` の規則と文言テンプレートを固定）
