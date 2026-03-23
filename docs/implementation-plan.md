@@ -11,16 +11,29 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 
 ### Core API
 - `ap_parser_new(const char *prog, const char *description)`
+- `ap_add_subcommand(ap_parser*, const char *name, const char *description, ap_error*)`
+- `ap_add_mutually_exclusive_group(ap_parser*, bool required, ap_error*)`
+- `ap_group_add_argument(ap_mutually_exclusive_group*, const char *name_or_flags, ap_arg_options, ap_error*)`
 - `ap_add_argument(ap_parser*, const char *name_or_flags, ap_arg_options, ap_error*)`
 - `ap_parse_args(ap_parser*, int argc, char **argv, ap_namespace **out_ns, ap_error*)`
 - `ap_parse_known_args(ap_parser*, int argc, char **argv, ap_namespace **out_ns, char ***out_unknown_args, int *out_unknown_count, ap_error*)`
 - `ap_parser_free(ap_parser*)`
 - `ap_namespace_free(ap_namespace*)`
 - `ap_free_tokens(char **tokens, int count)`
+- `ap_complete(const ap_parser*, int argc, char **argv, const char *shell, ap_completion_result*, ap_error*)`
+
+### Completion / Introspection API
+- `ap_completion_result_init`, `ap_completion_result_free`, `ap_completion_result_add`
+- `ap_parser_get_info`, `ap_parser_get_argument`, `ap_parser_get_subcommand`
+- `ap_arg_short_flag_count`, `ap_arg_short_flag_at`
+- `ap_arg_long_flag_count`, `ap_arg_long_flag_at`
 
 ### Formatting API
 - `ap_format_usage(const ap_parser*)`
 - `ap_format_help(const ap_parser*)`
+- `ap_format_manpage(const ap_parser*)`
+- `ap_format_bash_completion(const ap_parser*)`
+- `ap_format_fish_completion(const ap_parser*)`
 - `ap_format_error(const ap_parser*, const ap_error*)`
 
 ### Namespace Accessors
@@ -34,7 +47,9 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - nested subcommands
 - types: `string`, `int32`, `bool`
 - actions: `store`, `store_true`, `store_false`, `append`, `count`, `store_const`
-- options: `required`, `default_value`, `const_value`, `choices`, `metavar`, `help`, `nargs(?/*/+ / fixed)`
+- options: `required`, `default_value`, `const_value`, `choices`, `metavar`, `help`, `dest`, `nargs(?/*/+ / fixed)`
+- completion metadata: `completion_kind`, `completion_hint`
+- dynamic completion callback: `completion_callback`, `completion_user_data`
 - mutually exclusive groups
 
 ### Parsing Behavior
@@ -64,6 +79,12 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - usage/help 生成
 - help に `choices/default/required` を表示
 - `ap_format_error` で `error + usage` を一括整形
+- manpage / bash completion / fish completion の生成
+
+### Namespace / Introspection
+- nested subcommand の leaf 名を `"subcommand"` に格納
+- nested subcommand のフルパスを `"subcommand_path"` に格納
+- parser / argument / subcommand introspection API を提供
 
 ## 4. Internal Architecture Plan
 - `lib/api.c`: 公開API、メモリ管理、統合フロー
@@ -71,6 +92,9 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - `lib/core_validate.c`: required/nargs/choices 検証
 - `lib/core_convert.c`: 型変換、namespace 構築
 - `lib/format_help.c`: usage/help/error の文字列整形補助
+- `lib/format_manpage.c`: manpage 生成
+- `lib/format_completion_bash.c`: bash completion 生成
+- `lib/format_completion_fish.c`: fish completion 生成
 - `lib/ap_internal.h`: 内部構造体・内部関数宣言
 
 ## 5. Testing Plan and Current Status
@@ -96,6 +120,11 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - format_error 出力
 - parse_known_args の unknown 回収（option/value/extra positional/`--` 以降）
 - short bool cluster (`-vq`) と不正クラスタ
+- nested subcommand の `subcommand_path`
+- parser / argument / subcommand introspection
+- dynamic completion callback と `ap_complete`
+- bash / fish completion 生成
+- manpage 生成
 
 ## 6. CI/CD Plan (GitHub Actions)
 
@@ -119,7 +148,7 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 - publish: GitHub Pages (`/coverage/` で HTML レポートを公開)
 
 ## 7. Next Phase Plan (Recommended)
-- `dest` 自動生成規則の追加テスト・ドキュメント強化
+- completion callback の利用者向けガイド追加（`__complete` エントリポイント設計、shell 統合例、fallback 方針）
+- introspection / formatter API の利用例拡充（README / Getting Started / sample の相互参照整理）
 - error code/message の一貫性改善（`err.argument` の規則と文言テンプレートを固定）
-- `nargs` と unknown 回収の仕様明文化（README / API spec に binding ルールと出現順 unknown 回収を明記）
-- nested subcommands の namespace / help contract 明文化（leaf-only `subcommand` と full command path help）
+- coverage レポートをもとに境界ケースの追加テストを拡充（大きな `argc`、completion path の深いネスト、generator の quoting）
