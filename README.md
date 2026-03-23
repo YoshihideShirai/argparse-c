@@ -158,6 +158,14 @@ ctest --test-dir build --output-on-failure
 cmake --build build --target format
 cmake --build build --target tidy
 
+# sanitizer build (ASan + UBSan)
+cmake -S . -B build-sanitizers \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DAP_ENABLE_SANITIZERS=ON
+cmake --build build-sanitizers
+ctest --test-dir build-sanitizers --output-on-failure
+
 # coverage (requires gcovr; with clang the build uses `llvm-cov gcov` automatically)
 cmake -S . -B build-coverage \
   -DCMAKE_C_COMPILER=clang \

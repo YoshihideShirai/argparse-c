@@ -24,7 +24,7 @@ target_include_directories(argparse-c
 
 target_compile_features(argparse-c PUBLIC c_std_99)
 
-if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(argparse-c PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
