@@ -1202,9 +1202,9 @@ int ap_complete(const ap_parser *parser, int argc, char **argv,
   char subcommand_path[256];
   ap_completion_request request;
 
-  if (!parser || argc < 0 || !out_result) {
+  if (!parser || argc < 0 || !out_result || (argc > 0 && !argv)) {
     ap_error_set(err, AP_ERR_INVALID_DEFINITION, "",
-                 "parser and completion result are required");
+                 "parser, argv, and completion result are required");
     return -1;
   }
 
@@ -1263,7 +1263,7 @@ int ap_complete(const ap_parser *parser, int argc, char **argv,
         ap_completion_result_free(out_result);
         return -1;
       }
-      strcpy(subcommand_path, next_path);
+      memcpy(subcommand_path, next_path, strlen(next_path) + 1);
       active_parser = sub->parser;
     }
   }

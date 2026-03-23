@@ -937,6 +937,19 @@ TEST(CompleteUsesDynamicCallbackAndStaticChoiceFallback) {
   ap_parser_free(p);
 }
 
+TEST(CompleteRejectsNullArgvWhenArgcIsPositive) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_completion_result result = {};
+
+  CHECK(p != NULL);
+
+  LONGS_EQUAL(-1, ap_complete(p, 1, NULL, "bash", &result, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+
+  ap_parser_free(p);
+}
+
 TEST(FormatCompletionUsesStaticCompletionMetadata) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
