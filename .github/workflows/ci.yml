@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build
+          sudo apt-get install -y cmake ninja-build pkg-config
 
       - name: Configure
         run: |
@@ -44,6 +44,25 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build --output-on-failure
+
+      - name: Verify installed package consumers
+        run: |
+          install_prefix="$PWD/stage/${{ matrix.compiler.cc }}"
+          cmake --install build --prefix "$install_prefix"
+
+          cmake -S sample/consumer/cmake -B consumer-build/cmake \
+            -G Ninja \
+            -DCMAKE_C_COMPILER=${{ matrix.compiler.cc }} \
+            -DCMAKE_PREFIX_PATH="$install_prefix"
+          cmake --build consumer-build/cmake --parallel
+          ./consumer-build/cmake/argparse_c_consumer
+
+          export PKG_CONFIG_PATH="$install_prefix/lib/pkgconfig"
+          export LD_LIBRARY_PATH="$install_prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          ${{ matrix.compiler.cc }} sample/consumer/pkg-config/main.c \
+            -o consumer-build/pkg-config-consumer \
+            $(pkg-config --cflags --libs argparse-c)
+          ./consumer-build/pkg-config-consumer
 
   sanitizers:
     name: Sanitizers (clang ASan/UBSan)
