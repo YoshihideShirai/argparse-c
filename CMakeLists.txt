@@ -87,6 +87,8 @@ set(AP_CLANG_TOOL_SOURCES
   lib/format_completion_fish.c
   sample/example1.c
   sample/example_subcommands.c
+  sample/consumer/cmake/main.c
+  sample/consumer/pkg-config/main.c
   test/test_format_and_api.cpp
   test/test_framework.cpp
   test/test_framework.h

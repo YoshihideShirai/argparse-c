@@ -40,6 +40,25 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+      - name: Verify installed package consumers
+        run: |
+          install_prefix="$PWD/stage/release"
+          cmake --install build --prefix "$install_prefix"
+
+          cmake -S sample/consumer/cmake -B consumer-build/cmake \
+            -G Ninja \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_PREFIX_PATH="$install_prefix"
+          cmake --build consumer-build/cmake --parallel
+          ./consumer-build/cmake/argparse_c_consumer
+
+          export PKG_CONFIG_PATH="$install_prefix/lib/pkgconfig"
+          export LD_LIBRARY_PATH="$install_prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          clang sample/consumer/pkg-config/main.c \
+            -o consumer-build/pkg-config-consumer \
+            $(pkg-config --cflags --libs argparse-c)
+          ./consumer-build/pkg-config-consumer
+
       - name: Prepare release assets
         run: |
           mkdir -p dist/install-root
