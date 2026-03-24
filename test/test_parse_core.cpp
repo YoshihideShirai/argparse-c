@@ -927,3 +927,78 @@ TEST(ParseUint64ValuesAndRejectNegativeInput) {
 
   ap_parser_free(p);
 }
+
+TEST(InvalidNumericFormatsBurstAcrossTypesKeepsFailureScoped) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options i32 = ap_arg_options_default();
+  ap_arg_options i64 = ap_arg_options_default();
+  ap_arg_options u64 = ap_arg_options_default();
+  ap_arg_options dbl = ap_arg_options_default();
+  char *argv_i32[] = {(char *)"prog", (char *)"--i32", (char *)"12x", NULL};
+  char *argv_i64[] = {(char *)"prog", (char *)"--i64", (char *)"--", NULL};
+  char *argv_u64[] = {(char *)"prog", (char *)"--u64", (char *)"-10", NULL};
+  char *argv_dbl[] = {(char *)"prog", (char *)"--dbl", (char *)"1.2.3", NULL};
+
+  CHECK(p != NULL);
+  i32.type = AP_TYPE_INT32;
+  i64.type = AP_TYPE_INT64;
+  u64.type = AP_TYPE_UINT64;
+  dbl.type = AP_TYPE_DOUBLE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--i32", i32, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--i64", i64, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--u64", u64, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--dbl", dbl, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_i32, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_INT32, err.code);
+  STRCMP_EQUAL("--i32", err.argument);
+  CHECK(ns == NULL);
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_i64, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_INT64, err.code);
+  STRCMP_EQUAL("--i64", err.argument);
+  CHECK(ns == NULL);
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_u64, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_UINT64, err.code);
+  STRCMP_EQUAL("--u64", err.argument);
+  CHECK(ns == NULL);
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_dbl, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DOUBLE, err.code);
+  STRCMP_EQUAL("--dbl", err.argument);
+  CHECK(ns == NULL);
+
+  ap_parser_free(p);
+}
+
+TEST(DeepSubcommandDoubleDashBoundaryRejectsTailPositionals) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *l1 = NULL;
+  ap_parser *l2 = NULL;
+  ap_parser *l3 = NULL;
+  ap_arg_options leaf_value = ap_arg_options_default();
+  char *argv[] = {(char *)"prog",  (char *)"alpha",    (char *)"beta",
+                  (char *)"gamma", (char *)"--leaf",   (char *)"ok",
+                  (char *)"--",    (char *)"dangling", NULL};
+
+  CHECK(p != NULL);
+  l1 = ap_add_subcommand(p, "alpha", "level1", &err);
+  CHECK(l1 != NULL);
+  l2 = ap_add_subcommand(l1, "beta", "level2", &err);
+  CHECK(l2 != NULL);
+  l3 = ap_add_subcommand(l2, "gamma", "level3", &err);
+  CHECK(l3 != NULL);
+  LONGS_EQUAL(0, ap_add_argument(l3, "--leaf", leaf_value, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 8, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_UNEXPECTED_POSITIONAL, err.code);
+  STRCMP_EQUAL("dangling", err.argument);
+  CHECK(ns == NULL);
+
+  ap_parser_free(p);
+}

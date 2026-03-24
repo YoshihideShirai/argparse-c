@@ -645,3 +645,106 @@ TEST(ParseKnownArgsAlternatingUnknownPairsDoNotStealKnownValuesInLongRun) {
   ap_namespace_free(ns);
   ap_parser_free(p);
 }
+
+TEST(
+    ParseKnownArgsHandlesVeryLongAndManyUnknownTokensWithoutStealingNamespace) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  std::vector<std::string> storage;
+  std::vector<char *> argv;
+  const char *text = NULL;
+  const char *input = NULL;
+  int32_t num = 0;
+  const size_t long_size = 8192;
+  const int extra_tokens = 128;
+
+  CHECK(p != NULL);
+  storage.reserve((size_t)extra_tokens + 6);
+  argv.push_back((char *)"prog");
+  argv.push_back((char *)"--very-long");
+  storage.push_back(std::string(long_size, 'x'));
+  argv.push_back((char *)storage.back().c_str());
+  argv.push_back((char *)"-t");
+  argv.push_back((char *)"hello");
+  argv.push_back((char *)"-n");
+  argv.push_back((char *)"123");
+  argv.push_back((char *)"file.txt");
+
+  for (int i = 0; i < extra_tokens; ++i) {
+    storage.push_back("--u-" + std::to_string(i));
+    argv.push_back((char *)storage.back().c_str());
+  }
+
+  LONGS_EQUAL(0, ap_parse_known_args(p, (int)argv.size(), argv.data(), &ns,
+                                     &unknown, &unknown_count, &err));
+  LONGS_EQUAL(AP_ERR_NONE, err.code);
+  LONGS_EQUAL(extra_tokens + 2, unknown_count);
+  STRCMP_EQUAL("--very-long", unknown[0]);
+  STRCMP_EQUAL(storage[0].c_str(), unknown[1]);
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_int32(ns, "num", &num));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("hello", text);
+  LONGS_EQUAL(123, num);
+  STRCMP_EQUAL("file.txt", input);
+  CHECK(!ap_ns_get_string(ns, "very_long", &text));
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseKnownArgsAlternatingUnknownOptionValueDoesNotAbsorbKnownTokens) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  std::vector<std::string> unknown_storage;
+  std::vector<char *> argv;
+  const char *text = NULL;
+  const char *input = NULL;
+  int32_t num = 0;
+  const int pairs = 20;
+
+  CHECK(p != NULL);
+  unknown_storage.reserve((size_t)pairs * 2);
+  argv.push_back((char *)"prog");
+  for (int i = 0; i < pairs; ++i) {
+    unknown_storage.push_back("--z-" + std::to_string(i));
+    unknown_storage.push_back("zv-" + std::to_string(i));
+    argv.push_back((char *)unknown_storage[unknown_storage.size() - 2].c_str());
+    argv.push_back((char *)unknown_storage.back().c_str());
+    if (i == 5) {
+      argv.push_back((char *)"-t");
+      argv.push_back((char *)"hello");
+    }
+    if (i == 11) {
+      argv.push_back((char *)"-n");
+      argv.push_back((char *)"77");
+    }
+  }
+  argv.push_back((char *)"file.txt");
+
+  LONGS_EQUAL(0, ap_parse_known_args(p, (int)argv.size(), argv.data(), &ns,
+                                     &unknown, &unknown_count, &err));
+  LONGS_EQUAL(AP_ERR_NONE, err.code);
+  LONGS_EQUAL(pairs * 2, unknown_count);
+  for (int i = 0; i < unknown_count; ++i) {
+    STRCMP_EQUAL(unknown_storage[(size_t)i].c_str(), unknown[i]);
+  }
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_int32(ns, "num", &num));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("hello", text);
+  LONGS_EQUAL(77, num);
+  STRCMP_EQUAL("file.txt", input);
+  CHECK(!ap_ns_get_string(ns, "z_0", &text));
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
