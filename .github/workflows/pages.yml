@@ -38,8 +38,10 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Sync repository mirror pages
-        run: python scripts/sync_repository_docs.py
+      - name: Verify docs/repository is synchronized
+        run: |
+          python scripts/sync_docs_repository.py
+          git diff --exit-code -- docs/repository
 
       - name: Build documentation site
         run: mkdocs build

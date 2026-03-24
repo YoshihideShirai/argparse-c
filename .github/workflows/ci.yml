@@ -155,6 +155,25 @@ jobs:
       - name: Run clang-tidy
         run: cmake --build build-clang-tools --target tidy
 
+  docs-repository-sync:
+    name: Docs repository sync check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify docs/repository is synchronized
+        run: |
+          python scripts/sync_docs_repository.py
+          git diff --exit-code -- docs/repository
+
+
   coverage:
     name: Coverage (gcovr)
     runs-on: ubuntu-latest
