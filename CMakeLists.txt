@@ -78,13 +78,8 @@ install(FILES
 
 set(AP_CLANG_TOOL_SOURCES
   include/argparse-c.h
-  lib/api.c
   lib/ap_internal.h
-  lib/core_convert.c
-  lib/core_parser.c
-  lib/core_validate.c
-  lib/format_help.c
-  lib/format_completion_fish.c
+  ${AP_ARGPARSE_C_TOOL_SOURCES}
   sample/example1.c
   sample/example_subcommands.c
   sample/consumer/cmake/main.c
@@ -99,13 +94,8 @@ set(AP_CLANG_TOOL_SOURCES
 )
 
 set(AP_CLANG_TIDY_SOURCES
-  lib/api.c
   lib/ap_internal.h
-  lib/core_convert.c
-  lib/core_parser.c
-  lib/core_validate.c
-  lib/format_help.c
-  lib/format_completion_fish.c
+  ${AP_ARGPARSE_C_TOOL_SOURCES}
 )
 
 find_program(AP_CLANG_FORMAT_EXECUTABLE clang-format)

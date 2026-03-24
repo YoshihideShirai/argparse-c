@@ -172,9 +172,12 @@ static int append_load_parser_cases(ap_string_builder *sb,
     }
   }
   if (ap_sb_appendf(sb, " )\n") != 0 ||
-      append_words_array(sb, "parser_options", parser, true, false, false) != 0 ||
-      append_words_array(sb, "parser_value_options", parser, true, true, false) != 0 ||
-      append_words_array(sb, "parser_flag_only_options", parser, true, false, true) != 0 ||
+      append_words_array(sb, "parser_options", parser, true, false, false) !=
+          0 ||
+      append_words_array(sb, "parser_value_options", parser, true, true,
+                         false) != 0 ||
+      append_words_array(sb, "parser_flag_only_options", parser, true, false,
+                         true) != 0 ||
       ap_sb_appendf(sb, "        ;;\n") != 0) {
     return -1;
   }
@@ -199,7 +202,8 @@ static int append_choice_cases(ap_string_builder *sb, const ap_parser *parser) {
       continue;
     }
     for (j = 0; j < def->flags_count; j++) {
-      if (ap_sb_appendf(sb, "      ") != 0 || append_parser_key(sb, parser) != 0 ||
+      if (ap_sb_appendf(sb, "      ") != 0 ||
+          append_parser_key(sb, parser) != 0 ||
           ap_sb_appendf(sb, ":%s) reply=(", def->flags[j]) != 0) {
         return -1;
       }
@@ -233,7 +237,8 @@ static int append_value_mode_cases(ap_string_builder *sb,
       continue;
     }
     for (j = 0; j < def->flags_count; j++) {
-      if (ap_sb_appendf(sb, "      ") != 0 || append_parser_key(sb, parser) != 0 ||
+      if (ap_sb_appendf(sb, "      ") != 0 ||
+          append_parser_key(sb, parser) != 0 ||
           ap_sb_appendf(sb, ":%s) printf '%%s\\n' '%s' ;;\n", def->flags[j],
                         option_value_mode(def)) != 0) {
         return -1;
@@ -259,7 +264,8 @@ static int append_completion_kind_cases(ap_string_builder *sb,
       continue;
     }
     for (j = 0; j < def->flags_count; j++) {
-      if (ap_sb_appendf(sb, "      ") != 0 || append_parser_key(sb, parser) != 0 ||
+      if (ap_sb_appendf(sb, "      ") != 0 ||
+          append_parser_key(sb, parser) != 0 ||
           ap_sb_appendf(sb, ":%s) printf '%%s\\n' '%s' ;;\n", def->flags[j],
                         completion_dispatch_kind_name(def)) != 0) {
         return -1;
@@ -285,7 +291,8 @@ static int append_value_count_cases(ap_string_builder *sb,
       continue;
     }
     for (j = 0; j < def->flags_count; j++) {
-      if (ap_sb_appendf(sb, "      ") != 0 || append_parser_key(sb, parser) != 0 ||
+      if (ap_sb_appendf(sb, "      ") != 0 ||
+          append_parser_key(sb, parser) != 0 ||
           ap_sb_appendf(sb, ":%s) printf '%%d\\n' %d ;;\n", def->flags[j],
                         option_value_count(def)) != 0) {
         return -1;
@@ -315,221 +322,231 @@ char *ap_zsh_completion_build(const ap_parser *parser) {
   if (ap_sb_appendf(&sb, "#compdef %s\n# zsh completion for %s\n_", prog,
                     parser->prog) != 0 ||
       append_identifier(&sb, prog) != 0 ||
-      ap_sb_appendf(&sb,
-                    "() {\n"
-                    "  local cur parser_key pending_option pending_mode option_name value_prefix completion_kind\n"
-                    "  local -a parser_subcommands parser_options parser_value_options parser_flag_only_options choices reply subcommand_descriptions option_descriptions dynamic_reply\n"
-                    "  cur=\"${words[CURRENT]}\"\n"
-                    "  parser_key='root'\n"
-                    "  pending_option=''\n"
-                    "  pending_mode=''\n"
-                    "  integer pending_fixed_remaining=0\n\n"
-                    "  __ap_zsh_load_parser() {\n"
-                    "    case \"$1\" in\n") != 0) {
+      ap_sb_appendf(
+          &sb, "() {\n"
+               "  local cur parser_key pending_option pending_mode option_name "
+               "value_prefix completion_kind\n"
+               "  local -a parser_subcommands parser_options "
+               "parser_value_options parser_flag_only_options choices reply "
+               "subcommand_descriptions option_descriptions dynamic_reply\n"
+               "  cur=\"${words[CURRENT]}\"\n"
+               "  parser_key='root'\n"
+               "  pending_option=''\n"
+               "  pending_mode=''\n"
+               "  integer pending_fixed_remaining=0\n\n"
+               "  __ap_zsh_load_parser() {\n"
+               "    case \"$1\" in\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
   }
   if (append_load_parser_cases(&sb, parser) != 0 ||
-      ap_sb_appendf(&sb,
-                    "      *) return 1 ;;\n"
-                    "    esac\n"
-                    "    return 0\n"
-                    "  }\n\n"
-                    "  __ap_zsh_choice_words() {\n"
-                    "    reply=()\n"
-                    "    case \"$1\" in\n") != 0) {
+      ap_sb_appendf(&sb, "      *) return 1 ;;\n"
+                         "    esac\n"
+                         "    return 0\n"
+                         "  }\n\n"
+                         "  __ap_zsh_choice_words() {\n"
+                         "    reply=()\n"
+                         "    case \"$1\" in\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
   }
   if (append_choice_cases(&sb, parser) != 0 ||
-      ap_sb_appendf(&sb,
-                    "      *) return 1 ;;\n"
-                    "    esac\n"
-                    "    return 0\n"
-                    "  }\n\n"
-                    "  __ap_zsh_option_value_mode() {\n"
-                    "    case \"$1\" in\n") != 0) {
+      ap_sb_appendf(&sb, "      *) return 1 ;;\n"
+                         "    esac\n"
+                         "    return 0\n"
+                         "  }\n\n"
+                         "  __ap_zsh_option_value_mode() {\n"
+                         "    case \"$1\" in\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
   }
   if (append_value_mode_cases(&sb, parser) != 0 ||
-      ap_sb_appendf(&sb,
-                    "      *) return 1 ;;\n"
-                    "    esac\n"
-                    "  }\n\n"
-                    "  __ap_zsh_option_completion_kind() {\n"
-                    "    case \"$1\" in\n") != 0) {
+      ap_sb_appendf(&sb, "      *) return 1 ;;\n"
+                         "    esac\n"
+                         "  }\n\n"
+                         "  __ap_zsh_option_completion_kind() {\n"
+                         "    case \"$1\" in\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
   }
   if (append_completion_kind_cases(&sb, parser) != 0 ||
-      ap_sb_appendf(&sb,
-                    "      *) return 1 ;;\n"
-                    "    esac\n"
-                    "  }\n\n"
-                    "  __ap_zsh_option_value_count() {\n"
-                    "    case \"$1\" in\n") != 0) {
+      ap_sb_appendf(&sb, "      *) return 1 ;;\n"
+                         "    esac\n"
+                         "  }\n\n"
+                         "  __ap_zsh_option_value_count() {\n"
+                         "    case \"$1\" in\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
   }
   if (append_value_count_cases(&sb, parser) != 0 ||
-      ap_sb_appendf(&sb,
-                    "      *) return 1 ;;\n"
-                    "    esac\n"
-                    "  }\n\n"
-                    "  __ap_zsh_has_word() {\n"
-                    "    local item=$1\n"
-                    "    shift\n"
-                    "    local candidate\n"
-                    "    for candidate in \"$@\"; do\n"
-                    "      [[ \"$candidate\" == \"$item\" ]] && return 0\n"
-                    "    done\n"
-                    "    return 1\n"
-                    "  }\n\n"
-                    "  __ap_zsh_dynamic_query() {\n"
-                    "    local -a query_words\n"
-                    "    query_words=(\"${words[@]:2}\")\n"
-                    "    ") != 0 ||
+      ap_sb_appendf(&sb, "      *) return 1 ;;\n"
+                         "    esac\n"
+                         "  }\n\n"
+                         "  __ap_zsh_has_word() {\n"
+                         "    local item=$1\n"
+                         "    shift\n"
+                         "    local candidate\n"
+                         "    for candidate in \"$@\"; do\n"
+                         "      [[ \"$candidate\" == \"$item\" ]] && return 0\n"
+                         "    done\n"
+                         "    return 1\n"
+                         "  }\n\n"
+                         "  __ap_zsh_dynamic_query() {\n"
+                         "    local -a query_words\n"
+                         "    query_words=(\"${words[@]:2}\")\n"
+                         "    ") != 0 ||
       append_single_quoted(&sb, prog) != 0 || ap_sb_appendf(&sb, " ") != 0 ||
       append_single_quoted(&sb, ap_parser_completion_entrypoint(parser)) != 0 ||
-      ap_sb_appendf(&sb,
-                    " --shell zsh -- \"${query_words[@]}\"\n"
-                    "  }\n\n"
-                    "  __ap_zsh_load_parser \"$parser_key\" || return 0\n"
-                    "  integer i=2\n"
-                    "  while (( i < CURRENT )); do\n"
-                    "    local token=${words[i]}\n"
-                    "    if [[ -n \"$pending_option\" ]]; then\n"
-                    "      case \"$pending_mode\" in\n"
-                    "        single)\n"
-                    "          pending_option=''\n"
-                    "          pending_mode=''\n"
-                    "          ;;\n"
-                    "        fixed)\n"
-                    "          pending_fixed_remaining=$((pending_fixed_remaining - 1))\n"
-                    "          if (( pending_fixed_remaining <= 0 )); then\n"
-                    "            pending_option=''\n"
-                    "            pending_mode=''\n"
-                    "            pending_fixed_remaining=0\n"
-                    "          fi\n"
-                    "          ;;\n"
-                    "        optional|multi)\n"
-                    "          if [[ \"$token\" != -* ]]; then\n"
-                    "            if [[ \"$pending_mode\" == optional ]]; then\n"
-                    "              pending_option=''\n"
-                    "              pending_mode=''\n"
-                    "            fi\n"
-                    "          else\n"
-                    "            pending_option=''\n"
-                    "            pending_mode=''\n"
-                    "          fi\n"
-                    "          ;;\n"
-                    "      esac\n"
-                    "    fi\n"
-                    "    if [[ \"$token\" == --*=* ]]; then\n"
-                    "      option_name=${token%%=*}\n"
-                    "      if __ap_zsh_has_word \"$option_name\" \"${parser_value_options[@]}\"; then\n"
-                    "        :\n"
-                    "      fi\n"
-                    "    elif [[ \"$token\" == -* ]]; then\n"
-                    "      if __ap_zsh_has_word \"$token\" \"${parser_value_options[@]}\"; then\n"
-                    "        pending_option=$token\n"
-                    "        pending_mode=$(__ap_zsh_option_value_mode \"$parser_key:$token\")\n"
-                    "        pending_fixed_remaining=$(__ap_zsh_option_value_count \"$parser_key:$token\")\n"
-                    "      fi\n"
-                    "    elif __ap_zsh_has_word \"$token\" \"${parser_subcommands[@]}\"; then\n"
-                    "      if [[ \"$parser_key\" == root ]]; then\n"
-                    "        parser_key=\"root/$token\"\n"
-                    "      else\n"
-                    "        parser_key=\"$parser_key/$token\"\n"
-                    "      fi\n"
-                    "      pending_option=''\n"
-                    "      pending_mode=''\n"
-                    "      pending_fixed_remaining=0\n"
-                    "      __ap_zsh_load_parser \"$parser_key\" || return 0\n"
-                    "    fi\n"
-                    "    i=$((i + 1))\n"
-                    "  done\n\n"
-                    "  if [[ \"$cur\" == --*=* ]]; then\n"
-                    "    option_name=${cur%%=*}\n"
-                    "    value_prefix=${cur#*=}\n"
-                    "    completion_kind=$(__ap_zsh_option_completion_kind \"$parser_key:$option_name\" 2>/dev/null || printf '%%s' none)\n"
-                    "    case \"$completion_kind\" in\n"
-                    "      choices)\n"
-                    "        if __ap_zsh_choice_words \"$parser_key:$option_name\" 2>/dev/null; then\n"
-                    "          compadd -Q -S '' -P \"$option_name=\" -- ${(M)reply:#$value_prefix*}\n"
-                    "        fi\n"
-                    "        return 0\n"
-                    "        ;;\n"
-                    "      dynamic)\n"
-                    "        dynamic_reply=(\"$(@f)$(__ap_zsh_dynamic_query)\")\n"
-                    "        compadd -Q -S '' -P \"$option_name=\" -- ${(M)dynamic_reply:#$value_prefix*}\n"
-                    "        return 0\n"
-                    "        ;;\n"
-                    "      file)\n"
-                    "        _files -P \"$option_name=\"\n"
-                    "        return 0\n"
-                    "        ;;\n"
-                    "      directory)\n"
-                    "        _files -/ -P \"$option_name=\"\n"
-                    "        return 0\n"
-                    "        ;;\n"
-                    "      command)\n"
-                    "        _command_names -P \"$option_name=\"\n"
-                    "        return 0\n"
-                    "        ;;\n"
-                    "    esac\n"
-                    "  fi\n\n"
-                    "  if [[ -n \"$pending_option\" ]]; then\n"
-                    "    completion_kind=$(__ap_zsh_option_completion_kind \"$parser_key:$pending_option\" 2>/dev/null || printf '%%s' none)\n"
-                    "    case \"$completion_kind\" in\n"
-                    "      choices)\n"
-                    "        if __ap_zsh_choice_words \"$parser_key:$pending_option\" 2>/dev/null; then\n"
-                    "          compadd -Q -S '' -- $reply\n"
-                    "        fi\n"
-                    "        return 0\n"
-                    "        ;;\n"
-                    "      dynamic)\n"
-                    "        dynamic_reply=(\"$(@f)$(__ap_zsh_dynamic_query)\")\n"
-                    "        compadd -Q -S '' -- $dynamic_reply\n"
-                    "        return 0\n"
-                    "        ;;\n"
-                    "      file)\n"
-                    "        _files\n"
-                    "        return 0\n"
-                    "        ;;\n"
-                    "      directory)\n"
-                    "        _files -/\n"
-                    "        return 0\n"
-                    "        ;;\n"
-                    "      command)\n"
-                    "        _command_names\n"
-                    "        return 0\n"
-                    "        ;;\n"
-                    "    esac\n"
-                    "  fi\n\n"
-                    "  if [[ \"$cur\" == -* ]]; then\n"
-                    "    option_descriptions=()\n"
-                    "    local opt\n"
-                    "    for opt in \"${parser_options[@]}\"; do\n"
-                    "      option_descriptions+=(\"$opt\")\n"
-                    "    done\n"
-                    "    compadd -Q -S '' -- ${(M)option_descriptions:#$cur*}\n"
-                    "    return 0\n"
-                    "  fi\n\n"
-                    "  subcommand_descriptions=()\n"
-                    "  local sub\n"
-                    "  for sub in \"${parser_subcommands[@]}\"; do\n"
-                    "    subcommand_descriptions+=(\"$sub\")\n"
-                    "  done\n"
-                    "  if (( ${#subcommand_descriptions[@]} > 0 )); then\n"
-                    "    compadd -Q -S '' -- ${(M)subcommand_descriptions:#$cur*}\n"
-                    "  fi\n"
-                    "  dynamic_reply=(\"$(@f)$(__ap_zsh_dynamic_query)\")\n"
-                    "  if (( ${#dynamic_reply[@]} > 0 )); then\n"
-                    "    compadd -Q -S '' -- $dynamic_reply\n"
-                    "  fi\n"
-                    "}\n\ncompdef _") != 0 ||
+      ap_sb_appendf(
+          &sb,
+          " --shell zsh -- \"${query_words[@]}\"\n"
+          "  }\n\n"
+          "  __ap_zsh_load_parser \"$parser_key\" || return 0\n"
+          "  integer i=2\n"
+          "  while (( i < CURRENT )); do\n"
+          "    local token=${words[i]}\n"
+          "    if [[ -n \"$pending_option\" ]]; then\n"
+          "      case \"$pending_mode\" in\n"
+          "        single)\n"
+          "          pending_option=''\n"
+          "          pending_mode=''\n"
+          "          ;;\n"
+          "        fixed)\n"
+          "          pending_fixed_remaining=$((pending_fixed_remaining - 1))\n"
+          "          if (( pending_fixed_remaining <= 0 )); then\n"
+          "            pending_option=''\n"
+          "            pending_mode=''\n"
+          "            pending_fixed_remaining=0\n"
+          "          fi\n"
+          "          ;;\n"
+          "        optional|multi)\n"
+          "          if [[ \"$token\" != -* ]]; then\n"
+          "            if [[ \"$pending_mode\" == optional ]]; then\n"
+          "              pending_option=''\n"
+          "              pending_mode=''\n"
+          "            fi\n"
+          "          else\n"
+          "            pending_option=''\n"
+          "            pending_mode=''\n"
+          "          fi\n"
+          "          ;;\n"
+          "      esac\n"
+          "    fi\n"
+          "    if [[ \"$token\" == --*=* ]]; then\n"
+          "      option_name=${token%%=*}\n"
+          "      if __ap_zsh_has_word \"$option_name\" "
+          "\"${parser_value_options[@]}\"; then\n"
+          "        :\n"
+          "      fi\n"
+          "    elif [[ \"$token\" == -* ]]; then\n"
+          "      if __ap_zsh_has_word \"$token\" "
+          "\"${parser_value_options[@]}\"; then\n"
+          "        pending_option=$token\n"
+          "        pending_mode=$(__ap_zsh_option_value_mode "
+          "\"$parser_key:$token\")\n"
+          "        pending_fixed_remaining=$(__ap_zsh_option_value_count "
+          "\"$parser_key:$token\")\n"
+          "      fi\n"
+          "    elif __ap_zsh_has_word \"$token\" \"${parser_subcommands[@]}\"; "
+          "then\n"
+          "      if [[ \"$parser_key\" == root ]]; then\n"
+          "        parser_key=\"root/$token\"\n"
+          "      else\n"
+          "        parser_key=\"$parser_key/$token\"\n"
+          "      fi\n"
+          "      pending_option=''\n"
+          "      pending_mode=''\n"
+          "      pending_fixed_remaining=0\n"
+          "      __ap_zsh_load_parser \"$parser_key\" || return 0\n"
+          "    fi\n"
+          "    i=$((i + 1))\n"
+          "  done\n\n"
+          "  if [[ \"$cur\" == --*=* ]]; then\n"
+          "    option_name=${cur%%=*}\n"
+          "    value_prefix=${cur#*=}\n"
+          "    completion_kind=$(__ap_zsh_option_completion_kind "
+          "\"$parser_key:$option_name\" 2>/dev/null || printf '%%s' none)\n"
+          "    case \"$completion_kind\" in\n"
+          "      choices)\n"
+          "        if __ap_zsh_choice_words \"$parser_key:$option_name\" "
+          "2>/dev/null; then\n"
+          "          compadd -Q -S '' -P \"$option_name=\" -- "
+          "${(M)reply:#$value_prefix*}\n"
+          "        fi\n"
+          "        return 0\n"
+          "        ;;\n"
+          "      dynamic)\n"
+          "        dynamic_reply=(\"$(@f)$(__ap_zsh_dynamic_query)\")\n"
+          "        compadd -Q -S '' -P \"$option_name=\" -- "
+          "${(M)dynamic_reply:#$value_prefix*}\n"
+          "        return 0\n"
+          "        ;;\n"
+          "      file)\n"
+          "        _files -P \"$option_name=\"\n"
+          "        return 0\n"
+          "        ;;\n"
+          "      directory)\n"
+          "        _files -/ -P \"$option_name=\"\n"
+          "        return 0\n"
+          "        ;;\n"
+          "      command)\n"
+          "        _command_names -P \"$option_name=\"\n"
+          "        return 0\n"
+          "        ;;\n"
+          "    esac\n"
+          "  fi\n\n"
+          "  if [[ -n \"$pending_option\" ]]; then\n"
+          "    completion_kind=$(__ap_zsh_option_completion_kind "
+          "\"$parser_key:$pending_option\" 2>/dev/null || printf '%%s' none)\n"
+          "    case \"$completion_kind\" in\n"
+          "      choices)\n"
+          "        if __ap_zsh_choice_words \"$parser_key:$pending_option\" "
+          "2>/dev/null; then\n"
+          "          compadd -Q -S '' -- $reply\n"
+          "        fi\n"
+          "        return 0\n"
+          "        ;;\n"
+          "      dynamic)\n"
+          "        dynamic_reply=(\"$(@f)$(__ap_zsh_dynamic_query)\")\n"
+          "        compadd -Q -S '' -- $dynamic_reply\n"
+          "        return 0\n"
+          "        ;;\n"
+          "      file)\n"
+          "        _files\n"
+          "        return 0\n"
+          "        ;;\n"
+          "      directory)\n"
+          "        _files -/\n"
+          "        return 0\n"
+          "        ;;\n"
+          "      command)\n"
+          "        _command_names\n"
+          "        return 0\n"
+          "        ;;\n"
+          "    esac\n"
+          "  fi\n\n"
+          "  if [[ \"$cur\" == -* ]]; then\n"
+          "    option_descriptions=()\n"
+          "    local opt\n"
+          "    for opt in \"${parser_options[@]}\"; do\n"
+          "      option_descriptions+=(\"$opt\")\n"
+          "    done\n"
+          "    compadd -Q -S '' -- ${(M)option_descriptions:#$cur*}\n"
+          "    return 0\n"
+          "  fi\n\n"
+          "  subcommand_descriptions=()\n"
+          "  local sub\n"
+          "  for sub in \"${parser_subcommands[@]}\"; do\n"
+          "    subcommand_descriptions+=(\"$sub\")\n"
+          "  done\n"
+          "  if (( ${#subcommand_descriptions[@]} > 0 )); then\n"
+          "    compadd -Q -S '' -- ${(M)subcommand_descriptions:#$cur*}\n"
+          "  fi\n"
+          "  dynamic_reply=(\"$(@f)$(__ap_zsh_dynamic_query)\")\n"
+          "  if (( ${#dynamic_reply[@]} > 0 )); then\n"
+          "    compadd -Q -S '' -- $dynamic_reply\n"
+          "  fi\n"
+          "}\n\ncompdef _") != 0 ||
       append_identifier(&sb, prog) != 0 || ap_sb_appendf(&sb, " ") != 0 ||
       append_single_quoted(&sb, prog) != 0 || ap_sb_appendf(&sb, "\n") != 0) {
     ap_sb_free(&sb);

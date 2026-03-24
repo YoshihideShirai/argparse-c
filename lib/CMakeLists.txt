@@ -10,6 +10,12 @@ set(AP_ARGPARSE_C_SOURCES
   format_completion_zsh.c
 )
 
+set(AP_ARGPARSE_C_TOOL_SOURCES)
+foreach(ap_source IN LISTS AP_ARGPARSE_C_SOURCES)
+  list(APPEND AP_ARGPARSE_C_TOOL_SOURCES "lib/${ap_source}")
+endforeach()
+set(AP_ARGPARSE_C_TOOL_SOURCES ${AP_ARGPARSE_C_TOOL_SOURCES} PARENT_SCOPE)
+
 add_library(argparse-c SHARED ${AP_ARGPARSE_C_SOURCES})
 add_library(argparse-c-static STATIC ${AP_ARGPARSE_C_SOURCES})
 
