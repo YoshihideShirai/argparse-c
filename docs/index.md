@@ -6,8 +6,8 @@ Build C99 CLIs with a Python `argparse`-style workflow.
 
 ## Choose a language
 
-- [README / English](../README.md)
-- [README / 日本語](../README.ja.md)
+- [README / English](repository/README.md)
+- [README / 日本語](repository/README.ja.md)
 - [GitHub Pages / English](en/index.md)
 - [GitHub Pages / 日本語](ja/index.md)
 
