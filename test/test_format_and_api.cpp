@@ -1175,6 +1175,94 @@ TEST(CompleteUsesPositionalCompletionMetadataAndCallback) {
   ap_parser_free(p);
 }
 
+TEST(CompleteAppliesCallbackScopeAcrossThreeToFiveSubcommandLevels) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *alpha = NULL;
+  ap_parser *beta = NULL;
+  ap_parser *gamma = NULL;
+  ap_parser *delta = NULL;
+  ap_parser *epsilon = NULL;
+  ap_arg_options root_exec = ap_arg_options_default();
+  ap_arg_options beta_exec = ap_arg_options_default();
+  ap_arg_options epsilon_exec = ap_arg_options_default();
+  ap_completion_result result = {};
+  static const char *const root_commands[] = {"root-run", "root-report",
+                                              nullptr};
+  static const char *const beta_commands[] = {"beta-build", "beta-bench",
+                                              nullptr};
+  static const char *const epsilon_commands[] = {"leaf-lint", "leaf-link",
+                                                 nullptr};
+  char arg0[] = "--exec";
+  char arg1[] = "root-r";
+  char *argv_root[] = {arg0, arg1};
+  char arg2[] = "alpha";
+  char arg3[] = "beta";
+  char arg4[] = "--exec";
+  char arg5[] = "beta-b";
+  char *argv_beta[] = {arg2, arg3, arg4, arg5};
+  char arg6[] = "alpha";
+  char arg7[] = "beta";
+  char arg8[] = "gamma";
+  char arg9[] = "delta";
+  char arg10[] = "epsilon";
+  char arg11[] = "--exec";
+  char arg12[] = "leaf-l";
+  char *argv_epsilon[] = {arg6, arg7, arg8, arg9, arg10, arg11, arg12};
+  char arg13[] = "alpha";
+  char arg14[] = "beta";
+  char arg15[] = "gamma";
+  char arg16[] = "--exec";
+  char arg17[] = "leaf";
+  char *argv_gamma[] = {arg13, arg14, arg15, arg16, arg17};
+
+  CHECK(p != NULL);
+  root_exec.completion_callback = dynamic_exec_completion;
+  root_exec.completion_user_data = (void *)root_commands;
+  beta_exec.completion_callback = dynamic_exec_completion;
+  beta_exec.completion_user_data = (void *)beta_commands;
+  epsilon_exec.completion_callback = dynamic_exec_completion;
+  epsilon_exec.completion_user_data = (void *)epsilon_commands;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--exec", root_exec, &err));
+  alpha = ap_add_subcommand(p, "alpha", "alpha commands", &err);
+  CHECK(alpha != NULL);
+  beta = ap_add_subcommand(alpha, "beta", "beta commands", &err);
+  CHECK(beta != NULL);
+  gamma = ap_add_subcommand(beta, "gamma", "gamma commands", &err);
+  CHECK(gamma != NULL);
+  delta = ap_add_subcommand(gamma, "delta", "delta commands", &err);
+  CHECK(delta != NULL);
+  epsilon = ap_add_subcommand(delta, "epsilon", "epsilon commands", &err);
+  CHECK(epsilon != NULL);
+  LONGS_EQUAL(0, ap_add_argument(beta, "--exec", beta_exec, &err));
+  LONGS_EQUAL(0, ap_add_argument(epsilon, "--exec", epsilon_exec, &err));
+
+  LONGS_EQUAL(0, ap_complete(p, 2, argv_root, "bash", &result, &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("root-run", result.items[0].value);
+  STRCMP_EQUAL("root-report", result.items[1].value);
+  ap_completion_result_free(&result);
+
+  LONGS_EQUAL(0, ap_complete(p, 4, argv_beta, "bash", &result, &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("beta-build", result.items[0].value);
+  STRCMP_EQUAL("beta-bench", result.items[1].value);
+  ap_completion_result_free(&result);
+
+  LONGS_EQUAL(0, ap_complete(p, 7, argv_epsilon, "bash", &result, &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("leaf-lint", result.items[0].value);
+  STRCMP_EQUAL("leaf-link", result.items[1].value);
+  ap_completion_result_free(&result);
+
+  LONGS_EQUAL(0, ap_complete(p, 5, argv_gamma, "bash", &result, &err));
+  LONGS_EQUAL(0, result.count);
+  ap_completion_result_free(&result);
+
+  ap_parser_free(p);
+}
+
 TEST(CompleteRejectsNullArgvWhenArgcIsPositive) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
