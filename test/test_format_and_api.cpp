@@ -1626,3 +1626,35 @@ TEST(NamespaceGettersSupportUint64) {
   ap_namespace_free(ns);
   ap_parser_free(p);
 }
+
+TEST(FormatErrorSurvivesVeryLongInvalidNumericMessages) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options limit = ap_arg_options_default();
+  std::string huge_bad_number(4096, '9');
+  std::vector<char *> argv;
+  char *formatted = NULL;
+
+  CHECK(p != NULL);
+  limit.type = AP_TYPE_INT64;
+  LONGS_EQUAL(0, ap_add_argument(p, "--limit", limit, &err));
+
+  argv.push_back((char *)"prog");
+  argv.push_back((char *)"--limit");
+  argv.push_back((char *)huge_bad_number.c_str());
+
+  LONGS_EQUAL(-1, ap_parse_args(p, (int)argv.size(), argv.data(), &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_INT64, err.code);
+  STRCMP_EQUAL("--limit", err.argument);
+  CHECK(ns == NULL);
+
+  formatted = ap_format_error(p, &err);
+  CHECK(formatted != NULL);
+  CHECK(strstr(formatted, "error: argument '--limit' must be a valid int64") !=
+        NULL);
+  CHECK(strstr(formatted, "usage: prog") != NULL);
+
+  free(formatted);
+  ap_parser_free(p);
+}
