@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
 - sanitizer と境界ケースを含むテストを CI で継続実行し、coverage を公開しています。
   - CI（tests + sanitizers + coverage）: <https://github.com/yoshihideshirai/argparse-c/actions/workflows/ci.yml>
   - Pages（coverage 公開ジョブ）: <https://github.com/yoshihideshirai/argparse-c/actions/workflows/pages.yml>
-- セキュリティテスト手順: [docs/ja/security-testing.md](./docs/ja/security-testing.md)
+- セキュリティテスト手順: <https://yoshihideshirai.github.io/argparse-c/ja/security-testing/>
 - 公開時点の既知状態: この README の公開時点で、未修正の重大脆弱性は把握していません。
 
 ### 非保証範囲

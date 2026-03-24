@@ -159,7 +159,7 @@ The README no longer carries the detailed setup steps. Use the docs site for com
 - We continuously run sanitizer and boundary-focused tests in CI, and we publish coverage results for each run:
   - CI (tests + sanitizers + coverage): <https://github.com/yoshihideshirai/argparse-c/actions/workflows/ci.yml>
   - Pages (coverage publish job): <https://github.com/yoshihideshirai/argparse-c/actions/workflows/pages.yml>
-- Security test procedure: [docs/en/security-testing.md](./docs/en/security-testing.md)
+- Security test procedure: <https://yoshihideshirai.github.io/argparse-c/en/security-testing/>
 - Known status at publish time: no known unpatched critical vulnerabilities in this repository at the time this README was published.
 
 ### Out of guarantee scope
