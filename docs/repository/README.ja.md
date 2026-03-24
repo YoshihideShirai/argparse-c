@@ -113,3 +113,20 @@ int main(int argc, char **argv) {
 - `README.md` と `README.ja.md` では、概要・主な利点・機能一覧の粒度を大きくずらさずに保ちます。
 - README は訴求と導線を担い、詳細な使い方は `docs/ja/getting-started.md` や各 guide に寄せます。
 - 詳細説明を追加したくなった場合は、まず docs 側へ追記し、README からはそのページへ案内します。
+
+## セキュリティ検証の現状と適用範囲
+
+- sanitizer と境界ケースを含むテストを CI で継続実行し、coverage を公開しています。
+  - CI（tests + sanitizers + coverage）: <https://github.com/yoshihideshirai/argparse-c/actions/workflows/ci.yml>
+  - Pages（coverage 公開ジョブ）: <https://github.com/yoshihideshirai/argparse-c/actions/workflows/pages.yml>
+- セキュリティテスト手順: <../ja/security-testing/>
+- 公開時点の既知状態: この README の公開時点で、未修正の重大脆弱性は把握していません。
+
+### 非保証範囲
+
+- 実際に本ライブラリを利用するアプリケーション側の入出力検証は、利用側アプリケーションの責務です。
+- OS・ツールチェーン・依存ライブラリなど実行環境差異による挙動差やリスクは、本ライブラリ単体では完全には保証できません。
+
+### 更新ルール
+
+- リリースごとに本節の表現を見直し、最新の CI 実行結果とセキュリティテスト手順に合わせて更新します。
