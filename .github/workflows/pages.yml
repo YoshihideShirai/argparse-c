@@ -38,34 +38,8 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Verify docs/repository is synchronized
-        run: |
-          scripts/sync_docs_repository
-          git diff --exit-code -- docs/repository
-
-      - name: Build documentation site
-        run: mkdocs build
-
-      - name: Validate docs source forbidden link patterns
-        run: |
-          set -euo pipefail
-
-          forbidden_patterns=(
-            '\.\./README\.md'
-            '\.\./\.\./sample/'
-          )
-
-          found=0
-          for pattern in "${forbidden_patterns[@]}"; do
-            if rg --line-number --no-heading --glob '*.md' "$pattern" docs; then
-              echo "Forbidden docs link pattern detected: $pattern" >&2
-              found=1
-            fi
-          done
-
-          if [ "$found" -ne 0 ]; then
-            exit 1
-          fi
+      - name: Verify docs/repository and generated links
+        run: python scripts/verify_docs_repository_links.py
 
       - name: Configure coverage build
         run: |
@@ -91,8 +65,14 @@ jobs:
             --txt site/coverage.txt \
             --html-details site/coverage/index.html
 
-      - name: Validate generated site links
-        run: python scripts/check_docs_links.py --skip-source
+      - name: Upload docs verification debug artifact (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-verification-debug
+          path: |
+            docs/repository/README*.md
+            site/repository/**/*.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
