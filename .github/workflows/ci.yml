@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build pkg-config
+          sudo apt-get install -y cmake ninja-build pkg-config zsh
 
       - name: Configure
         run: |
@@ -63,6 +63,44 @@ jobs:
             -o consumer-build/pkg-config-consumer \
             $(pkg-config --cflags --libs argparse-c)
           ./consumer-build/pkg-config-consumer
+
+  shell-syntax:
+    name: Shell completion syntax checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build gcc g++ bash fish zsh
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-shell \
+            -G Ninja \
+            -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_CXX_COMPILER=g++
+
+      - name: Build sample generators
+        run: |
+          cmake --build build-shell --parallel --target example_completion example_manpage
+
+      - name: Validate generated shell scripts
+        run: |
+          mkdir -p build-shell/generated
+
+          for sample in example_completion example_manpage; do
+            ./build-shell/sample/${sample} --generate-bash-completion > build-shell/generated/${sample}.bash
+            ./build-shell/sample/${sample} --generate-fish-completion > build-shell/generated/${sample}.fish
+            ./build-shell/sample/${sample} --generate-zsh-completion > build-shell/generated/_${sample}
+
+            bash -n build-shell/generated/${sample}.bash
+            fish --no-execute build-shell/generated/${sample}.fish
+            zsh -n build-shell/generated/_${sample}
+          done
 
   sanitizers:
     name: Sanitizers (clang ASan/UBSan)
