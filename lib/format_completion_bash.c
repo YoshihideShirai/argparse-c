@@ -239,7 +239,8 @@ static int append_choice_cases(ap_string_builder *sb, const ap_parser *parser) {
       continue;
     }
     for (j = 0; j < def->flags_count; j++) {
-      if (ap_sb_appendf(sb, "      ") != 0 || append_parser_key(sb, parser) != 0 ||
+      if (ap_sb_appendf(sb, "      ") != 0 ||
+          append_parser_key(sb, parser) != 0 ||
           ap_sb_appendf(sb, ":%s) printf '%%s\\n' ", def->flags[j]) != 0) {
         return -1;
       }
@@ -275,7 +276,8 @@ static int append_value_mode_cases(ap_string_builder *sb,
       continue;
     }
     for (j = 0; j < def->flags_count; j++) {
-      if (ap_sb_appendf(sb, "      ") != 0 || append_parser_key(sb, parser) != 0 ||
+      if (ap_sb_appendf(sb, "      ") != 0 ||
+          append_parser_key(sb, parser) != 0 ||
           ap_sb_appendf(sb, ":%s) printf '%%s\\n' '%s' ;;\n", def->flags[j],
                         option_value_mode(def)) != 0) {
         return -1;
@@ -301,7 +303,8 @@ static int append_completion_kind_cases(ap_string_builder *sb,
       continue;
     }
     for (j = 0; j < def->flags_count; j++) {
-      if (ap_sb_appendf(sb, "      ") != 0 || append_parser_key(sb, parser) != 0 ||
+      if (ap_sb_appendf(sb, "      ") != 0 ||
+          append_parser_key(sb, parser) != 0 ||
           ap_sb_appendf(sb, ":%s) printf '%%s\\n' '%s' ;;\n", def->flags[j],
                         completion_dispatch_kind_name(def)) != 0) {
         return -1;
@@ -327,7 +330,8 @@ static int append_value_count_cases(ap_string_builder *sb,
       continue;
     }
     for (j = 0; j < def->flags_count; j++) {
-      if (ap_sb_appendf(sb, "      ") != 0 || append_parser_key(sb, parser) != 0 ||
+      if (ap_sb_appendf(sb, "      ") != 0 ||
+          append_parser_key(sb, parser) != 0 ||
           ap_sb_appendf(sb, ":%s) printf '%%d\\n' %d ;;\n", def->flags[j],
                         option_value_count(def)) != 0) {
         return -1;
@@ -356,217 +360,225 @@ char *ap_bash_completion_build(const ap_parser *parser) {
   ap_sb_init(&sb);
   if (ap_sb_appendf(&sb, "# bash completion for %s\n_", parser->prog) != 0 ||
       append_identifier(&sb, prog) != 0 ||
-      ap_sb_appendf(&sb,
-                    "() {\n"
-                    "  local cur parser_key parser_subcommands parser_options parser_value_options parser_flag_only_options\n"
-                    "  local pending_option pending_mode pending_fixed_remaining option_name value_prefix token choices completion_kind\n"
-                    "  local -a filtered candidates\n"
-                    "  cur=\"${COMP_WORDS[COMP_CWORD]}\"\n"
-                    "  parser_key='root'\n"
-                    "  pending_option=''\n"
-                    "  pending_mode=''\n"
-                    "  pending_fixed_remaining=0\n\n"
-                    "  __ap_completion_load_parser() {\n"
-                    "    case \"$1\" in\n") != 0) {
+      ap_sb_appendf(
+          &sb, "() {\n"
+               "  local cur parser_key parser_subcommands parser_options "
+               "parser_value_options parser_flag_only_options\n"
+               "  local pending_option pending_mode pending_fixed_remaining "
+               "option_name value_prefix token choices completion_kind\n"
+               "  local -a filtered candidates\n"
+               "  cur=\"${COMP_WORDS[COMP_CWORD]}\"\n"
+               "  parser_key='root'\n"
+               "  pending_option=''\n"
+               "  pending_mode=''\n"
+               "  pending_fixed_remaining=0\n\n"
+               "  __ap_completion_load_parser() {\n"
+               "    case \"$1\" in\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
   }
   if (append_load_parser_cases(&sb, parser) != 0 ||
-      ap_sb_appendf(&sb,
-                    "      *) return 1 ;;\n"
-                    "    esac\n"
-                    "  }\n\n"
-                    "  __ap_completion_choice_words() {\n"
-                    "    case \"$1\" in\n") != 0) {
+      ap_sb_appendf(&sb, "      *) return 1 ;;\n"
+                         "    esac\n"
+                         "  }\n\n"
+                         "  __ap_completion_choice_words() {\n"
+                         "    case \"$1\" in\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
   }
   if (append_choice_cases(&sb, parser) != 0 ||
-      ap_sb_appendf(&sb,
-                    "      *) return 1 ;;\n"
-                    "    esac\n"
-                    "  }\n\n"
-                    "  __ap_completion_option_value_mode() {\n"
-                    "    case \"$1\" in\n") != 0) {
+      ap_sb_appendf(&sb, "      *) return 1 ;;\n"
+                         "    esac\n"
+                         "  }\n\n"
+                         "  __ap_completion_option_value_mode() {\n"
+                         "    case \"$1\" in\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
   }
   if (append_value_mode_cases(&sb, parser) != 0 ||
-      ap_sb_appendf(&sb,
-                    "      *) return 1 ;;\n"
-                    "    esac\n"
-                    "  }\n\n"
-                    "  __ap_completion_option_completion_kind() {\n"
-                    "    case \"$1\" in\n") != 0) {
+      ap_sb_appendf(&sb, "      *) return 1 ;;\n"
+                         "    esac\n"
+                         "  }\n\n"
+                         "  __ap_completion_option_completion_kind() {\n"
+                         "    case \"$1\" in\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
   }
   if (append_completion_kind_cases(&sb, parser) != 0 ||
-      ap_sb_appendf(&sb,
-                    "      *) return 1 ;;\n"
-                    "    esac\n"
-                    "  }\n\n"
-                    "  __ap_completion_option_value_count() {\n"
-                    "    case \"$1\" in\n") != 0) {
+      ap_sb_appendf(&sb, "      *) return 1 ;;\n"
+                         "    esac\n"
+                         "  }\n\n"
+                         "  __ap_completion_option_value_count() {\n"
+                         "    case \"$1\" in\n") != 0) {
     ap_sb_free(&sb);
     return NULL;
   }
   if (append_value_count_cases(&sb, parser) != 0 ||
-      ap_sb_appendf(&sb,
-                    "      *) return 1 ;;\n"
-                    "    esac\n"
-                    "  }\n\n"
-                    "  __ap_completion_has_word() {\n"
-                    "    case \" $2 \" in\n"
-                    "      *\" $1 \"*) return 0 ;;\n"
-                    "      *) return 1 ;;\n"
-                    "    esac\n"
-                    "  }\n\n"
-                    "  __ap_completion_filter_mutex_candidates() {\n"
-                    "    local parser_name=$1\n"
-                    "    shift\n"
-                    "    printf '%%s\\n' \"$@\"\n"
-                    "  }\n\n"
-                    "  __ap_completion_dynamic_query() {\n"
-                    "    ") != 0 ||
-      append_single_quoted(&sb, prog) != 0 ||
-      ap_sb_appendf(&sb,
-                    " ") != 0 ||
+      ap_sb_appendf(&sb, "      *) return 1 ;;\n"
+                         "    esac\n"
+                         "  }\n\n"
+                         "  __ap_completion_has_word() {\n"
+                         "    case \" $2 \" in\n"
+                         "      *\" $1 \"*) return 0 ;;\n"
+                         "      *) return 1 ;;\n"
+                         "    esac\n"
+                         "  }\n\n"
+                         "  __ap_completion_filter_mutex_candidates() {\n"
+                         "    local parser_name=$1\n"
+                         "    shift\n"
+                         "    printf '%%s\\n' \"$@\"\n"
+                         "  }\n\n"
+                         "  __ap_completion_dynamic_query() {\n"
+                         "    ") != 0 ||
+      append_single_quoted(&sb, prog) != 0 || ap_sb_appendf(&sb, " ") != 0 ||
       append_single_quoted(&sb, ap_parser_completion_entrypoint(parser)) != 0 ||
-      ap_sb_appendf(&sb,
-                    " --shell bash -- \"${COMP_WORDS[@]:1}\"\n"
-                    "  }\n\n"
-                    "  __ap_completion_load_parser \"$parser_key\" || return 0\n"
-                    "  local i=1\n"
-                    "  while (( i < COMP_CWORD )); do\n"
-                    "    token=\"${COMP_WORDS[i]}\"\n"
-                    "    if [[ -n \"$pending_option\" ]]; then\n"
-                    "      case \"$pending_mode\" in\n"
-                    "        single)\n"
-                    "          pending_option=''\n"
-                    "          pending_mode=''\n"
-                    "          ;;&\n"
-                    "        fixed)\n"
-                    "          pending_fixed_remaining=$((pending_fixed_remaining - 1))\n"
-                    "          if (( pending_fixed_remaining <= 0 )); then\n"
-                    "            pending_option=''\n"
-                    "            pending_mode=''\n"
-                    "            pending_fixed_remaining=0\n"
-                    "          fi\n"
-                    "          ;;&\n"
-                    "        optional|multi)\n"
-                    "          if [[ \"$token\" != -* ]]; then\n"
-                    "            if [[ \"$pending_mode\" == optional ]]; then\n"
-                    "              pending_option=''\n"
-                    "              pending_mode=''\n"
-                    "            fi\n"
-                    "          else\n"
-                    "            pending_option=''\n"
-                    "            pending_mode=''\n"
-                    "          fi\n"
-                    "          ;;\n"
-                    "      esac\n"
-                    "    fi\n"
-                    "    if [[ \"$token\" == --*=* ]]; then\n"
-                    "      option_name=${token%%=*}\n"
-                    "      if __ap_completion_has_word \"$option_name\" \"$parser_value_options\"; then\n"
-                    "        :\n"
-                    "      fi\n"
-                    "    elif [[ \"$token\" == -* ]]; then\n"
-                    "      if __ap_completion_has_word \"$token\" \"$parser_value_options\"; then\n"
-                    "        pending_option=$token\n"
-                    "        pending_mode=$(__ap_completion_option_value_mode \"$parser_key:$token\")\n"
-                    "        pending_fixed_remaining=$(__ap_completion_option_value_count \"$parser_key:$token\")\n"
-                    "      fi\n"
-                    "    elif __ap_completion_has_word \"$token\" \"$parser_subcommands\"; then\n"
-                    "      if [[ \"$parser_key\" == root ]]; then\n"
-                    "        parser_key=\"root/$token\"\n"
-                    "      else\n"
-                    "        parser_key=\"$parser_key/$token\"\n"
-                    "      fi\n"
-                    "      pending_option=''\n"
-                    "      pending_mode=''\n"
-                    "      pending_fixed_remaining=0\n"
-                    "      __ap_completion_load_parser \"$parser_key\" || return 0\n"
-                    "    fi\n"
-                    "    i=$((i + 1))\n"
-                    "  done\n\n"
-                    "  if [[ \"$cur\" == --*=* ]]; then\n"
-                    "    option_name=${cur%%=*}\n"
-                    "    value_prefix=${cur#*=}\n"
-                    "    completion_kind=$(__ap_completion_option_completion_kind \"$parser_key:$option_name\" 2>/dev/null || printf '%%s' none)\n"
-                    "    case \"$completion_kind\" in\n"
-                    "      choices)\n"
-                    "        if choices=$(__ap_completion_choice_words \"$parser_key:$option_name\" 2>/dev/null); then\n"
-                    "          COMPREPLY=( $(compgen -W \"$choices\" -- \"$value_prefix\") )\n"
-                    "        fi\n"
-                    "        ;;\n"
-                    "      dynamic)\n"
-                    "        mapfile -t COMPREPLY < <(__ap_completion_dynamic_query)\n"
-                    "        ;;\n"
-                    "      file)\n"
-                    "        COMPREPLY=( $(compgen -f -- \"$value_prefix\") )\n"
-                    "        ;;\n"
-                    "      directory)\n"
-                    "        COMPREPLY=( $(compgen -d -- \"$value_prefix\") )\n"
-                    "        ;;\n"
-                    "      command)\n"
-                    "        COMPREPLY=( $(compgen -c -- \"$value_prefix\") )\n"
-                    "        ;;\n"
-                    "    esac\n"
-                    "    if (( ${#COMPREPLY[@]} > 0 )); then\n"
-                    "      local idx\n"
-                    "      for idx in \"${!COMPREPLY[@]}\"; do\n"
-                    "        COMPREPLY[idx]=\"$option_name=${COMPREPLY[idx]}\"\n"
-                    "      done\n"
-                    "      return 0\n"
-                    "    fi\n"
-                    "  fi\n\n"
-                    "  if [[ -n \"$pending_option\" ]]; then\n"
-                    "    completion_kind=$(__ap_completion_option_completion_kind \"$parser_key:$pending_option\" 2>/dev/null || printf '%%s' none)\n"
-                    "    case \"$completion_kind\" in\n"
-                    "      choices)\n"
-                    "        if choices=$(__ap_completion_choice_words \"$parser_key:$pending_option\" 2>/dev/null); then\n"
-                    "          COMPREPLY=( $(compgen -W \"$choices\" -- \"$cur\") )\n"
-                    "        fi\n"
-                    "        ;;\n"
-                    "      dynamic)\n"
-                    "        mapfile -t COMPREPLY < <(__ap_completion_dynamic_query)\n"
-                    "        ;;\n"
-                    "      file)\n"
-                    "        COMPREPLY=( $(compgen -f -- \"$cur\") )\n"
-                    "        ;;\n"
-                    "      directory)\n"
-                    "        COMPREPLY=( $(compgen -d -- \"$cur\") )\n"
-                    "        ;;\n"
-                    "      command)\n"
-                    "        COMPREPLY=( $(compgen -c -- \"$cur\") )\n"
-                    "        ;;\n"
-                    "    esac\n"
-                    "    if (( ${#COMPREPLY[@]} > 0 )); then\n"
-                    "      return 0\n"
-                    "    fi\n"
-                    "  fi\n\n"
-                    "  if [[ \"$cur\" == -* ]]; then\n"
-                    "    filtered=()\n"
-                    "    while IFS= read -r token; do\n"
-                    "      [[ -n \"$token\" ]] && filtered+=(\"$token\")\n"
-                    "    done < <(__ap_completion_filter_mutex_candidates \"$parser_key\" $parser_options)\n"
-                    "    COMPREPLY=( $(compgen -W \"${filtered[*]}\" -- \"$cur\") )\n"
-                    "    return 0\n"
-                    "  fi\n\n"
-                    "  mapfile -t COMPREPLY < <(__ap_completion_dynamic_query)\n"
-                    "  if (( ${#COMPREPLY[@]} > 0 )); then\n"
-                    "    return 0\n"
-                    "  fi\n\n"
-                    "  candidates=()\n"
-                    "  while IFS= read -r token; do\n"
-                    "    [[ -n \"$token\" ]] && candidates+=(\"$token\")\n"
-                    "  done < <(printf '%%s\\n' $parser_subcommands)\n"
-                    "  COMPREPLY=( $(compgen -W \"${candidates[*]}\" -- \"$cur\") )\n"
-                    "  return 0\n"
-                    "}\n\n"
-                    "complete -F _") != 0 ||
+      ap_sb_appendf(
+          &sb,
+          " --shell bash -- \"${COMP_WORDS[@]:1}\"\n"
+          "  }\n\n"
+          "  __ap_completion_load_parser \"$parser_key\" || return 0\n"
+          "  local i=1\n"
+          "  while (( i < COMP_CWORD )); do\n"
+          "    token=\"${COMP_WORDS[i]}\"\n"
+          "    if [[ -n \"$pending_option\" ]]; then\n"
+          "      case \"$pending_mode\" in\n"
+          "        single)\n"
+          "          pending_option=''\n"
+          "          pending_mode=''\n"
+          "          ;;&\n"
+          "        fixed)\n"
+          "          pending_fixed_remaining=$((pending_fixed_remaining - 1))\n"
+          "          if (( pending_fixed_remaining <= 0 )); then\n"
+          "            pending_option=''\n"
+          "            pending_mode=''\n"
+          "            pending_fixed_remaining=0\n"
+          "          fi\n"
+          "          ;;&\n"
+          "        optional|multi)\n"
+          "          if [[ \"$token\" != -* ]]; then\n"
+          "            if [[ \"$pending_mode\" == optional ]]; then\n"
+          "              pending_option=''\n"
+          "              pending_mode=''\n"
+          "            fi\n"
+          "          else\n"
+          "            pending_option=''\n"
+          "            pending_mode=''\n"
+          "          fi\n"
+          "          ;;\n"
+          "      esac\n"
+          "    fi\n"
+          "    if [[ \"$token\" == --*=* ]]; then\n"
+          "      option_name=${token%%=*}\n"
+          "      if __ap_completion_has_word \"$option_name\" "
+          "\"$parser_value_options\"; then\n"
+          "        :\n"
+          "      fi\n"
+          "    elif [[ \"$token\" == -* ]]; then\n"
+          "      if __ap_completion_has_word \"$token\" "
+          "\"$parser_value_options\"; then\n"
+          "        pending_option=$token\n"
+          "        pending_mode=$(__ap_completion_option_value_mode "
+          "\"$parser_key:$token\")\n"
+          "        "
+          "pending_fixed_remaining=$(__ap_completion_option_value_count "
+          "\"$parser_key:$token\")\n"
+          "      fi\n"
+          "    elif __ap_completion_has_word \"$token\" "
+          "\"$parser_subcommands\"; then\n"
+          "      if [[ \"$parser_key\" == root ]]; then\n"
+          "        parser_key=\"root/$token\"\n"
+          "      else\n"
+          "        parser_key=\"$parser_key/$token\"\n"
+          "      fi\n"
+          "      pending_option=''\n"
+          "      pending_mode=''\n"
+          "      pending_fixed_remaining=0\n"
+          "      __ap_completion_load_parser \"$parser_key\" || return 0\n"
+          "    fi\n"
+          "    i=$((i + 1))\n"
+          "  done\n\n"
+          "  if [[ \"$cur\" == --*=* ]]; then\n"
+          "    option_name=${cur%%=*}\n"
+          "    value_prefix=${cur#*=}\n"
+          "    completion_kind=$(__ap_completion_option_completion_kind "
+          "\"$parser_key:$option_name\" 2>/dev/null || printf '%%s' none)\n"
+          "    case \"$completion_kind\" in\n"
+          "      choices)\n"
+          "        if choices=$(__ap_completion_choice_words "
+          "\"$parser_key:$option_name\" 2>/dev/null); then\n"
+          "          COMPREPLY=( $(compgen -W \"$choices\" -- "
+          "\"$value_prefix\") )\n"
+          "        fi\n"
+          "        ;;\n"
+          "      dynamic)\n"
+          "        mapfile -t COMPREPLY < <(__ap_completion_dynamic_query)\n"
+          "        ;;\n"
+          "      file)\n"
+          "        COMPREPLY=( $(compgen -f -- \"$value_prefix\") )\n"
+          "        ;;\n"
+          "      directory)\n"
+          "        COMPREPLY=( $(compgen -d -- \"$value_prefix\") )\n"
+          "        ;;\n"
+          "      command)\n"
+          "        COMPREPLY=( $(compgen -c -- \"$value_prefix\") )\n"
+          "        ;;\n"
+          "    esac\n"
+          "    if (( ${#COMPREPLY[@]} > 0 )); then\n"
+          "      local idx\n"
+          "      for idx in \"${!COMPREPLY[@]}\"; do\n"
+          "        COMPREPLY[idx]=\"$option_name=${COMPREPLY[idx]}\"\n"
+          "      done\n"
+          "      return 0\n"
+          "    fi\n"
+          "  fi\n\n"
+          "  if [[ -n \"$pending_option\" ]]; then\n"
+          "    completion_kind=$(__ap_completion_option_completion_kind "
+          "\"$parser_key:$pending_option\" 2>/dev/null || printf '%%s' none)\n"
+          "    case \"$completion_kind\" in\n"
+          "      choices)\n"
+          "        if choices=$(__ap_completion_choice_words "
+          "\"$parser_key:$pending_option\" 2>/dev/null); then\n"
+          "          COMPREPLY=( $(compgen -W \"$choices\" -- \"$cur\") )\n"
+          "        fi\n"
+          "        ;;\n"
+          "      dynamic)\n"
+          "        mapfile -t COMPREPLY < <(__ap_completion_dynamic_query)\n"
+          "        ;;\n"
+          "      file)\n"
+          "        COMPREPLY=( $(compgen -f -- \"$cur\") )\n"
+          "        ;;\n"
+          "      directory)\n"
+          "        COMPREPLY=( $(compgen -d -- \"$cur\") )\n"
+          "        ;;\n"
+          "      command)\n"
+          "        COMPREPLY=( $(compgen -c -- \"$cur\") )\n"
+          "        ;;\n"
+          "    esac\n"
+          "    if (( ${#COMPREPLY[@]} > 0 )); then\n"
+          "      return 0\n"
+          "    fi\n"
+          "  fi\n\n"
+          "  if [[ \"$cur\" == -* ]]; then\n"
+          "    filtered=()\n"
+          "    while IFS= read -r token; do\n"
+          "      [[ -n \"$token\" ]] && filtered+=(\"$token\")\n"
+          "    done < <(__ap_completion_filter_mutex_candidates "
+          "\"$parser_key\" $parser_options)\n"
+          "    COMPREPLY=( $(compgen -W \"${filtered[*]}\" -- \"$cur\") )\n"
+          "    return 0\n"
+          "  fi\n\n"
+          "  mapfile -t COMPREPLY < <(__ap_completion_dynamic_query)\n"
+          "  if (( ${#COMPREPLY[@]} > 0 )); then\n"
+          "    return 0\n"
+          "  fi\n\n"
+          "  candidates=()\n"
+          "  while IFS= read -r token; do\n"
+          "    [[ -n \"$token\" ]] && candidates+=(\"$token\")\n"
+          "  done < <(printf '%%s\\n' $parser_subcommands)\n"
+          "  COMPREPLY=( $(compgen -W \"${candidates[*]}\" -- \"$cur\") )\n"
+          "  return 0\n"
+          "}\n\n"
+          "complete -F _") != 0 ||
       append_identifier(&sb, prog) != 0 || ap_sb_appendf(&sb, " ") != 0 ||
       append_single_quoted(&sb, prog) != 0 || ap_sb_appendf(&sb, "\n") != 0) {
     ap_sb_free(&sb);
