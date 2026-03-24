@@ -44,6 +44,9 @@ jobs:
       - name: Build documentation site
         run: mkdocs build
 
+      - name: Validate docs source and site links
+        run: python scripts/check_docs_links.py
+
       - name: Configure coverage build
         run: |
           cmake -S . -B build-coverage \
