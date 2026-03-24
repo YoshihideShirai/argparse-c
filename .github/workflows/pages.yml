@@ -40,7 +40,7 @@ jobs:
 
       - name: Verify docs/repository is synchronized
         run: |
-          python scripts/sync_docs_repository.py
+          scripts/sync_docs_repository
           git diff --exit-code -- docs/repository
 
       - name: Build documentation site
