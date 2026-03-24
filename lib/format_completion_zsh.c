@@ -209,7 +209,7 @@ static int append_choice_cases(ap_string_builder *sb, const ap_parser *parser) {
           return -1;
         }
       }
-      if (ap_sb_appendf(sb, " ) ;;&\n") != 0) {
+      if (ap_sb_appendf(sb, " ) ;;\n") != 0) {
         return -1;
       }
     }
@@ -234,7 +234,7 @@ static int append_value_mode_cases(ap_string_builder *sb,
     }
     for (j = 0; j < def->flags_count; j++) {
       if (ap_sb_appendf(sb, "      ") != 0 || append_parser_key(sb, parser) != 0 ||
-          ap_sb_appendf(sb, ":%s) printf '%%s\\n' '%s' ;;&\n", def->flags[j],
+          ap_sb_appendf(sb, ":%s) printf '%%s\\n' '%s' ;;\n", def->flags[j],
                         option_value_mode(def)) != 0) {
         return -1;
       }
@@ -260,7 +260,7 @@ static int append_completion_kind_cases(ap_string_builder *sb,
     }
     for (j = 0; j < def->flags_count; j++) {
       if (ap_sb_appendf(sb, "      ") != 0 || append_parser_key(sb, parser) != 0 ||
-          ap_sb_appendf(sb, ":%s) printf '%%s\\n' '%s' ;;&\n", def->flags[j],
+          ap_sb_appendf(sb, ":%s) printf '%%s\\n' '%s' ;;\n", def->flags[j],
                         completion_dispatch_kind_name(def)) != 0) {
         return -1;
       }
@@ -286,7 +286,7 @@ static int append_value_count_cases(ap_string_builder *sb,
     }
     for (j = 0; j < def->flags_count; j++) {
       if (ap_sb_appendf(sb, "      ") != 0 || append_parser_key(sb, parser) != 0 ||
-          ap_sb_appendf(sb, ":%s) printf '%%d\\n' %d ;;&\n", def->flags[j],
+          ap_sb_appendf(sb, ":%s) printf '%%d\\n' %d ;;\n", def->flags[j],
                         option_value_count(def)) != 0) {
         return -1;
       }
@@ -404,7 +404,7 @@ char *ap_zsh_completion_build(const ap_parser *parser) {
                     "        single)\n"
                     "          pending_option=''\n"
                     "          pending_mode=''\n"
-                    "          ;;&\n"
+                    "          ;;\n"
                     "        fixed)\n"
                     "          pending_fixed_remaining=$((pending_fixed_remaining - 1))\n"
                     "          if (( pending_fixed_remaining <= 0 )); then\n"
@@ -412,7 +412,7 @@ char *ap_zsh_completion_build(const ap_parser *parser) {
                     "            pending_mode=''\n"
                     "            pending_fixed_remaining=0\n"
                     "          fi\n"
-                    "          ;;&\n"
+                    "          ;;\n"
                     "        optional|multi)\n"
                     "          if [[ \"$token\" != -* ]]; then\n"
                     "            if [[ \"$pending_mode\" == optional ]]; then\n"
