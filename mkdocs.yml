@@ -58,6 +58,7 @@ nav:
           - オプションと型: ja/guides/options-and-types.md
           - nargs: ja/guides/nargs.md
           - サブコマンド: ja/guides/subcommands.md
+          - Completion callback: ja/guides/completion-callbacks.md
           - known args / unknown args: ja/guides/known-args.md
       - API Reference: api-spec.ja.md
       - FAQ: ja/faq.md
@@ -69,6 +70,7 @@ nav:
           - Options and types: en/guides/options-and-types.md
           - nargs: en/guides/nargs.md
           - Subcommands: en/guides/subcommands.md
+          - Completion callbacks: en/guides/completion-callbacks.md
           - known args / unknown args: en/guides/known-args.md
       - API Reference: api-spec.en.md
       - FAQ: en/faq.md
