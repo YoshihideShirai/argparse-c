@@ -722,6 +722,10 @@ TEST(ParseArgsDistributesLongMixedNargsStarOptionalAndFixedPositionals) {
   ap_arg_options maybe = ap_arg_options_default();
   ap_arg_options pair = ap_arg_options_default();
   ap_arg_options target = ap_arg_options_default();
+  ap_parser *q = NULL;
+  ap_arg_options q_maybe = ap_arg_options_default();
+  ap_arg_options q_pair = ap_arg_options_default();
+  ap_arg_options q_target = ap_arg_options_default();
   const int extra_count = 15;
   std::vector<std::string> extra_values;
   std::vector<char *> argv;
@@ -766,6 +770,105 @@ TEST(ParseArgsDistributesLongMixedNargsStarOptionalAndFixedPositionals) {
   STRCMP_EQUAL("dest.out", target_value);
 
   ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseArgsLongMixedDistributionAndErrorBoundaries) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options extras = ap_arg_options_default();
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  ap_arg_options target = ap_arg_options_default();
+  ap_parser *q = NULL;
+  ap_arg_options q_maybe = ap_arg_options_default();
+  ap_arg_options q_pair = ap_arg_options_default();
+  ap_arg_options q_target = ap_arg_options_default();
+  const int extra_count = 12;
+  std::vector<std::string> extra_values;
+  std::vector<char *> argv_ok;
+  char *argv_shortage[] = {(char *)"prog", (char *)"--maybe",
+                           (char *)"seen.txt", (char *)"left.bin", NULL};
+  char *argv_overflow[] = {(char *)"prog",      (char *)"--maybe",
+                           (char *)"seen.txt",  (char *)"left.bin",
+                           (char *)"right.bin", (char *)"dest.out",
+                           (char *)"overflow",  NULL};
+  char *argv_after_dd[] = {(char *)"prog",
+                           (char *)"--",
+                           (char *)"left.bin",
+                           (char *)"right.bin",
+                           (char *)"dest.out",
+                           (char *)"--after-0",
+                           NULL};
+  const char *maybe_value = NULL;
+  const char *target_value = NULL;
+
+  CHECK(p != NULL);
+  extras.nargs = AP_NARGS_ZERO_OR_MORE;
+  extras.action = AP_ACTION_APPEND;
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "extras", extras, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "pair", pair, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "target", target, &err));
+
+  argv_ok.push_back((char *)"prog");
+  extra_values.reserve(extra_count);
+  for (int i = 0; i < extra_count; ++i) {
+    extra_values.push_back("extra-" + std::to_string(i));
+    argv_ok.push_back((char *)extra_values.back().c_str());
+  }
+  argv_ok.push_back((char *)"--maybe");
+  argv_ok.push_back((char *)"seen.txt");
+  argv_ok.push_back((char *)"left.bin");
+  argv_ok.push_back((char *)"right.bin");
+  argv_ok.push_back((char *)"dest.out");
+
+  LONGS_EQUAL(0,
+              ap_parse_args(p, (int)argv_ok.size(), argv_ok.data(), &ns, &err));
+  LONGS_EQUAL(extra_count, ap_ns_get_count(ns, "extras"));
+  for (int i = 0; i < extra_count; ++i) {
+    std::string expected = "extra-" + std::to_string(i);
+    STRCMP_EQUAL(expected.c_str(), ap_ns_get_string_at(ns, "extras", i));
+  }
+  CHECK(ap_ns_get_string(ns, "maybe", &maybe_value));
+  STRCMP_EQUAL("seen.txt", maybe_value);
+  LONGS_EQUAL(2, ap_ns_get_count(ns, "pair"));
+  STRCMP_EQUAL("left.bin", ap_ns_get_string_at(ns, "pair", 0));
+  STRCMP_EQUAL("right.bin", ap_ns_get_string_at(ns, "pair", 1));
+  CHECK(ap_ns_get_string(ns, "target", &target_value));
+  STRCMP_EQUAL("dest.out", target_value);
+  ap_namespace_free(ns);
+  ns = NULL;
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 4, argv_shortage, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_NARGS, err.code);
+  STRCMP_EQUAL("pair", err.argument);
+  STRCMP_EQUAL("argument 'pair' requires exactly 2 values", err.message);
+
+  q = ap_parser_new("prog", "desc");
+  CHECK(q != NULL);
+  q_maybe.nargs = AP_NARGS_OPTIONAL;
+  q_pair.nargs = AP_NARGS_FIXED;
+  q_pair.nargs_count = 2;
+  LONGS_EQUAL(0, ap_add_argument(q, "--maybe", q_maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(q, "pair", q_pair, &err));
+  LONGS_EQUAL(0, ap_add_argument(q, "target", q_target, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(q, 7, argv_overflow, &ns, &err));
+  LONGS_EQUAL(AP_ERR_UNEXPECTED_POSITIONAL, err.code);
+  STRCMP_EQUAL("overflow", err.argument);
+  STRCMP_EQUAL("unexpected positional argument 'overflow'", err.message);
+
+  LONGS_EQUAL(-1, ap_parse_args(q, 6, argv_after_dd, &ns, &err));
+  LONGS_EQUAL(AP_ERR_UNEXPECTED_POSITIONAL, err.code);
+  STRCMP_EQUAL("--after-0", err.argument);
+  STRCMP_EQUAL("unexpected positional argument '--after-0'", err.message);
+
+  ap_parser_free(q);
   ap_parser_free(p);
 }
 
