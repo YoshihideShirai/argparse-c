@@ -139,6 +139,17 @@ endif()
 
 find_package(Python3 COMPONENTS Interpreter)
 
+if(Python3_Interpreter_FOUND)
+  add_custom_target(sync-docs-repository
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/sync_docs_repository.py
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    USES_TERMINAL
+    COMMENT "Synchronizing docs/repository snapshots"
+  )
+else()
+  message(STATUS "Python3 not found; 'sync-docs-repository' target will be unavailable")
+endif()
+
 if(AP_ENABLE_COVERAGE AND Python3_Interpreter_FOUND)
   add_custom_target(coverage
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
