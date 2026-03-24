@@ -154,6 +154,23 @@ The README no longer carries the detailed setup steps. Use the docs site for com
 - [ガイド](./docs/ja/guides/)
 - [API仕様](./docs/api-spec.ja.md)
 
+## Security validation status and scope
+
+- We continuously run sanitizer and boundary-focused tests in CI, and we publish coverage results for each run:
+  - CI (tests + sanitizers + coverage): <https://github.com/yoshihideshirai/argparse-c/actions/workflows/ci.yml>
+  - Pages (coverage publish job): <https://github.com/yoshihideshirai/argparse-c/actions/workflows/pages.yml>
+- Security test procedure: [docs/en/security-testing.md](./docs/en/security-testing.md)
+- Known status at publish time: no known unpatched critical vulnerabilities in this repository at the time this README was published.
+
+### Out of guarantee scope
+
+- Input/output validation in the consuming application remains the responsibility of the application developer.
+- Runtime/library/toolchain differences across operating systems and dependency environments can affect behavior and risk, and are outside this library's full guarantee scope.
+
+### Update rule
+
+- At each release, we review and update the wording in this section against the current CI/test evidence and the latest security-test procedure.
+
 ## Development
 
 Before finishing changes in this repository, run the formatter:
