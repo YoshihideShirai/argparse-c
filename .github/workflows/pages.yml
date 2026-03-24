@@ -67,9 +67,6 @@ jobs:
             exit 1
           fi
 
-      - name: Validate generated site links
-        run: python scripts/check_docs_links.py --skip-source
-
       - name: Configure coverage build
         run: |
           cmake -S . -B build-coverage \
@@ -93,6 +90,9 @@ jobs:
             --exclude '.*/sample/.*' \
             --txt site/coverage.txt \
             --html-details site/coverage/index.html
+
+      - name: Validate generated site links
+        run: python scripts/check_docs_links.py --skip-source
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
