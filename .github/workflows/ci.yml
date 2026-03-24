@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build pkg-config zsh
+          sudo apt-get install -y cmake ninja-build pkg-config zsh man-db
 
       - name: Configure
         run: |
@@ -121,7 +121,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build clang
+          sudo apt-get install -y cmake ninja-build clang man-db
 
       - name: Configure
         run: |
@@ -198,7 +198,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build gcc g++
+          sudo apt-get install -y cmake ninja-build gcc g++ man-db
           python -m pip install --upgrade pip
           pip install gcovr
 
