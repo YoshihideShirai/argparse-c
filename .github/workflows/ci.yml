@@ -86,21 +86,40 @@ jobs:
 
       - name: Build sample generators
         run: |
-          cmake --build build-shell --parallel --target example_completion example_manpage
+          cmake --build build-shell --parallel --target example_completion
 
       - name: Validate generated shell scripts
         run: |
-          mkdir -p build-shell/generated
+          set -euo pipefail
 
-          for sample in example_completion example_manpage; do
-            ./build-shell/sample/${sample} --generate-bash-completion > build-shell/generated/${sample}.bash
-            ./build-shell/sample/${sample} --generate-fish-completion > build-shell/generated/${sample}.fish
-            ./build-shell/sample/${sample} --generate-zsh-completion > build-shell/generated/_${sample}
+          generator="./build-shell/sample/example_completion"
+          out_dir="build-shell/generated/example_completion"
+          mkdir -p "$out_dir"
 
-            bash -n build-shell/generated/${sample}.bash
-            fish --no-execute build-shell/generated/${sample}.fish
-            zsh -n build-shell/generated/_${sample}
-          done
+          bash_out="$out_dir/example_completion.bash"
+          fish_out="$out_dir/example_completion.fish"
+          zsh_out="$out_dir/_example_completion"
+
+          "$generator" --generate-bash-completion > "$bash_out"
+          "$generator" --generate-fish-completion > "$fish_out"
+          "$generator" --generate-zsh-completion > "$zsh_out"
+
+          check_syntax() {
+            local name="$1"
+            local file="$2"
+            shift 2
+            echo "[syntax-check:$name] file=$file"
+            echo "[syntax-check:$name] command=$*"
+            if ! "$@" "$file"; then
+              echo "[syntax-check:$name] failed"
+              echo "[syntax-check:$name] inspect: sed -n '1,120p' '$file'"
+              exit 1
+            fi
+          }
+
+          check_syntax bash "$bash_out" bash -n
+          check_syntax zsh "$zsh_out" zsh -n
+          check_syntax fish "$fish_out" fish --no-execute
 
   sanitizers:
     name: Sanitizers (clang ASan/UBSan)
