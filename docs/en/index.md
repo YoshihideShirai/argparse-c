@@ -22,6 +22,7 @@ Use this site when you want to:
    - [nargs](guides/nargs.md)
    - [Subcommands](guides/subcommands.md)
    - [Completion callbacks](guides/completion-callbacks.md)
+   - [known args / unknown args](guides/known-args.md)
 3. **Reference**
    - [API Reference (English)](../api-spec.en.md)
    - [FAQ](faq.md)
