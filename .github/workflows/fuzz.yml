@@ -1,0 +1,67 @@
+name: Fuzz
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+  schedule:
+    - cron: '0 3 * * *'
+
+jobs:
+  fuzz-smoke:
+    name: libFuzzer smoke
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-fuzz \
+            -G Ninja \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DAP_ENABLE_FUZZING=ON
+
+      - name: Build fuzz harness
+        run: cmake --build build-fuzz --target argparse_fuzz_harness
+
+      - name: Run smoke fuzz
+        run: cmake --build build-fuzz --target fuzz-smoke
+
+  fuzz-nightly:
+    name: libFuzzer nightly
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-fuzz-nightly \
+            -G Ninja \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DAP_ENABLE_FUZZING=ON
+
+      - name: Build fuzz harness
+        run: cmake --build build-fuzz-nightly --target argparse_fuzz_harness
+
+      - name: Run nightly fuzz
+        run: cmake --build build-fuzz-nightly --target fuzz-long

@@ -3,6 +3,7 @@ project(argparse-c VERSION 0.1.0 LANGUAGES C CXX)
 
 option(AP_ENABLE_COVERAGE "Enable coverage instrumentation for gcovr" OFF)
 option(AP_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+option(AP_ENABLE_FUZZING "Enable libFuzzer harness build" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -64,6 +65,9 @@ add_subdirectory(sample)
 
 enable_testing()
 add_subdirectory(test)
+if(AP_ENABLE_FUZZING)
+  add_subdirectory(test/fuzz)
+endif()
 
 install(FILES
   ${CMAKE_BINARY_DIR}/argparse-cConfig.cmake
@@ -91,6 +95,7 @@ set(AP_CLANG_TOOL_SOURCES
   test/test_parse_core.cpp
   test/test_runner.cpp
   test/test_subcommands_and_validation.cpp
+  test/fuzz/fuzz_harness.c
 )
 
 set(AP_CLANG_TIDY_SOURCES
