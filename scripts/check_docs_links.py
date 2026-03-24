@@ -63,19 +63,29 @@ def link_target_exists(site_dir: Path, source_html: Path, href: str) -> bool:
     if not raw_path:
         return True
 
+    site_root = site_dir.resolve()
     if raw_path.startswith("/"):
-        target = site_dir / raw_path.lstrip("/")
+        target = site_root / raw_path.lstrip("/")
     else:
         target = source_html.parent / raw_path
+    target = target.resolve(strict=False)
+    if site_root not in target.parents and target != site_root:
+        return False
 
     candidates = [target]
     if target.suffix == "":
         candidates.append(target.with_suffix(".html"))
         candidates.append(target / "index.html")
+    elif target.suffix == ".md":
+        candidates.append(target.with_suffix(".html"))
+        candidates.append(target.with_name(target.stem) / "index.html")
     elif target.name == "index.html":
         candidates.append(target.parent)
 
-    return any(candidate.exists() for candidate in candidates)
+    return any(
+        (site_root in candidate.parents or candidate == site_root) and candidate.exists()
+        for candidate in candidates
+    )
 
 
 def validate_site_links(site_dir: Path) -> list[str]:
