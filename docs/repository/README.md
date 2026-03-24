@@ -7,16 +7,16 @@
 > Build C99 CLIs with Python `argparse`-like ergonomics — including completion, manpage generation, subcommands, and known-args parsing.
 
 [![README (日本語)](https://img.shields.io/badge/README-日本語-0A66C2?style=for-the-badge)](README.ja.md)
-[![Docs (English)](https://img.shields.io/badge/GitHub%20Pages-English-0A66C2?style=for-the-badge)](../en/)
-[![Docs (日本語)](https://img.shields.io/badge/GitHub%20Pages-日本語-0A66C2?style=for-the-badge)](../ja/)
+[![Docs (English)](https://img.shields.io/badge/GitHub%20Pages-English-0A66C2?style=for-the-badge)](../../en/)
+[![Docs (日本語)](https://img.shields.io/badge/GitHub%20Pages-日本語-0A66C2?style=for-the-badge)](../../ja/)
 
 ## Start here
 
 - **README / 日本語**: [README.ja.md](README.ja.md)
-- **GitHub Pages / English**: [../en/](../en/)
-- **GitHub Pages / 日本語**: [../ja/](../ja/)
-- **Getting Started / English**: [../en/getting-started/](../en/getting-started/)
-- **Getting Started / 日本語**: [../ja/getting-started/](../ja/getting-started/)
+- **GitHub Pages / English**: [../../en/](../../en/)
+- **GitHub Pages / 日本語**: [../../ja/](../../ja/)
+- **Getting Started / English**: [../../en/getting-started/](../../en/getting-started/)
+- **Getting Started / 日本語**: [../../ja/getting-started/](../../ja/getting-started/)
 
 If you want the installation steps, completion setup, package metadata, or API details, jump to GitHub Pages first. The repository README now stays focused on **what this library is**, **why it is useful**, and **which examples to open next**.
 
@@ -73,8 +73,8 @@ See these runnable samples in this repository:
 
 For the walkthrough behind those examples, use GitHub Pages:
 
-- English guides: [../en/](../en/)
-- 日本語ガイド: [../ja/](../ja/)
+- English guides: [../../en/](../../en/)
+- 日本語ガイド: [../../ja/](../../ja/)
 
 ## Minimal example
 
@@ -117,16 +117,16 @@ int main(int argc, char **argv) {
 
 Want the full setup, build commands, and next APIs to learn? Go to:
 
-- **English Getting Started**: [../en/getting-started/](../en/getting-started/)
-- **日本語 Getting Started**: [../ja/getting-started/](../ja/getting-started/)
+- **English Getting Started**: [../../en/getting-started/](../../en/getting-started/)
+- **日本語 Getting Started**: [../../ja/getting-started/](../../ja/getting-started/)
 
 ## Installation and packaging
 
 `argparse-c` provides both CMake package metadata and a pkg-config file after installation.
 
 - Build/install details: `docs/en/getting-started.md`, `docs/ja/getting-started.md`
-- GitHub Pages / English: [../en/getting-started/](../en/getting-started/)
-- GitHub Pages / 日本語: [../ja/getting-started/](../ja/getting-started/)
+- GitHub Pages / English: [../../en/getting-started/](../../en/getting-started/)
+- GitHub Pages / 日本語: [../../ja/getting-started/](../../ja/getting-started/)
 
 GitHub Releases also publish an install-tree tarball for library consumers. The README keeps this short on purpose; use Getting Started for the exact commands and layout details.
 
@@ -134,34 +134,34 @@ GitHub Releases also publish an install-tree tarball for library consumers. The 
 
 The README no longer carries the detailed setup steps. Use the docs site for complete guidance:
 
-- Completion guide / English: [../en/guides/completion-callbacks/](../en/guides/completion-callbacks/)
-- Completion guide / 日本語: [../ja/guides/completion-callbacks/](../ja/guides/completion-callbacks/)
-- API reference / English: [../api-spec.en/](../api-spec.en/)
-- API reference / 日本語: [../api-spec.ja/](../api-spec.ja/)
+- Completion guide / English: [../../en/guides/completion-callbacks/](../../en/guides/completion-callbacks/)
+- Completion guide / 日本語: [../../ja/guides/completion-callbacks/](../../ja/guides/completion-callbacks/)
+- API reference / English: [../../api-spec.en/](../../api-spec.en/)
+- API reference / 日本語: [../../api-spec.ja/](../../api-spec.ja/)
 - Docs language selector: [../](../)
 
 ## Documentation map
 
 ### English
 
-- [Docs home](../en/index.md)
-- [Getting Started](../en/getting-started.md)
-- [Guides](../en/guides/)
-- [API spec](../api-spec.en.md)
+- [Docs home](../../en/index.md)
+- [Getting Started](../../en/getting-started.md)
+- [Guides](../../en/guides/)
+- [API spec](../../api-spec.en.md)
 
 ### 日本語
 
-- [ドキュメント入口](../ja/index.md)
-- [Getting Started](../ja/getting-started.md)
-- [ガイド](../ja/guides/)
-- [API仕様](../api-spec.ja.md)
+- [ドキュメント入口](../../ja/index.md)
+- [Getting Started](../../ja/getting-started.md)
+- [ガイド](../../ja/guides/)
+- [API仕様](../../api-spec.ja.md)
 
 ## Security validation status and scope
 
 - We continuously run sanitizer and boundary-focused tests in CI, and we publish coverage results for each run:
   - CI (tests + sanitizers + coverage): <https://github.com/yoshihideshirai/argparse-c/actions/workflows/ci.yml>
   - Pages (coverage publish job): <https://github.com/yoshihideshirai/argparse-c/actions/workflows/pages.yml>
-- Security test procedure: <../en/security-testing/>
+- Security test procedure: <../../en/security-testing/>
 - Known status at publish time: no known unpatched critical vulnerabilities in this repository at the time this README was published.
 
 ### Out of guarantee scope

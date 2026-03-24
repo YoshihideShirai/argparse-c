@@ -7,14 +7,14 @@
 > Python `argparse` のような体験で、C99 CLI に completion、manpage 生成、subcommand、known-args parsing を導入できます。
 
 [![README (English)](https://img.shields.io/badge/README-English-0A66C2?style=for-the-badge)](README.md)
-[![GitHub%20Pages (日本語)](https://img.shields.io/badge/GitHub%20Pages-日本語-0A66C2?style=for-the-badge)](../ja/)
+[![GitHub%20Pages (日本語)](https://img.shields.io/badge/GitHub%20Pages-日本語-0A66C2?style=for-the-badge)](../../ja/)
 
 ## ここから始める
 
 - **README / English**: [README.md](README.md)
-- **日本語ドキュメント**: [docs/ja/index.md](../ja/index.md)
-- **GitHub Pages / 日本語トップ**: [../ja/](../ja/)
-- **Getting Started / 日本語**: [docs/ja/getting-started.md](../ja/getting-started.md)
+- **日本語ドキュメント**: [docs/ja/index.md](../../ja/index.md)
+- **GitHub Pages / 日本語トップ**: [../../ja/](../../ja/)
+- **Getting Started / 日本語**: [docs/ja/getting-started.md](../../ja/getting-started.md)
 
 インストール手順、completion 設定、パッケージング、API の詳細は GitHub Pages または `docs/ja/` 配下に集約しています。この README は **ライブラリの概要**、**主な利点**、**最初に見るサンプル**、**日本語ドキュメントへの導線** に絞っています。
 
@@ -93,20 +93,20 @@ int main(int argc, char **argv) {
 
 詳しいセットアップ、ビルド手順、次に覚える API は次を参照してください。
 
-- **日本語ドキュメント**: [docs/ja/index.md](../ja/index.md)
-- **Getting Started / 日本語**: [docs/ja/getting-started.md](../ja/getting-started.md)
-- **GitHub Pages / 日本語トップ**: [../ja/](../ja/)
+- **日本語ドキュメント**: [docs/ja/index.md](../../ja/index.md)
+- **Getting Started / 日本語**: [docs/ja/getting-started.md](../../ja/getting-started.md)
+- **GitHub Pages / 日本語トップ**: [../../ja/](../../ja/)
 
 ## 日本語ドキュメントへのリンク
 
-- [日本語ドキュメント入口](../ja/index.md)
-- [Getting Started](../ja/getting-started.md)
-- [ガイド一覧](../ja/guides/)
-- [API仕様](../api-spec.ja.md)
+- [日本語ドキュメント入口](../../ja/index.md)
+- [Getting Started](../../ja/getting-started.md)
+- [ガイド一覧](../../ja/guides/)
+- [API仕様](../../api-spec.ja.md)
 
 ## GitHub Pages 日本語トップへのリンク
 
-- [../ja/](../ja/)
+- [../../ja/](../../ja/)
 
 ## 更新方針
 
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
 - sanitizer と境界ケースを含むテストを CI で継続実行し、coverage を公開しています。
   - CI（tests + sanitizers + coverage）: <https://github.com/yoshihideshirai/argparse-c/actions/workflows/ci.yml>
   - Pages（coverage 公開ジョブ）: <https://github.com/yoshihideshirai/argparse-c/actions/workflows/pages.yml>
-- セキュリティテスト手順: <../ja/security-testing/>
+- セキュリティテスト手順: <../../ja/security-testing/>
 - 公開時点の既知状態: この README の公開時点で、未修正の重大脆弱性は把握していません。
 
 ### 非保証範囲
