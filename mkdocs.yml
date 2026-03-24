@@ -74,3 +74,12 @@ nav:
       - FAQ: en/faq.md
   - Development:
       - Implementation Plan: implementation-plan.md
+  - Repository Mirror:
+      - README (English): repository/README.md
+      - README (日本語): repository/README.ja.md
+      - Samples:
+          - example1.c: repository/sample/example1.c.md
+          - example_completion.c: repository/sample/example_completion.c.md
+          - example_subcommands.c: repository/sample/example_subcommands.c.md
+          - example_manpage.c: repository/sample/example_manpage.c.md
+          - example_introspection.c: repository/sample/example_introspection.c.md

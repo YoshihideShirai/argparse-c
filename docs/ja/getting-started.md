@@ -209,11 +209,11 @@ man ./example_manpage.1
 
 ### サンプル
 
-- [`sample/example1.c`](../../sample/example1.c): required option、positional、`ap_format_error(...)`、namespace 取得の最初の一歩
-- [`sample/example_subcommands.c`](../../sample/example_subcommands.c): ネストした subcommand と `subcommand_path` の確認
-- [`sample/example_completion.c`](../../sample/example_completion.c): formatter API と実行時 completion callback の実装例
-- [`sample/example_manpage.c`](../../sample/example_manpage.c): subcommand を含む parser から manpage / completion を生成する例
-- [`sample/example_introspection.c`](../../sample/example_introspection.c): `ap_parser_get_info`、`ap_parser_get_argument`、`ap_parser_get_subcommand` を使った introspection 例
+- [`sample/example1.c`](../repository/sample/example1.c.md): required option、positional、`ap_format_error(...)`、namespace 取得の最初の一歩
+- [`sample/example_subcommands.c`](../repository/sample/example_subcommands.c.md): ネストした subcommand と `subcommand_path` の確認
+- [`sample/example_completion.c`](../repository/sample/example_completion.c.md): formatter API と実行時 completion callback の実装例
+- [`sample/example_manpage.c`](../repository/sample/example_manpage.c.md): subcommand を含む parser から manpage / completion を生成する例
+- [`sample/example_introspection.c`](../repository/sample/example_introspection.c.md): `ap_parser_get_info`、`ap_parser_get_argument`、`ap_parser_get_subcommand` を使った introspection 例
 
 ### ガイド
 

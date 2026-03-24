@@ -35,9 +35,9 @@ Use this site when you want to:
 
 ## Example programs in this repository
 
-- [`sample/example1.c`](../../sample/example1.c) — minimal parse/validate/read flow
-- [`sample/example_completion.c`](../../sample/example_completion.c) — completion and manpage generator entrypoints
-- [`sample/example_subcommands.c`](../../sample/example_subcommands.c) — nested subcommands and `subcommand_path`
+- [`sample/example1.c`](../repository/sample/example1.c.md) — minimal parse/validate/read flow
+- [`sample/example_completion.c`](../repository/sample/example_completion.c.md) — completion and manpage generator entrypoints
+- [`sample/example_subcommands.c`](../repository/sample/example_subcommands.c.md) — nested subcommands and `subcommand_path`
 
 ## Need Japanese docs?
 

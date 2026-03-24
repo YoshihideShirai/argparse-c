@@ -334,10 +334,10 @@ Maintain the following regression coverage so error naming stays stable across f
 When extending tests, assert all three fields together where practical: `err.code`, `err.argument`, and `err.message`.
 
 ## 8.5 Practical examples and reverse links
-- Parse basics and error formatting: [`README.md`](../README.md), [`sample/example1.c`](../sample/example1.c)
-- Nested subcommands and `subcommand_path`: [`README.md`](../README.md), [`sample/example_subcommands.c`](../sample/example_subcommands.c)
-- Formatter APIs (`ap_format_help`, `ap_format_manpage`, `ap_format_bash_completion`, `ap_format_fish_completion`, `ap_format_zsh_completion`): [`README.md`](../README.md), [`sample/example_completion.c`](../sample/example_completion.c), [`sample/example_manpage.c`](../sample/example_manpage.c)
-- Introspection APIs (`ap_parser_get_info`, `ap_parser_get_argument`, `ap_parser_get_subcommand`): [`README.md`](../README.md), [`sample/example_introspection.c`](../sample/example_introspection.c)
+- Parse basics and error formatting: [`README.md`](repository/README.md), [`sample/example1.c`](repository/sample/example1.c.md)
+- Nested subcommands and `subcommand_path`: [`README.md`](repository/README.md), [`sample/example_subcommands.c`](repository/sample/example_subcommands.c.md)
+- Formatter APIs (`ap_format_help`, `ap_format_manpage`, `ap_format_bash_completion`, `ap_format_fish_completion`, `ap_format_zsh_completion`): [`README.md`](repository/README.md), [`sample/example_completion.c`](repository/sample/example_completion.c.md), [`sample/example_manpage.c`](repository/sample/example_manpage.c.md)
+- Introspection APIs (`ap_parser_get_info`, `ap_parser_get_argument`, `ap_parser_get_subcommand`): [`README.md`](repository/README.md), [`sample/example_introspection.c`](repository/sample/example_introspection.c.md)
 
 ## 9. Minimal Example
 

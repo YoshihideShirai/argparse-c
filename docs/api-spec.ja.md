@@ -291,10 +291,10 @@ CLI 出力では、この「`error:` 行 + usage ブロック」の2段構成を
 テスト追加時は、可能な限り `err.code`、`err.argument`、`err.message` の3項目をまとめて検証してください。
 
 ## 8.5 実例への逆リンク
-- 基本的なパースとエラー整形: [`README.md`](../README.md), [`sample/example1.c`](../sample/example1.c)
-- ネストした subcommand と `subcommand_path`: [`README.md`](../README.md), [`sample/example_subcommands.c`](../sample/example_subcommands.c)
-- formatter API（`ap_format_help`、`ap_format_manpage`、`ap_format_bash_completion`、`ap_format_fish_completion`、`ap_format_zsh_completion`）: [`README.md`](../README.md), [`sample/example_completion.c`](../sample/example_completion.c), [`sample/example_manpage.c`](../sample/example_manpage.c)
-- introspection API（`ap_parser_get_info`、`ap_parser_get_argument`、`ap_parser_get_subcommand`）: [`README.md`](../README.md), [`sample/example_introspection.c`](../sample/example_introspection.c)
+- 基本的なパースとエラー整形: [`README.ja.md`](repository/README.ja.md), [`sample/example1.c`](repository/sample/example1.c.md)
+- ネストした subcommand と `subcommand_path`: [`README.ja.md`](repository/README.ja.md), [`sample/example_subcommands.c`](repository/sample/example_subcommands.c.md)
+- formatter API（`ap_format_help`、`ap_format_manpage`、`ap_format_bash_completion`、`ap_format_fish_completion`、`ap_format_zsh_completion`）: [`README.ja.md`](repository/README.ja.md), [`sample/example_completion.c`](repository/sample/example_completion.c.md), [`sample/example_manpage.c`](repository/sample/example_manpage.c.md)
+- introspection API（`ap_parser_get_info`、`ap_parser_get_argument`、`ap_parser_get_subcommand`）: [`README.ja.md`](repository/README.ja.md), [`sample/example_introspection.c`](repository/sample/example_introspection.c.md)
 
 ## 9. 最小利用例
 

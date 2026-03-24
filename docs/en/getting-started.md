@@ -209,11 +209,11 @@ man ./example_manpage.1
 
 ### Sample programs
 
-- [`sample/example1.c`](../../sample/example1.c): start here for required options, positionals, namespace reads, and `ap_format_error(...)`
-- [`sample/example_subcommands.c`](../../sample/example_subcommands.c): continue here for nested subcommands and `subcommand_path`
-- [`sample/example_completion.c`](../../sample/example_completion.c): formatter APIs plus runtime completion callbacks
-- [`sample/example_manpage.c`](../../sample/example_manpage.c): formatter APIs on a subcommand tree that is suitable for docs output
-- [`sample/example_introspection.c`](../../sample/example_introspection.c): parser metadata introspection via `ap_parser_get_info`, `ap_parser_get_argument`, and `ap_parser_get_subcommand`
+- [`sample/example1.c`](../repository/sample/example1.c.md): start here for required options, positionals, namespace reads, and `ap_format_error(...)`
+- [`sample/example_subcommands.c`](../repository/sample/example_subcommands.c.md): continue here for nested subcommands and `subcommand_path`
+- [`sample/example_completion.c`](../repository/sample/example_completion.c.md): formatter APIs plus runtime completion callbacks
+- [`sample/example_manpage.c`](../repository/sample/example_manpage.c.md): formatter APIs on a subcommand tree that is suitable for docs output
+- [`sample/example_introspection.c`](../repository/sample/example_introspection.c.md): parser metadata introspection via `ap_parser_get_info`, `ap_parser_get_argument`, and `ap_parser_get_subcommand`
 
 ### Guides
 
