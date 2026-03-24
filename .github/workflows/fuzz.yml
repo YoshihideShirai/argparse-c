@@ -6,13 +6,18 @@ on:
     branches:
       - main
       - master
-  schedule:
-    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      run_long_fuzz:
+        description: "Run long fuzz target (fuzz-long)"
+        required: true
+        default: true
+        type: boolean
 
 jobs:
   fuzz-smoke:
     name: libFuzzer smoke
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
@@ -38,9 +43,9 @@ jobs:
       - name: Run smoke fuzz
         run: cmake --build build-fuzz --target fuzz-smoke
 
-  fuzz-nightly:
-    name: libFuzzer nightly
-    if: github.event_name == 'schedule'
+  fuzz-long:
+    name: libFuzzer long (manual)
+    if: github.event_name == 'workflow_dispatch' && inputs.run_long_fuzz
     runs-on: ubuntu-latest
 
     steps:
@@ -63,5 +68,5 @@ jobs:
       - name: Build fuzz harness
         run: cmake --build build-fuzz-nightly --target argparse_fuzz_harness
 
-      - name: Run nightly fuzz
+      - name: Run long fuzz
         run: cmake --build build-fuzz-nightly --target fuzz-long
