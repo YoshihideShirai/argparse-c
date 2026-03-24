@@ -19,14 +19,14 @@ FORBIDDEN_SOURCE_PATTERNS = (
 class HrefCollector(html.parser.HTMLParser):
     def __init__(self) -> None:
         super().__init__()
-        self.hrefs: list[str] = []
+        self.hrefs: list[tuple[int, str]] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag != "a":
             return
         for name, value in attrs:
             if name == "href" and value:
-                self.hrefs.append(value)
+                self.hrefs.append((self.getpos()[0], value))
 
 
 def validate_docs_source(docs_dir: Path) -> list[str]:
@@ -42,13 +42,13 @@ def validate_docs_source(docs_dir: Path) -> list[str]:
     return errors
 
 
-def iter_site_html_links(site_dir: Path) -> list[tuple[Path, str]]:
-    links: list[tuple[Path, str]] = []
+def iter_site_html_links(site_dir: Path) -> list[tuple[Path, int, str]]:
+    links: list[tuple[Path, int, str]] = []
     for html_file in sorted(site_dir.rglob("*.html")):
         parser = HrefCollector()
         parser.feed(html_file.read_text(encoding="utf-8"))
-        for href in parser.hrefs:
-            links.append((html_file, href))
+        for line, href in parser.hrefs:
+            links.append((html_file, line, href))
     return links
 
 
@@ -80,11 +80,9 @@ def link_target_exists(site_dir: Path, source_html: Path, href: str) -> bool:
 
 def validate_site_links(site_dir: Path) -> list[str]:
     errors: list[str] = []
-    for html_file, href in iter_site_html_links(site_dir):
-        if "README" not in href and "sample" not in href:
-            continue
+    for html_file, line, href in iter_site_html_links(site_dir):
         if not link_target_exists(site_dir, html_file, href):
-            errors.append(f"{html_file}: broken link for README/sample target: {href}")
+            errors.append(f"{html_file}:{line}: broken link: {href}")
     return errors
 
 

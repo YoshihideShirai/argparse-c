@@ -46,8 +46,29 @@ jobs:
       - name: Build documentation site
         run: mkdocs build
 
-      - name: Validate docs source and site links
-        run: python scripts/check_docs_links.py
+      - name: Validate docs source forbidden link patterns
+        run: |
+          set -euo pipefail
+
+          forbidden_patterns=(
+            '\.\./README\.md'
+            '\.\./\.\./sample/'
+          )
+
+          found=0
+          for pattern in "${forbidden_patterns[@]}"; do
+            if rg --line-number --no-heading --glob '*.md' "$pattern" docs; then
+              echo "Forbidden docs link pattern detected: $pattern" >&2
+              found=1
+            fi
+          done
+
+          if [ "$found" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Validate generated site links
+        run: python scripts/check_docs_links.py --skip-source
 
       - name: Configure coverage build
         run: |
