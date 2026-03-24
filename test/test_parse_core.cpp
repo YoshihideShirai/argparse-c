@@ -1,4 +1,6 @@
 #include <cmath>
+#include <string>
+#include <vector>
 #include "test_framework.h"
 
 TEST(SuccessParse) {
@@ -664,6 +666,133 @@ TEST(ParseArgsTracksAppendCountAndPositionalsAcrossLongSequence) {
   STRCMP_EQUAL("dest", target_value);
 
   ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseArgsScalesRepeatedAppendAndCountAcrossLongInputVector) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options tag = ap_arg_options_default();
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options input = ap_arg_options_default();
+  int32_t verbose_count = 0;
+  const int repeat = 40;
+  std::vector<std::string> tag_values;
+  std::vector<char *> argv;
+
+  CHECK(p != NULL);
+  tag.action = AP_ACTION_APPEND;
+  verbose.type = AP_TYPE_INT32;
+  verbose.action = AP_ACTION_COUNT;
+  LONGS_EQUAL(0, ap_add_argument(p, "--tag", tag, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "-v, --verbose", verbose, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "input", input, &err));
+
+  argv.push_back((char *)"prog");
+  tag_values.reserve(repeat);
+  for (int i = 0; i < repeat; ++i) {
+    tag_values.push_back("tag-" + std::to_string(i));
+    argv.push_back((char *)"--tag");
+    argv.push_back((char *)tag_values.back().c_str());
+    if ((i % 2) == 0) {
+      argv.push_back((char *)"-v");
+    }
+  }
+  argv.push_back((char *)"input.txt");
+
+  LONGS_EQUAL(0, ap_parse_args(p, (int)argv.size(), argv.data(), &ns, &err));
+  LONGS_EQUAL(repeat, ap_ns_get_count(ns, "tag"));
+  for (int i = 0; i < repeat; ++i) {
+    std::string expected = "tag-" + std::to_string(i);
+    STRCMP_EQUAL(expected.c_str(), ap_ns_get_string_at(ns, "tag", i));
+  }
+  CHECK(ap_ns_get_int32(ns, "verbose", &verbose_count));
+  LONGS_EQUAL(20, verbose_count);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseArgsDistributesLongMixedNargsStarOptionalAndFixedPositionals) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options extras = ap_arg_options_default();
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  ap_arg_options target = ap_arg_options_default();
+  const int extra_count = 15;
+  std::vector<std::string> extra_values;
+  std::vector<char *> argv;
+  const char *maybe_value = NULL;
+  const char *target_value = NULL;
+
+  CHECK(p != NULL);
+  extras.nargs = AP_NARGS_ZERO_OR_MORE;
+  extras.action = AP_ACTION_APPEND;
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "extras", extras, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "pair", pair, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "target", target, &err));
+
+  argv.push_back((char *)"prog");
+  extra_values.reserve(extra_count);
+  for (int i = 0; i < extra_count; ++i) {
+    extra_values.push_back("extra-" + std::to_string(i));
+    argv.push_back((char *)extra_values.back().c_str());
+  }
+  argv.push_back((char *)"--maybe");
+  argv.push_back((char *)"seen.txt");
+  argv.push_back((char *)"left.bin");
+  argv.push_back((char *)"right.bin");
+  argv.push_back((char *)"dest.out");
+
+  LONGS_EQUAL(0, ap_parse_args(p, (int)argv.size(), argv.data(), &ns, &err));
+  LONGS_EQUAL(extra_count, ap_ns_get_count(ns, "extras"));
+  for (int i = 0; i < extra_count; ++i) {
+    std::string expected = "extra-" + std::to_string(i);
+    STRCMP_EQUAL(expected.c_str(), ap_ns_get_string_at(ns, "extras", i));
+  }
+  CHECK(ap_ns_get_string(ns, "maybe", &maybe_value));
+  STRCMP_EQUAL("seen.txt", maybe_value);
+  LONGS_EQUAL(2, ap_ns_get_count(ns, "pair"));
+  STRCMP_EQUAL("left.bin", ap_ns_get_string_at(ns, "pair", 0));
+  STRCMP_EQUAL("right.bin", ap_ns_get_string_at(ns, "pair", 1));
+  CHECK(ap_ns_get_string(ns, "target", &target_value));
+  STRCMP_EQUAL("dest.out", target_value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseArgsReportsFirstOverflowTokenFromLongDoubleDashTail) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  std::vector<std::string> tail_tokens;
+  std::vector<char *> argv;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "target", ap_arg_options_default(), &err));
+
+  argv.push_back((char *)"prog");
+  argv.push_back((char *)"--");
+  argv.push_back((char *)"target.txt");
+  tail_tokens.reserve(18);
+  for (int i = 0; i < 18; ++i) {
+    tail_tokens.push_back("--tail-" + std::to_string(i));
+    argv.push_back((char *)tail_tokens.back().c_str());
+  }
+
+  LONGS_EQUAL(-1, ap_parse_args(p, (int)argv.size(), argv.data(), &ns, &err));
+  LONGS_EQUAL(AP_ERR_UNEXPECTED_POSITIONAL, err.code);
+  STRCMP_EQUAL("--tail-0", err.argument);
+  STRCMP_EQUAL("unexpected positional argument '--tail-0'", err.message);
+
   ap_parser_free(p);
 }
 
