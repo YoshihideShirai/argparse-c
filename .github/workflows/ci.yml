@@ -178,7 +178,10 @@ jobs:
 
       - name: Verify docs/repository is synchronized
         run: |
-          python scripts/sync_docs_repository.py
+          echo "Reproduction commands:"
+          echo "  python scripts/sync_docs_repository.py"
+          echo "  git diff --exit-code -- docs/repository"
+          python scripts/sync_docs_repository.py --print-repro-cmds
           git diff --exit-code -- docs/repository
 
 

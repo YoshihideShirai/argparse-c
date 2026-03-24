@@ -173,11 +173,18 @@ The README no longer carries the detailed setup steps. Use the docs site for com
 
 ## Development
 
-Before finishing changes in this repository, run the formatter:
+Before finishing changes in this repository, run the docs/repository sync and formatter:
 
 ```bash
+python scripts/sync_docs_repository.py
 cmake -S . -B build
 cmake --build build --target format
+```
+
+You can also run the dedicated sync target:
+
+```bash
+cmake --build build --target sync-docs-repository
 ```
 
 After formatting, rerun any relevant build/tests for your change.
