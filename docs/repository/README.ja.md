@@ -2,9 +2,9 @@
 
 # argparse-c
 
-`argparse-c` は、Python の `argparse` に近い書き味で C99 の CLI を組み立てるためのライブラリです。
+`argparse-c` は、Python の `argparse` に近い書き心地で C99 の CLI を構築できるライブラリです。
 
-> Python `argparse` のような体験で、C99 CLI に completion、manpage 生成、subcommand、known-args parsing を導入できます。
+> Python `argparse` の使い勝手を C99 に持ち込み、completion・manpage 生成・subcommand・known-args parsing まで対応できます。
 
 [![README (English)](https://img.shields.io/badge/README-English-0A66C2?style=for-the-badge)](README.md)
 [![GitHub%20Pages (日本語)](https://img.shields.io/badge/GitHub%20Pages-日本語-0A66C2?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/ja/)
@@ -16,13 +16,13 @@
 - **GitHub Pages / 日本語トップ**: [https://yoshihideshirai.github.io/argparse-c/ja/](https://yoshihideshirai.github.io/argparse-c/ja/)
 - **Getting Started / 日本語**: [docs/ja/getting-started.md](https://yoshihideshirai.github.io/argparse-c/ja/getting-started/)
 
-インストール手順、completion 設定、パッケージング、API の詳細は GitHub Pages または `docs/ja/` 配下に集約しています。この README は **ライブラリの概要**、**主な利点**、**最初に見るサンプル**、**日本語ドキュメントへの導線** に絞っています。
+インストール手順、completion の設定、パッケージング、API の詳細は GitHub Pages または `docs/ja/` 配下にまとめています。この README では **ライブラリの概要**、**主な利点**、**最初に読むサンプル**、**日本語ドキュメントへの導線** に絞って説明します。
 
 ## 概要
 
-`argparse-c` は、低レベルな引数走査や検証処理を手書きせずに、C99 で実用的なコマンドラインインターフェースを定義したい場面を想定したライブラリです。parser を作成し、option や positional を追加し、`argv` を parse して、namespace から値を読み出します。
+`argparse-c` は、低レベルな引数走査や検証処理を手書きせずに、C99 で実用的なコマンドラインインターフェースを定義したい場面を想定したライブラリです。parser を作成し、option や positional を追加し、`argv` を parse して、namespace から値を取り出します。
 
-主な機能は英語 README と粒度を揃えて維持します。
+主な機能は英語 README と粒度を揃えて管理しています。
 
 - Python `argparse` に着想を得た parser 定義
 - option、positional、default、required、`choices`
@@ -40,7 +40,7 @@ Python の `argparse` を使ったことがあれば、parser を作る、引数
 
 ### 2. 1 つの定義で実用機能までカバーできる
 
-1 つの parser 定義から次をまとめて扱えます。
+1 つの parser 定義から、次の機能を一貫して扱えます。
 
 - ヘルプ表示
 - shell completion の入口
@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-詳しいセットアップ、ビルド手順、次に覚える API は次を参照してください。
+セットアップ、ビルド手順、次に覚える API は以下を参照してください。
 
 - **日本語ドキュメント**: [docs/ja/index.md](https://yoshihideshirai.github.io/argparse-c/ja/)
 - **Getting Started / 日本語**: [docs/ja/getting-started.md](https://yoshihideshirai.github.io/argparse-c/ja/getting-started/)
@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
 - [日本語ドキュメント入口](https://yoshihideshirai.github.io/argparse-c/ja/)
 - [Getting Started](https://yoshihideshirai.github.io/argparse-c/ja/getting-started/)
 - [ガイド一覧](https://yoshihideshirai.github.io/argparse-c/ja/guides/)
-- [API仕様](https://yoshihideshirai.github.io/argparse-c/api-spec.ja/)
+- [API 仕様](https://yoshihideshirai.github.io/argparse-c/api-spec.ja/)
 
 ## GitHub Pages 日本語トップへのリンク
 
@@ -120,12 +120,12 @@ int main(int argc, char **argv) {
   - CI（tests + sanitizers + coverage）: <https://github.com/yoshihideshirai/argparse-c/actions/workflows/ci.yml>
   - Pages（coverage 公開ジョブ）: <https://github.com/yoshihideshirai/argparse-c/actions/workflows/pages.yml>
 - セキュリティテスト手順: <https://yoshihideshirai.github.io/argparse-c/ja/security-testing/>
-- 公開時点の既知状態: この README の公開時点で、未修正の重大脆弱性は把握していません。
+- 公開時点の既知状態: この README の公開時点で、未修正の重大な脆弱性は把握していません。
 
 ### 非保証範囲
 
 - 実際に本ライブラリを利用するアプリケーション側の入出力検証は、利用側アプリケーションの責務です。
-- OS・ツールチェーン・依存ライブラリなど実行環境差異による挙動差やリスクは、本ライブラリ単体では完全には保証できません。
+- OS・ツールチェーン・依存ライブラリなど、実行環境の差異による挙動差やリスクは、本ライブラリ単体では完全には保証できません。
 
 ### 更新ルール
 
