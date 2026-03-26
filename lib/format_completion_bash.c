@@ -57,21 +57,6 @@ static const char *option_value_mode(const ap_arg_def *def) {
   }
 }
 
-static const char *completion_kind_name(ap_completion_kind kind) {
-  switch (kind) {
-  case AP_COMPLETION_KIND_CHOICES:
-    return "choices";
-  case AP_COMPLETION_KIND_FILE:
-    return "file";
-  case AP_COMPLETION_KIND_DIRECTORY:
-    return "directory";
-  case AP_COMPLETION_KIND_COMMAND:
-    return "command";
-  default:
-    return "none";
-  }
-}
-
 static const char *completion_dispatch_kind_name(const ap_arg_def *def) {
   if (option_has_dynamic_completion(def)) {
     return "dynamic";
@@ -496,7 +481,9 @@ char *ap_bash_completion_build(const ap_parser *parser) {
           "      __ap_completion_load_parser \"$parser_key\" || return 0\n"
           "    fi\n"
           "    i=$((i + 1))\n"
-          "  done\n\n"
+          "  done\n\n") != 0 ||
+      ap_sb_appendf(
+          &sb,
           "  if [[ \"$cur\" == --*=* ]]; then\n"
           "    option_name=${cur%%=*}\n"
           "    value_prefix=${cur#*=}\n"
@@ -557,7 +544,9 @@ char *ap_bash_completion_build(const ap_parser *parser) {
           "    if (( ${#COMPREPLY[@]} > 0 )); then\n"
           "      return 0\n"
           "    fi\n"
-          "  fi\n\n"
+          "  fi\n\n") != 0 ||
+      ap_sb_appendf(
+          &sb,
           "  if [[ \"$cur\" == -* ]]; then\n"
           "    filtered=()\n"
           "    while IFS= read -r token; do\n"

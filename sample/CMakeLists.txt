@@ -12,3 +12,12 @@ target_link_libraries(example_manpage PRIVATE argparse-c ap_warnings)
 
 add_executable(example_introspection example_introspection.c)
 target_link_libraries(example_introspection PRIVATE argparse-c ap_warnings)
+
+add_custom_target(sample
+  DEPENDS
+    example1
+    example_subcommands
+    example_completion
+    example_manpage
+    example_introspection
+)
