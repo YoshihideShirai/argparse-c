@@ -178,18 +178,26 @@ The README no longer carries the detailed setup steps. Use the docs site for com
 
 ## Development
 
-Before finishing changes in this repository, run the docs/repository sync and formatter:
+Recommended common entry point for both AI agents and humans:
 
 ```bash
-python scripts/sync_docs_repository.py
+./scripts/dev_quick_check.sh
+```
+
+This quick check runs the minimum static validation flow in order: docs sync verification, format-check, and core tests.
+
+If you want to run each step manually:
+
+```bash
+python scripts/verify_docs_repository_links.py
 cmake -S . -B build
+cmake --build build --target format-check
+cmake --build build --target argparse_test example_completion example_manpage
+ctest --test-dir build --output-on-failure -R '^argparse_test$'
+```
+
+Before finishing code changes, also run the project formatter:
+
+```bash
 cmake --build build --target format
 ```
-
-You can also run the dedicated sync target:
-
-```bash
-cmake --build build --target sync-docs-repository
-```
-
-After formatting, rerun any relevant build/tests for your change.

@@ -5,4 +5,5 @@
 - Preferred formatter command: `cmake --build build --target format`
 - If the `build/` directory does not exist yet, create it first with `cmake -S . -B build`, then run the formatter target.
 - After formatting, rerun any relevant build/tests needed for the change.
+- Recommended common entry point for both AI agents and humans: `./scripts/dev_quick_check.sh`
 - If you modify CI workflow files (for example `.github/workflows/*.yml`), you must run and report relevant local checks that validate the CI-targeted behavior before finishing.
