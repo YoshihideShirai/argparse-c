@@ -133,3 +133,30 @@ int main(int argc, char **argv) {
 ### 更新ルール
 
 - リリースごとに本節の表現を見直し、最新の CI 実行結果とセキュリティテスト手順に合わせて更新します。
+
+
+## 開発（クイックチェック）
+
+AI・人間の共通の推奨入口:
+
+```bash
+./scripts/dev_quick_check.sh
+```
+
+このクイックチェックは、最低限の静的検証フローを順に実行します（docs同期検証 → format-check → 主要テスト最小構成）。
+
+手動で実行する場合:
+
+```bash
+python scripts/verify_docs_repository_links.py
+cmake -S . -B build
+cmake --build build --target format-check
+cmake --build build --target argparse_test example_completion example_manpage
+ctest --test-dir build --output-on-failure -R '^argparse_test$'
+```
+
+コード変更の仕上げでは、フォーマッタも実行してください。
+
+```bash
+cmake --build build --target format
+```
