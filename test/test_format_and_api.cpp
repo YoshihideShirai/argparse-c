@@ -1312,7 +1312,6 @@ TEST(ParserCompletionIsEnabledByDefaultAndHelperHandlesRequests) {
 }
 
 TEST(ParserCompletionCanBeCustomizedAndScriptsUseConfiguredEntrypoint) {
-  ap_error err = {};
   ap_parser_options options = ap_parser_options_default();
   ap_parser *p = NULL;
   char *bash = NULL;

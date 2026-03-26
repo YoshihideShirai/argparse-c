@@ -722,10 +722,6 @@ TEST(ParseArgsDistributesLongMixedNargsStarOptionalAndFixedPositionals) {
   ap_arg_options maybe = ap_arg_options_default();
   ap_arg_options pair = ap_arg_options_default();
   ap_arg_options target = ap_arg_options_default();
-  ap_parser *q = NULL;
-  ap_arg_options q_maybe = ap_arg_options_default();
-  ap_arg_options q_pair = ap_arg_options_default();
-  ap_arg_options q_target = ap_arg_options_default();
   const int extra_count = 15;
   std::vector<std::string> extra_values;
   std::vector<char *> argv;
