@@ -149,6 +149,8 @@ The README no longer carries the detailed setup steps. Use the docs site for com
 - [Guides](https://yoshihideshirai.github.io/argparse-c/en/guides/)
 - [API spec](https://yoshihideshirai.github.io/argparse-c/api-spec.en/)
 - [Machine-readable API spec (JSON)](https://yoshihideshirai.github.io/argparse-c/api-spec.json) ← For AI/tool integrations, reference this first.
+- [AI agent guide (English)](https://yoshihideshirai.github.io/argparse-c/en/ai-agent-guide/) ← First reading order when using AI agents.
+- [AI agent guide (日本語)](https://yoshihideshirai.github.io/argparse-c/ja/ai-agent-guide/)
 
 ### 日本語
 
