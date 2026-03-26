@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yoshihideshirai.github.io/argparse-c/api-spec.schema.json",
+  "title": "argparse-c public API specification",
+  "type": "object",
+  "required": [
+    "$schema",
+    "spec_version",
+    "source_header",
+    "function_count",
+    "functions"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "spec_version": {
+      "type": "string"
+    },
+    "source_header": {
+      "const": "include/argparse-c.h"
+    },
+    "function_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "functions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "return_type",
+          "parameters",
+          "ownership",
+          "error_contract"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^ap_[A-Za-z0-9_]+$"
+          },
+          "return_type": {
+            "type": "string"
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "type"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "ownership": {
+            "type": "object",
+            "required": [
+              "returns_owned_memory",
+              "caller_must_free_with",
+              "notes_en",
+              "notes_ja"
+            ],
+            "properties": {
+              "returns_owned_memory": {
+                "type": "boolean"
+              },
+              "caller_must_free_with": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "notes_en": {
+                "type": "string"
+              },
+              "notes_ja": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "error_contract": {
+            "type": "object",
+            "required": [
+              "has_error_out",
+              "success_return",
+              "failure_return",
+              "notes_en",
+              "notes_ja"
+            ],
+            "properties": {
+              "has_error_out": {
+                "type": "boolean"
+              },
+              "success_return": {
+                "type": "string"
+              },
+              "failure_return": {
+                "type": "string"
+              },
+              "notes_en": {
+                "type": "string"
+              },
+              "notes_ja": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

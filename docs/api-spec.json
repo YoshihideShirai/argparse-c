@@ -1,0 +1,1387 @@
+{
+  "$schema": "./api-spec.schema.json",
+  "spec_version": "1.0.0",
+  "source_header": "include/argparse-c.h",
+  "function_count": 47,
+  "functions": [
+    {
+      "name": "ap_parser_new",
+      "return_type": "ap_parser *",
+      "parameters": [
+        {
+          "name": "prog",
+          "type": "const char *"
+        },
+        {
+          "name": "description",
+          "type": "const char *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": true,
+        "caller_must_free_with": "ap_parser_free",
+        "notes_en": "Returns a new parser instance. Caller owns it.",
+        "notes_ja": "新しい parser を返します。所有権は呼び出し側です。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_parser_new_with_options",
+      "return_type": "ap_parser *",
+      "parameters": [
+        {
+          "name": "prog",
+          "type": "const char *"
+        },
+        {
+          "name": "description",
+          "type": "const char *"
+        },
+        {
+          "name": "options",
+          "type": "ap_parser_options"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": true,
+        "caller_must_free_with": "ap_parser_free",
+        "notes_en": "Returns a new parser instance. Caller owns it.",
+        "notes_ja": "新しい parser を返します。所有権は呼び出し側です。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_parser_set_completion",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "ap_parser *"
+        },
+        {
+          "name": "enabled",
+          "type": "bool"
+        },
+        {
+          "name": "entrypoint",
+          "type": "const char *"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_parser_completion_enabled",
+      "return_type": "bool",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "true",
+        "failure_return": "false",
+        "notes_en": "Boolean APIs signal presence/success by true and miss/failure by false.",
+        "notes_ja": "bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。"
+      }
+    },
+    {
+      "name": "ap_parser_completion_entrypoint",
+      "return_type": "const char *",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_add_subcommand",
+      "return_type": "ap_parser *",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "ap_parser *"
+        },
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "description",
+          "type": "const char *"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "Returned parser pointer is owned by the parent parser tree.",
+        "notes_ja": "返される parser ポインタの所有権は親 parser ツリー側にあります。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_add_mutually_exclusive_group",
+      "return_type": "ap_mutually_exclusive_group *",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "ap_parser *"
+        },
+        {
+          "name": "required",
+          "type": "bool"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_parser_free",
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "ap_parser *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "Lifecycle helper; see function naming for ownership release semantics.",
+        "notes_ja": "ライフサイクル補助 API です。解放責務は関数名の規約に従います。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "n/a",
+        "failure_return": "n/a",
+        "notes_en": "See return type specific semantics.",
+        "notes_ja": "戻り値型ごとの意味に従います。"
+      }
+    },
+    {
+      "name": "ap_add_argument",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "ap_parser *"
+        },
+        {
+          "name": "name_or_flags",
+          "type": "const char *"
+        },
+        {
+          "name": "options",
+          "type": "ap_arg_options"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_group_add_argument",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "group",
+          "type": "ap_mutually_exclusive_group *"
+        },
+        {
+          "name": "name_or_flags",
+          "type": "const char *"
+        },
+        {
+          "name": "options",
+          "type": "ap_arg_options"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_parse_args",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "ap_parser *"
+        },
+        {
+          "name": "argc",
+          "type": "int"
+        },
+        {
+          "name": "argv",
+          "type": "char **"
+        },
+        {
+          "name": "out_ns",
+          "type": "ap_namespace **"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "On success, out_ns must be released with ap_namespace_free. parse_known_args also requires ap_free_tokens for unknown args.",
+        "notes_ja": "成功時は out_ns を ap_namespace_free で解放します。parse_known_args では unknown 配列を ap_free_tokens で解放します。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_parse_known_args",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "ap_parser *"
+        },
+        {
+          "name": "argc",
+          "type": "int"
+        },
+        {
+          "name": "argv",
+          "type": "char **"
+        },
+        {
+          "name": "out_ns",
+          "type": "ap_namespace **"
+        },
+        {
+          "name": "out_unknown_args",
+          "type": "char ***"
+        },
+        {
+          "name": "out_unknown_count",
+          "type": "int *"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "On success, out_ns must be released with ap_namespace_free. parse_known_args also requires ap_free_tokens for unknown args.",
+        "notes_ja": "成功時は out_ns を ap_namespace_free で解放します。parse_known_args では unknown 配列を ap_free_tokens で解放します。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_namespace_free",
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "ns",
+          "type": "ap_namespace *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "Lifecycle helper; see function naming for ownership release semantics.",
+        "notes_ja": "ライフサイクル補助 API です。解放責務は関数名の規約に従います。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "n/a",
+        "failure_return": "n/a",
+        "notes_en": "See return type specific semantics.",
+        "notes_ja": "戻り値型ごとの意味に従います。"
+      }
+    },
+    {
+      "name": "ap_free_tokens",
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "tokens",
+          "type": "char **"
+        },
+        {
+          "name": "count",
+          "type": "int"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "Lifecycle helper; see function naming for ownership release semantics.",
+        "notes_ja": "ライフサイクル補助 API です。解放責務は関数名の規約に従います。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "n/a",
+        "failure_return": "n/a",
+        "notes_en": "See return type specific semantics.",
+        "notes_ja": "戻り値型ごとの意味に従います。"
+      }
+    },
+    {
+      "name": "ap_format_usage",
+      "return_type": "char *",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": true,
+        "caller_must_free_with": "free",
+        "notes_en": "Returned string is heap-allocated.",
+        "notes_ja": "返される文字列はヒープ確保です。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_format_help",
+      "return_type": "char *",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": true,
+        "caller_must_free_with": "free",
+        "notes_en": "Returned string is heap-allocated.",
+        "notes_ja": "返される文字列はヒープ確保です。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_format_manpage",
+      "return_type": "char *",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": true,
+        "caller_must_free_with": "free",
+        "notes_en": "Returned string is heap-allocated.",
+        "notes_ja": "返される文字列はヒープ確保です。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_format_bash_completion",
+      "return_type": "char *",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": true,
+        "caller_must_free_with": "free",
+        "notes_en": "Returned string is heap-allocated.",
+        "notes_ja": "返される文字列はヒープ確保です。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_format_fish_completion",
+      "return_type": "char *",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": true,
+        "caller_must_free_with": "free",
+        "notes_en": "Returned string is heap-allocated.",
+        "notes_ja": "返される文字列はヒープ確保です。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_format_zsh_completion",
+      "return_type": "char *",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": true,
+        "caller_must_free_with": "free",
+        "notes_en": "Returned string is heap-allocated.",
+        "notes_ja": "返される文字列はヒープ確保です。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_format_error",
+      "return_type": "char *",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        },
+        {
+          "name": "err",
+          "type": "const ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": true,
+        "caller_must_free_with": "free",
+        "notes_en": "Returned string is heap-allocated.",
+        "notes_ja": "返される文字列はヒープ確保です。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_complete",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        },
+        {
+          "name": "argc",
+          "type": "int"
+        },
+        {
+          "name": "argv",
+          "type": "char **"
+        },
+        {
+          "name": "shell",
+          "type": "const char *"
+        },
+        {
+          "name": "out_result",
+          "type": "ap_completion_result *"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_try_handle_completion",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        },
+        {
+          "name": "argc",
+          "type": "int"
+        },
+        {
+          "name": "argv",
+          "type": "char **"
+        },
+        {
+          "name": "default_shell",
+          "type": "const char *"
+        },
+        {
+          "name": "out_handled",
+          "type": "int *"
+        },
+        {
+          "name": "out_result",
+          "type": "ap_completion_result *"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_completion_result_init",
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "result",
+          "type": "ap_completion_result *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "Lifecycle helper; see function naming for ownership release semantics.",
+        "notes_ja": "ライフサイクル補助 API です。解放責務は関数名の規約に従います。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "n/a",
+        "failure_return": "n/a",
+        "notes_en": "See return type specific semantics.",
+        "notes_ja": "戻り値型ごとの意味に従います。"
+      }
+    },
+    {
+      "name": "ap_completion_result_free",
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "result",
+          "type": "ap_completion_result *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "Lifecycle helper; see function naming for ownership release semantics.",
+        "notes_ja": "ライフサイクル補助 API です。解放責務は関数名の規約に従います。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "n/a",
+        "failure_return": "n/a",
+        "notes_en": "See return type specific semantics.",
+        "notes_ja": "戻り値型ごとの意味に従います。"
+      }
+    },
+    {
+      "name": "ap_completion_result_add",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "result",
+          "type": "ap_completion_result *"
+        },
+        {
+          "name": "value",
+          "type": "const char *"
+        },
+        {
+          "name": "help",
+          "type": "const char *"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "Candidate memory is managed by ap_completion_result_free.",
+        "notes_ja": "候補メモリは ap_completion_result_free で管理されます。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_parser_get_info",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        },
+        {
+          "name": "out_info",
+          "type": "ap_parser_info *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_parser_get_argument",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        },
+        {
+          "name": "index",
+          "type": "int"
+        },
+        {
+          "name": "out_info",
+          "type": "ap_arg_info *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_parser_get_subcommand",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "const ap_parser *"
+        },
+        {
+          "name": "index",
+          "type": "int"
+        },
+        {
+          "name": "out_info",
+          "type": "ap_subcommand_info *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_arg_short_flag_count",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "info",
+          "type": "const ap_arg_info *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_arg_short_flag_at",
+      "return_type": "const char *",
+      "parameters": [
+        {
+          "name": "info",
+          "type": "const ap_arg_info *"
+        },
+        {
+          "name": "index",
+          "type": "int"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_arg_long_flag_count",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "info",
+          "type": "const ap_arg_info *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_arg_long_flag_at",
+      "return_type": "const char *",
+      "parameters": [
+        {
+          "name": "info",
+          "type": "const ap_arg_info *"
+        },
+        {
+          "name": "index",
+          "type": "int"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_ns_get_bool",
+      "return_type": "bool",
+      "parameters": [
+        {
+          "name": "ns",
+          "type": "const ap_namespace *"
+        },
+        {
+          "name": "dest",
+          "type": "const char *"
+        },
+        {
+          "name": "out_value",
+          "type": "bool *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "true",
+        "failure_return": "false",
+        "notes_en": "Boolean APIs signal presence/success by true and miss/failure by false.",
+        "notes_ja": "bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。"
+      }
+    },
+    {
+      "name": "ap_ns_get_string",
+      "return_type": "bool",
+      "parameters": [
+        {
+          "name": "ns",
+          "type": "const ap_namespace *"
+        },
+        {
+          "name": "dest",
+          "type": "const char *"
+        },
+        {
+          "name": "out_value",
+          "type": "const char **"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "true",
+        "failure_return": "false",
+        "notes_en": "Boolean APIs signal presence/success by true and miss/failure by false.",
+        "notes_ja": "bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。"
+      }
+    },
+    {
+      "name": "ap_ns_get_int32",
+      "return_type": "bool",
+      "parameters": [
+        {
+          "name": "ns",
+          "type": "const ap_namespace *"
+        },
+        {
+          "name": "dest",
+          "type": "const char *"
+        },
+        {
+          "name": "out_value",
+          "type": "int32_t *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "true",
+        "failure_return": "false",
+        "notes_en": "Boolean APIs signal presence/success by true and miss/failure by false.",
+        "notes_ja": "bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。"
+      }
+    },
+    {
+      "name": "ap_ns_get_int64",
+      "return_type": "bool",
+      "parameters": [
+        {
+          "name": "ns",
+          "type": "const ap_namespace *"
+        },
+        {
+          "name": "dest",
+          "type": "const char *"
+        },
+        {
+          "name": "out_value",
+          "type": "int64_t *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "true",
+        "failure_return": "false",
+        "notes_en": "Boolean APIs signal presence/success by true and miss/failure by false.",
+        "notes_ja": "bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。"
+      }
+    },
+    {
+      "name": "ap_ns_get_uint64",
+      "return_type": "bool",
+      "parameters": [
+        {
+          "name": "ns",
+          "type": "const ap_namespace *"
+        },
+        {
+          "name": "dest",
+          "type": "const char *"
+        },
+        {
+          "name": "out_value",
+          "type": "uint64_t *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "true",
+        "failure_return": "false",
+        "notes_en": "Boolean APIs signal presence/success by true and miss/failure by false.",
+        "notes_ja": "bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。"
+      }
+    },
+    {
+      "name": "ap_ns_get_double",
+      "return_type": "bool",
+      "parameters": [
+        {
+          "name": "ns",
+          "type": "const ap_namespace *"
+        },
+        {
+          "name": "dest",
+          "type": "const char *"
+        },
+        {
+          "name": "out_value",
+          "type": "double *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "true",
+        "failure_return": "false",
+        "notes_en": "Boolean APIs signal presence/success by true and miss/failure by false.",
+        "notes_ja": "bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。"
+      }
+    },
+    {
+      "name": "ap_ns_get_count",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "ns",
+          "type": "const ap_namespace *"
+        },
+        {
+          "name": "dest",
+          "type": "const char *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_ns_get_string_at",
+      "return_type": "const char *",
+      "parameters": [
+        {
+          "name": "ns",
+          "type": "const ap_namespace *"
+        },
+        {
+          "name": "dest",
+          "type": "const char *"
+        },
+        {
+          "name": "index",
+          "type": "int"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
+      "name": "ap_ns_get_int32_at",
+      "return_type": "bool",
+      "parameters": [
+        {
+          "name": "ns",
+          "type": "const ap_namespace *"
+        },
+        {
+          "name": "dest",
+          "type": "const char *"
+        },
+        {
+          "name": "index",
+          "type": "int"
+        },
+        {
+          "name": "out_value",
+          "type": "int32_t *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "true",
+        "failure_return": "false",
+        "notes_en": "Boolean APIs signal presence/success by true and miss/failure by false.",
+        "notes_ja": "bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。"
+      }
+    },
+    {
+      "name": "ap_ns_get_int64_at",
+      "return_type": "bool",
+      "parameters": [
+        {
+          "name": "ns",
+          "type": "const ap_namespace *"
+        },
+        {
+          "name": "dest",
+          "type": "const char *"
+        },
+        {
+          "name": "index",
+          "type": "int"
+        },
+        {
+          "name": "out_value",
+          "type": "int64_t *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "true",
+        "failure_return": "false",
+        "notes_en": "Boolean APIs signal presence/success by true and miss/failure by false.",
+        "notes_ja": "bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。"
+      }
+    },
+    {
+      "name": "ap_ns_get_uint64_at",
+      "return_type": "bool",
+      "parameters": [
+        {
+          "name": "ns",
+          "type": "const ap_namespace *"
+        },
+        {
+          "name": "dest",
+          "type": "const char *"
+        },
+        {
+          "name": "index",
+          "type": "int"
+        },
+        {
+          "name": "out_value",
+          "type": "uint64_t *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "true",
+        "failure_return": "false",
+        "notes_en": "Boolean APIs signal presence/success by true and miss/failure by false.",
+        "notes_ja": "bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。"
+      }
+    },
+    {
+      "name": "ap_ns_get_double_at",
+      "return_type": "bool",
+      "parameters": [
+        {
+          "name": "ns",
+          "type": "const ap_namespace *"
+        },
+        {
+          "name": "dest",
+          "type": "const char *"
+        },
+        {
+          "name": "index",
+          "type": "int"
+        },
+        {
+          "name": "out_value",
+          "type": "double *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "true",
+        "failure_return": "false",
+        "notes_en": "Boolean APIs signal presence/success by true and miss/failure by false.",
+        "notes_ja": "bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。"
+      }
+    },
+    {
+      "name": "ap_arg_options_default",
+      "return_type": "ap_arg_options",
+      "parameters": [],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "n/a",
+        "failure_return": "n/a",
+        "notes_en": "See return type specific semantics.",
+        "notes_ja": "戻り値型ごとの意味に従います。"
+      }
+    },
+    {
+      "name": "ap_parser_options_default",
+      "return_type": "ap_parser_options",
+      "parameters": [],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": false,
+        "success_return": "n/a",
+        "failure_return": "n/a",
+        "notes_en": "See return type specific semantics.",
+        "notes_ja": "戻り値型ごとの意味に従います。"
+      }
+    }
+  ]
+}
