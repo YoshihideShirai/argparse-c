@@ -104,6 +104,8 @@ int main(int argc, char **argv) {
 - [ガイド一覧](https://yoshihideshirai.github.io/argparse-c/ja/guides/)
 - [API 仕様](https://yoshihideshirai.github.io/argparse-c/api-spec.ja/)
 - [機械可読API仕様 (JSON)](https://yoshihideshirai.github.io/argparse-c/api-spec.json) ← AI/ツール連携時はこのJSONを参照してください。
+- [AI agent guide (日本語)](https://yoshihideshirai.github.io/argparse-c/ja/ai-agent-guide/) ← AI利用時の最初の読む順。
+- [AI agent guide (English)](https://yoshihideshirai.github.io/argparse-c/en/ai-agent-guide/)
 
 ## GitHub Pages 日本語トップへのリンク
 
