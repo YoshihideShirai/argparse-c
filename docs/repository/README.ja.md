@@ -103,6 +103,7 @@ int main(int argc, char **argv) {
 - [Getting Started](https://yoshihideshirai.github.io/argparse-c/ja/getting-started/)
 - [ガイド一覧](https://yoshihideshirai.github.io/argparse-c/ja/guides/)
 - [API 仕様](https://yoshihideshirai.github.io/argparse-c/api-spec.ja/)
+- [機械可読API仕様 (JSON)](https://yoshihideshirai.github.io/argparse-c/api-spec.json) ← AI/ツール連携時はこのJSONを参照してください。
 
 ## GitHub Pages 日本語トップへのリンク
 

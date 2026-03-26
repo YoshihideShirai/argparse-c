@@ -146,6 +146,7 @@ The README no longer carries the detailed setup steps. Use the docs site for com
 - [Getting Started](./docs/en/getting-started.md)
 - [Guides](./docs/en/guides/)
 - [API spec](./docs/api-spec.en.md)
+- [Machine-readable API spec (JSON)](./docs/api-spec.json) ← For AI/tool integrations, reference this first.
 
 ### 日本語
 

@@ -101,6 +101,7 @@ int main(int argc, char **argv) {
 - [Getting Started](./docs/ja/getting-started.md)
 - [ガイド一覧](./docs/ja/guides/)
 - [API 仕様](./docs/api-spec.ja.md)
+- [機械可読API仕様 (JSON)](./docs/api-spec.json) ← AI/ツール連携時はこのJSONを参照してください。
 
 ## GitHub Pages 日本語トップへのリンク
 

@@ -185,6 +185,24 @@ jobs:
           git diff --exit-code -- docs/repository
 
 
+  api-spec-sync-check:
+    name: API spec sync check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify header and machine-readable API spec are synchronized
+        run: |
+          python scripts/sync_api_spec.py --check
+
+
   coverage:
     name: Coverage (gcovr)
     runs-on: ubuntu-latest
