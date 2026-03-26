@@ -160,3 +160,110 @@ ctest --test-dir build --output-on-failure -R '^argparse_test$'
 ```bash
 cmake --build build --target format
 ```
+
+## Warning policy
+
+### 対象コンパイラと最低バージョン方針
+
+- warning policy の対象コンパイラは **GCC** と **Clang** です。
+- 最低バージョン方針（ローカル再現・CI同等性の基準）:
+  - **GCC 11 以上**
+  - **Clang 14 以上**
+- 補足:
+  - CI の warning gate は GCC / Clang の両方で実行されます。
+  - ローカルがこれより古いコンパイラの場合は、新しいツールチェーンで再現してから判定してください。
+
+### ローカル再現コマンド（English / 日本語）
+
+**English (configure/build/check)**
+
+```bash
+# Configure (GCC)
+cmake -S . -B build-warning-gcc -G Ninja \
+  -DCMAKE_C_COMPILER=gcc \
+  -DCMAKE_CXX_COMPILER=g++ \
+  -DCMAKE_C_FLAGS='-Werror' \
+  -DCMAKE_CXX_FLAGS='-Werror'
+
+# Build (warning gate targets)
+for target in argparse-c sample argparse_test; do
+  cmake --build build-warning-gcc --target "${target}" --parallel
+done
+
+# Check (tests)
+ctest --test-dir build-warning-gcc --output-on-failure
+```
+
+```bash
+# Configure (Clang)
+cmake -S . -B build-warning-clang -G Ninja \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_C_FLAGS='-Werror' \
+  -DCMAKE_CXX_FLAGS='-Werror'
+
+# Build (warning gate targets)
+for target in argparse-c sample argparse_test; do
+  cmake --build build-warning-clang --target "${target}" --parallel
+done
+
+# Check (tests)
+ctest --test-dir build-warning-clang --output-on-failure
+```
+
+**日本語（configure/build/check の再現）**
+
+```bash
+# 設定（GCC）
+cmake -S . -B build-warning-gcc -G Ninja \
+  -DCMAKE_C_COMPILER=gcc \
+  -DCMAKE_CXX_COMPILER=g++ \
+  -DCMAKE_C_FLAGS='-Werror' \
+  -DCMAKE_CXX_FLAGS='-Werror'
+
+# ビルド（warning gate 対象）
+for target in argparse-c sample argparse_test; do
+  cmake --build build-warning-gcc --target "${target}" --parallel
+done
+
+# 確認（テスト）
+ctest --test-dir build-warning-gcc --output-on-failure
+```
+
+```bash
+# 設定（Clang）
+cmake -S . -B build-warning-clang -G Ninja \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_C_FLAGS='-Werror' \
+  -DCMAKE_CXX_FLAGS='-Werror'
+
+# ビルド（warning gate 対象）
+for target in argparse-c sample argparse_test; do
+  cmake --build build-warning-clang --target "${target}" --parallel
+done
+
+# 確認（テスト）
+ctest --test-dir build-warning-clang --output-on-failure
+```
+
+### 新規コード投入時の基準
+
+- GCC/Clang の warning-gate 構成で **warning を増やさない** こと。
+- 警告抑制が不可避な場合は、**局所抑制**（行/ブロック/対象ターゲットの最小スコープ）を使ってください。
+- 抑制には必ず短い理由コメントを添えてください（なぜ不可避か、なぜ局所抑制で安全か）。
+- まず全体フラグで広く抑制する方法は採らないでください。
+
+### CIジョブ名との対応と失敗時の確認導線
+
+- warning policy に関連する CI ジョブ（`.github/workflows/ci.yml`）:
+  - `warning-gate` → `Warning gate (gcc)` / `Warning gate (clang)`（`-Werror` 設定・必須ターゲットのビルドログ）
+  - `build-and-test` → `Build & Test (gcc)` / `Build & Test (clang)`（通常ビルドとテスト）
+  - `clang-tools` → `Clang format / tidy`（warning 関連変更で併走しやすい静的チェック）
+- 失敗時の確認手順:
+  1. 失敗した workflow run を開き、該当 matrix job（`gcc` または `clang`）を選ぶ。
+  2. `warning-gate` 失敗時は `warning-gate-logs-<compiler>` artifact を取得して確認する。
+  3. 本節の configure/build/check コマンドでローカル再現する。
+  4. 修正後は以下を実行してから再 push:
+     - `cmake --build build --target format`
+     - `./scripts/dev_quick_check.sh`

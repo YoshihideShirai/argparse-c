@@ -201,3 +201,110 @@ Before finishing code changes, also run the project formatter:
 ```bash
 cmake --build build --target format
 ```
+
+## Warning policy
+
+### Supported compilers and minimum versions
+
+- Target compilers for warning policy operation: **GCC** and **Clang**.
+- Minimum version policy (for local reproduction and CI parity):
+  - **GCC 11+**
+  - **Clang 14+**
+- Notes:
+  - The warning gate runs both compilers in CI.
+  - If a local environment uses older versions, reproduce with newer toolchains before concluding a warning policy result.
+
+### Local reproduction commands (English / 日本語)
+
+**English (configure/build/check)**
+
+```bash
+# Configure (GCC)
+cmake -S . -B build-warning-gcc -G Ninja \
+  -DCMAKE_C_COMPILER=gcc \
+  -DCMAKE_CXX_COMPILER=g++ \
+  -DCMAKE_C_FLAGS='-Werror' \
+  -DCMAKE_CXX_FLAGS='-Werror'
+
+# Build (warning gate targets)
+for target in argparse-c sample argparse_test; do
+  cmake --build build-warning-gcc --target "${target}" --parallel
+done
+
+# Check (tests)
+ctest --test-dir build-warning-gcc --output-on-failure
+```
+
+```bash
+# Configure (Clang)
+cmake -S . -B build-warning-clang -G Ninja \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_C_FLAGS='-Werror' \
+  -DCMAKE_CXX_FLAGS='-Werror'
+
+# Build (warning gate targets)
+for target in argparse-c sample argparse_test; do
+  cmake --build build-warning-clang --target "${target}" --parallel
+done
+
+# Check (tests)
+ctest --test-dir build-warning-clang --output-on-failure
+```
+
+**日本語（configure/build/check の再現）**
+
+```bash
+# 設定（GCC）
+cmake -S . -B build-warning-gcc -G Ninja \
+  -DCMAKE_C_COMPILER=gcc \
+  -DCMAKE_CXX_COMPILER=g++ \
+  -DCMAKE_C_FLAGS='-Werror' \
+  -DCMAKE_CXX_FLAGS='-Werror'
+
+# ビルド（warning gate 対象）
+for target in argparse-c sample argparse_test; do
+  cmake --build build-warning-gcc --target "${target}" --parallel
+done
+
+# 確認（テスト）
+ctest --test-dir build-warning-gcc --output-on-failure
+```
+
+```bash
+# 設定（Clang）
+cmake -S . -B build-warning-clang -G Ninja \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_C_FLAGS='-Werror' \
+  -DCMAKE_CXX_FLAGS='-Werror'
+
+# ビルド（warning gate 対象）
+for target in argparse-c sample argparse_test; do
+  cmake --build build-warning-clang --target "${target}" --parallel
+done
+
+# 確認（テスト）
+ctest --test-dir build-warning-clang --output-on-failure
+```
+
+### New code contribution criteria
+
+- Do not introduce new compiler warnings in GCC/Clang warning-gate configurations.
+- If warning suppression is unavoidable, keep it **local** (smallest scope possible: line/block/target).
+- Every suppression must include a short rationale comment (why unavoidable, and why the scoped suppression is safe).
+- Do not apply broad/global suppression flags as a first resort.
+
+### CI job mapping and failure triage
+
+- Warning policy related CI jobs (from `.github/workflows/ci.yml`):
+  - `warning-gate` → `Warning gate (gcc)` / `Warning gate (clang)` (`-Werror` configure and required-target build logs)
+  - `build-and-test` → `Build & Test (gcc)` / `Build & Test (clang)` (full build and test execution)
+  - `clang-tools` → `Clang format / tidy` (style/static checks that often accompany warning policy changes)
+- Failure investigation path:
+  1. Open the failed workflow run and select the corresponding matrix job (`gcc` or `clang`).
+  2. For `warning-gate` failures, download `warning-gate-logs-<compiler>` artifact.
+  3. Re-run the same configure/build/check commands from this section locally.
+  4. Confirm formatter and quick checks before pushing fixes:
+     - `cmake --build build --target format`
+     - `./scripts/dev_quick_check.sh`
