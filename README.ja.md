@@ -4,6 +4,8 @@
 
 > Python `argparse` の使い勝手を C99 に持ち込み、completion・manpage 生成・subcommand・known-args parsing まで対応できます。
 
+> このリポジトリは、**フル AI コーディング体制**（設計・実装・ドキュメント更新まで一貫して AI を活用）でメンテナンスしています。
+
 [![README (English)](https://img.shields.io/badge/README-English-0A66C2?style=for-the-badge)](./README.md)
 [![GitHub%20Pages (日本語)](https://img.shields.io/badge/GitHub%20Pages-日本語-0A66C2?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/ja/)
 
