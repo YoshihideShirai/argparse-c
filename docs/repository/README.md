@@ -148,6 +148,7 @@ The README no longer carries the detailed setup steps. Use the docs site for com
 - [Getting Started](https://yoshihideshirai.github.io/argparse-c/en/getting-started/)
 - [Guides](https://yoshihideshirai.github.io/argparse-c/en/guides/)
 - [API spec](https://yoshihideshirai.github.io/argparse-c/api-spec.en/)
+- [Machine-readable API spec (JSON)](https://yoshihideshirai.github.io/argparse-c/api-spec.json) ← For AI/tool integrations, reference this first.
 
 ### 日本語
 

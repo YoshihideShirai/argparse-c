@@ -25,10 +25,12 @@ README_MD_REPLACEMENTS = [
     ("(./docs/en/getting-started.md)", f"({PAGES_BASE_URL}/en/getting-started/)"),
     ("(./docs/en/guides/)", f"({PAGES_BASE_URL}/en/guides/)"),
     ("(./docs/api-spec.en.md)", f"({PAGES_BASE_URL}/api-spec.en/)"),
+    ("(./docs/api-spec.json)", f"({PAGES_BASE_URL}/api-spec.json)"),
     ("(./docs/ja/index.md)", f"({PAGES_BASE_URL}/ja/)"),
     ("(./docs/ja/getting-started.md)", f"({PAGES_BASE_URL}/ja/getting-started/)"),
     ("(./docs/ja/guides/)", f"({PAGES_BASE_URL}/ja/guides/)"),
     ("(./docs/api-spec.ja.md)", f"({PAGES_BASE_URL}/api-spec.ja/)"),
+    ("(./docs/api-spec.json)", f"({PAGES_BASE_URL}/api-spec.json)"),
     (f"<{PAGES_BASE_URL}/en/>", f"[{PAGES_BASE_URL}/en/]({PAGES_BASE_URL}/en/)"),
     (f"<{PAGES_BASE_URL}/ja/>", f"[{PAGES_BASE_URL}/ja/]({PAGES_BASE_URL}/ja/)"),
     (
@@ -64,6 +66,7 @@ README_JA_MD_REPLACEMENTS = [
     ("(./docs/ja/getting-started.md)", f"({PAGES_BASE_URL}/ja/getting-started/)"),
     ("(./docs/ja/guides/)", f"({PAGES_BASE_URL}/ja/guides/)"),
     ("(./docs/api-spec.ja.md)", f"({PAGES_BASE_URL}/api-spec.ja/)"),
+    ("(./docs/api-spec.json)", f"({PAGES_BASE_URL}/api-spec.json)"),
     (f"<{PAGES_BASE_URL}/ja/>", f"[{PAGES_BASE_URL}/ja/]({PAGES_BASE_URL}/ja/)"),
 ]
 
