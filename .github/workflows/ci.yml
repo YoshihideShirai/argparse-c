@@ -8,6 +8,55 @@ on:
   pull_request:
 
 jobs:
+  warning-gate:
+    name: Warning gate (${{ matrix.compiler.cc }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler:
+          - cc: gcc
+            cxx: g++
+          - cc: clang
+            cxx: clang++
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+
+      - name: Configure (-Werror)
+        run: |
+          set -euo pipefail
+          cmake -S . -B build-warning-gate \
+            -G Ninja \
+            -DCMAKE_C_COMPILER=${{ matrix.compiler.cc }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }} \
+            -DCMAKE_C_FLAGS='-Werror' \
+            -DCMAKE_CXX_FLAGS='-Werror' 2>&1 | tee build-warning-gate-configure.log
+
+      - name: Build required targets with raw compiler logs
+        run: |
+          set -euo pipefail
+          : > build-warning-gate-build.log
+          for target in argparse-c sample argparse_test; do
+            echo "==== Building target: ${target} ====" | tee -a build-warning-gate-build.log
+            cmake --build build-warning-gate --target "${target}" --parallel 2>&1 | tee -a build-warning-gate-build.log
+          done
+
+      - name: Upload warning-gate logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: warning-gate-logs-${{ matrix.compiler.cc }}
+          path: |
+            build-warning-gate-configure.log
+            build-warning-gate-build.log
+
   build-and-test:
     name: Build & Test (${{ matrix.compiler.cc }})
     runs-on: ubuntu-latest
