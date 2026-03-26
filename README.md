@@ -147,6 +147,8 @@ The README no longer carries the detailed setup steps. Use the docs site for com
 - [Guides](./docs/en/guides/)
 - [API spec](./docs/api-spec.en.md)
 - [Machine-readable API spec (JSON)](./docs/api-spec.json) ← For AI/tool integrations, reference this first.
+- [AI agent guide (English)](./docs/en/ai-agent-guide.md) ← First reading order when using AI agents.
+- [AI agent guide (日本語)](./docs/ja/ai-agent-guide.md)
 
 ### 日本語
 

@@ -16,14 +16,15 @@ Use this site when you want to:
 ## Recommended reading order
 
 1. **[Getting Started](getting-started.md)** — install the library, run the first sample, and learn the minimum parser flow
-2. **Guides** — dive into features as you need them
+2. **[AI agent guide](ai-agent-guide.md)** — ownership, cleanup order, and wrapper-CLI parsing policy
+3. **Guides** — dive into features as you need them
    - [Basic usage](guides/basic-usage.md)
    - [Options and types](guides/options-and-types.md)
    - [nargs](guides/nargs.md)
    - [Subcommands](guides/subcommands.md)
    - [Completion callbacks](guides/completion-callbacks.md)
    - [known args / unknown args](guides/known-args.md)
-3. **Reference**
+4. **Reference**
    - [API Reference (English)](../api-spec.en.md)
    - [FAQ](faq.md)
 

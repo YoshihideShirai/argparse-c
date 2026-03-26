@@ -102,6 +102,8 @@ int main(int argc, char **argv) {
 - [ガイド一覧](./docs/ja/guides/)
 - [API 仕様](./docs/api-spec.ja.md)
 - [機械可読API仕様 (JSON)](./docs/api-spec.json) ← AI/ツール連携時はこのJSONを参照してください。
+- [AI agent guide (日本語)](./docs/ja/ai-agent-guide.md) ← AI利用時の最初の読む順。
+- [AI agent guide (English)](./docs/en/ai-agent-guide.md)
 
 ## GitHub Pages 日本語トップへのリンク
 
