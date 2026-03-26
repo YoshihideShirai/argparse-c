@@ -12,7 +12,7 @@ target_compile_definitions(argparse_test PRIVATE
   AP_EXAMPLE_COMPLETION_PATH="$<TARGET_FILE:example_completion>"
   AP_EXAMPLE_MANPAGE_PATH="$<TARGET_FILE:example_manpage>"
 )
-target_link_libraries(argparse_test PRIVATE argparse-c)
+target_link_libraries(argparse_test PRIVATE argparse-c ap_warnings)
 
 add_executable(argparse_test_static
   test_runner.cpp
@@ -28,7 +28,7 @@ target_compile_definitions(argparse_test_static PRIVATE
   AP_EXAMPLE_COMPLETION_PATH="$<TARGET_FILE:example_completion>"
   AP_EXAMPLE_MANPAGE_PATH="$<TARGET_FILE:example_manpage>"
 )
-target_link_libraries(argparse_test_static PRIVATE argparse-c-static)
+target_link_libraries(argparse_test_static PRIVATE argparse-c-static ap_warnings)
 
 add_test(NAME argparse_test COMMAND argparse_test -v)
 add_test(NAME argparse_test_static COMMAND argparse_test_static -v)

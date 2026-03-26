@@ -10,6 +10,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
+include(${CMAKE_SOURCE_DIR}/cmake/APWarnings.cmake)
+
 set(AP_CMAKE_PACKAGE_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/argparse-c")
 
 if(AP_ENABLE_COVERAGE)

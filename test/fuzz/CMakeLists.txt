@@ -6,7 +6,7 @@ add_executable(argparse_fuzz_harness
   fuzz_harness.c
 )
 
-target_link_libraries(argparse_fuzz_harness PRIVATE argparse-c-static)
+target_link_libraries(argparse_fuzz_harness PRIVATE argparse-c-static ap_warnings)
 
 target_compile_options(argparse_fuzz_harness PRIVATE
   -O1

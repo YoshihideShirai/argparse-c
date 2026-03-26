@@ -42,10 +42,7 @@ foreach(ap_target IN ITEMS argparse-c argparse-c-static)
   )
 
   target_compile_features(${ap_target} PUBLIC c_std_99)
-
-  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(${ap_target} PRIVATE -Wall -Wextra -Wpedantic)
-  endif()
+  target_link_libraries(${ap_target} PRIVATE $<BUILD_INTERFACE:ap_warnings>)
 endforeach()
 
 install(TARGETS argparse-c argparse-c-static
