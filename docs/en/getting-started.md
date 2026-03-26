@@ -211,11 +211,11 @@ man ./example_manpage.1
 
 ### Minimal templates (one responsibility per file)
 
-- [`sample/templates/required_option_error_formatting.c`](../../sample/templates/required_option_error_formatting.c): required option + `ap_format_error(...)` flow
-- [`sample/templates/subcommand_nested_parser.c`](../../sample/templates/subcommand_nested_parser.c): subcommand + nested parser
-- [`sample/templates/known_args_forwarding.c`](../../sample/templates/known_args_forwarding.c): `ap_parse_known_args(...)` + unknown token forwarding
-- [`sample/templates/completion_callback.c`](../../sample/templates/completion_callback.c): completion callback wiring with `ap_try_handle_completion(...)`
-- [`sample/templates/manpage_generation.c`](../../sample/templates/manpage_generation.c): `--generate-manpage` + `ap_format_manpage(...)`
+- [`sample/templates/required_option_error_formatting.c`](https://github.com/yoshihideshirai/argparse-c/blob/main/sample/templates/required_option_error_formatting.c): required option + `ap_format_error(...)` flow
+- [`sample/templates/subcommand_nested_parser.c`](https://github.com/yoshihideshirai/argparse-c/blob/main/sample/templates/subcommand_nested_parser.c): subcommand + nested parser
+- [`sample/templates/known_args_forwarding.c`](https://github.com/yoshihideshirai/argparse-c/blob/main/sample/templates/known_args_forwarding.c): `ap_parse_known_args(...)` + unknown token forwarding
+- [`sample/templates/completion_callback.c`](https://github.com/yoshihideshirai/argparse-c/blob/main/sample/templates/completion_callback.c): completion callback wiring with `ap_try_handle_completion(...)`
+- [`sample/templates/manpage_generation.c`](https://github.com/yoshihideshirai/argparse-c/blob/main/sample/templates/manpage_generation.c): `--generate-manpage` + `ap_format_manpage(...)`
 
 - [`sample/example1.c`](../repository/sample/example1.c.md): start here for required options, positionals, namespace reads, and `ap_format_error(...)`
 - [`sample/example_subcommands.c`](../repository/sample/example_subcommands.c.md): continue here for nested subcommands and `subcommand_path`
