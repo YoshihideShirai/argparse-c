@@ -620,6 +620,123 @@ TEST(ParseArgsReportsUnexpectedPositionalAtFirstOverflowAfterDoubleDash) {
   ap_parser_free(p);
 }
 
+TEST(ParseArgsLongAlternatingOptionalAndPositionalHitsUnexpectedBoundary) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options opt = ap_arg_options_default();
+  ap_arg_options extras = ap_arg_options_default();
+  const char *input_value = NULL;
+  int32_t verbose_count = 0;
+  std::vector<std::string> unknown_like_tokens;
+  std::vector<char *> argv_ok;
+  const int alternating_pairs = 12;
+
+  CHECK(p != NULL);
+  opt.type = AP_TYPE_INT32;
+  opt.action = AP_ACTION_COUNT;
+  extras.nargs = AP_NARGS_ZERO_OR_MORE;
+  extras.action = AP_ACTION_APPEND;
+  LONGS_EQUAL(0, ap_add_argument(p, "-v, --verbose", opt, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "extras", extras, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "input", ap_arg_options_default(), &err));
+
+  argv_ok.push_back((char *)"prog");
+  unknown_like_tokens.reserve((size_t)alternating_pairs);
+  for (int i = 0; i < alternating_pairs; ++i) {
+    argv_ok.push_back((char *)"-v");
+    unknown_like_tokens.push_back("unknown-like-" + std::to_string(i));
+    argv_ok.push_back((char *)unknown_like_tokens.back().c_str());
+  }
+  argv_ok.push_back((char *)"--");
+  argv_ok.push_back((char *)"target.txt");
+
+  LONGS_EQUAL(0,
+              ap_parse_args(p, (int)argv_ok.size(), argv_ok.data(), &ns, &err));
+  CHECK(ap_ns_get_int32(ns, "verbose", &verbose_count));
+  LONGS_EQUAL(alternating_pairs, verbose_count);
+  LONGS_EQUAL(alternating_pairs, ap_ns_get_count(ns, "extras"));
+  for (int i = 0; i < alternating_pairs; ++i) {
+    STRCMP_EQUAL(unknown_like_tokens[(size_t)i].c_str(),
+                 ap_ns_get_string_at(ns, "extras", i));
+  }
+  CHECK(ap_ns_get_string(ns, "input", &input_value));
+  STRCMP_EQUAL("target.txt", input_value);
+  ap_namespace_free(ns);
+  ns = NULL;
+  ap_parser_free(p);
+
+  p = ap_parser_new("prog", "desc");
+  std::vector<char *> argv_strict_ok;
+  std::vector<char *> argv_strict_fail;
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "-v, --verbose", opt, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "input", ap_arg_options_default(), &err));
+
+  argv_strict_ok.push_back((char *)"prog");
+  argv_strict_ok.push_back((char *)"-v");
+  argv_strict_ok.push_back((char *)unknown_like_tokens[0].c_str());
+  LONGS_EQUAL(0, ap_parse_args(p, (int)argv_strict_ok.size(),
+                               argv_strict_ok.data(), &ns, &err));
+  ap_namespace_free(ns);
+  ns = NULL;
+
+  argv_strict_fail.push_back((char *)"prog");
+  argv_strict_fail.push_back((char *)"-v");
+  argv_strict_fail.push_back((char *)unknown_like_tokens[0].c_str());
+  argv_strict_fail.push_back((char *)"-v");
+  argv_strict_fail.push_back((char *)unknown_like_tokens[1].c_str());
+  LONGS_EQUAL(-1, ap_parse_args(p, (int)argv_strict_fail.size(),
+                                argv_strict_fail.data(), &ns, &err));
+  LONGS_EQUAL(AP_ERR_UNEXPECTED_POSITIONAL, err.code);
+  STRCMP_EQUAL("unknown-like-1", err.argument);
+  STRCMP_EQUAL("unexpected positional argument 'unknown-like-1'", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(ParseArgsLongZeroOrMorePositionalReservesRequiredTailPositionals) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options extras = ap_arg_options_default();
+  const char *mid_value = NULL;
+  const char *output_value = NULL;
+  std::vector<std::string> extra_values;
+  std::vector<char *> argv;
+  const int extra_count = 40;
+
+  CHECK(p != NULL);
+  extras.nargs = AP_NARGS_ZERO_OR_MORE;
+  extras.action = AP_ACTION_APPEND;
+  LONGS_EQUAL(0, ap_add_argument(p, "extras", extras, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "mid", ap_arg_options_default(), &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "output", ap_arg_options_default(), &err));
+
+  argv.push_back((char *)"prog");
+  extra_values.reserve((size_t)extra_count);
+  for (int i = 0; i < extra_count; ++i) {
+    extra_values.push_back("extra-" + std::to_string(i));
+    argv.push_back((char *)extra_values.back().c_str());
+  }
+  argv.push_back((char *)"mid.bin");
+  argv.push_back((char *)"dest.out");
+
+  LONGS_EQUAL(0, ap_parse_args(p, (int)argv.size(), argv.data(), &ns, &err));
+  LONGS_EQUAL(extra_count, ap_ns_get_count(ns, "extras"));
+  for (int i = 0; i < extra_count; ++i) {
+    STRCMP_EQUAL(extra_values[(size_t)i].c_str(),
+                 ap_ns_get_string_at(ns, "extras", i));
+  }
+  CHECK(ap_ns_get_string(ns, "mid", &mid_value));
+  STRCMP_EQUAL("mid.bin", mid_value);
+  CHECK(ap_ns_get_string(ns, "output", &output_value));
+  STRCMP_EQUAL("dest.out", output_value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
 TEST(ParseArgsTracksAppendCountAndPositionalsAcrossLongSequence) {
   ap_error err = {};
   ap_namespace *ns = NULL;

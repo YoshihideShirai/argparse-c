@@ -6,6 +6,8 @@
 
 > Build C99 CLIs with Python `argparse`-like ergonomics — including completion, manpage generation, subcommands, and known-args parsing.
 
+> This repository is maintained with a **full AI-coding workflow** (design, implementation, and documentation updates are AI-assisted end to end).
+
 [![README (日本語)](https://img.shields.io/badge/README-日本語-0A66C2?style=for-the-badge)](README.ja.md)
 [![Docs (English)](https://img.shields.io/badge/GitHub%20Pages-English-0A66C2?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/en/)
 [![Docs (日本語)](https://img.shields.io/badge/GitHub%20Pages-日本語-0A66C2?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/ja/)

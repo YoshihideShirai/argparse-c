@@ -2,6 +2,22 @@
 #include <vector>
 #include "test_framework.h"
 
+static void
+assert_unknown_tokens_equal(const std::vector<std::string> &expected,
+                            char **actual, int actual_count) {
+  LONGS_EQUAL((int)expected.size(), actual_count);
+  for (int i = 0; i < actual_count; ++i) {
+    const char *actual_token = (actual != NULL) ? actual[i] : NULL;
+    if (actual_token == NULL || expected[(size_t)i] != actual_token) {
+      std::ostringstream detail;
+      detail << "unknown token mismatch at index " << i << ": expected '"
+             << expected[(size_t)i] << "', got '"
+             << (actual_token ? actual_token : "(null)") << "'";
+      fail("unknown token order/value", __FILE__, __LINE__, detail.str());
+    }
+  }
+}
+
 TEST(ParseKnownArgsCollectsUnknownOptions) {
   ap_error err = {};
   ap_namespace *ns = NULL;
@@ -842,6 +858,97 @@ TEST(ParseKnownArgsAlternatingUnknownOptionValueDoesNotAbsorbKnownTokens) {
   LONGS_EQUAL(77, num);
   STRCMP_EQUAL("file.txt", input);
   CHECK(!ap_ns_get_string(ns, "z_0", &text));
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseKnownArgsLongAlternatingUnknownOptionValuePairsStrictMatch) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  std::vector<std::string> expected_unknown;
+  std::vector<char *> argv;
+  const char *text = NULL;
+  const char *input = NULL;
+  int32_t num = 0;
+  const int pair_count = 18;
+
+  CHECK(p != NULL);
+  argv.push_back((char *)"prog");
+  expected_unknown.reserve((size_t)pair_count * 2);
+  for (int i = 0; i < pair_count; ++i) {
+    expected_unknown.push_back("--u" + std::to_string(i));
+    expected_unknown.push_back("v" + std::to_string(i));
+    argv.push_back(
+        (char *)expected_unknown[expected_unknown.size() - 2].c_str());
+    argv.push_back((char *)expected_unknown.back().c_str());
+    if (i == 4) {
+      argv.push_back((char *)"-t");
+      argv.push_back((char *)"hello");
+    }
+    if (i == 11) {
+      argv.push_back((char *)"-n");
+      argv.push_back((char *)"42");
+    }
+  }
+  argv.push_back((char *)"file.txt");
+
+  LONGS_EQUAL(0, ap_parse_known_args(p, (int)argv.size(), argv.data(), &ns,
+                                     &unknown, &unknown_count, &err));
+  assert_unknown_tokens_equal(expected_unknown, unknown, unknown_count);
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_int32(ns, "num", &num));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("hello", text);
+  LONGS_EQUAL(42, num);
+  STRCMP_EQUAL("file.txt", input);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseKnownArgsPreservesLongMixedOrderAfterDoubleDashStrictMatch) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  std::vector<std::string> tail_tokens;
+  std::vector<char *> argv;
+  const char *text = NULL;
+  const char *input = NULL;
+
+  CHECK(p != NULL);
+  argv.push_back((char *)"prog");
+  argv.push_back((char *)"-t");
+  argv.push_back((char *)"hello");
+  argv.push_back((char *)"file.txt");
+  argv.push_back((char *)"--");
+
+  tail_tokens.reserve(30);
+  for (int i = 0; i < 30; ++i) {
+    if ((i % 3) == 0) {
+      tail_tokens.push_back("-x" + std::to_string(i));
+    } else if ((i % 3) == 1) {
+      tail_tokens.push_back("--long-" + std::to_string(i));
+    } else {
+      tail_tokens.push_back("plain-" + std::to_string(i));
+    }
+    argv.push_back((char *)tail_tokens.back().c_str());
+  }
+
+  LONGS_EQUAL(0, ap_parse_known_args(p, (int)argv.size(), argv.data(), &ns,
+                                     &unknown, &unknown_count, &err));
+  assert_unknown_tokens_equal(tail_tokens, unknown, unknown_count);
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  STRCMP_EQUAL("hello", text);
+  STRCMP_EQUAL("file.txt", input);
 
   ap_free_tokens(unknown, unknown_count);
   ap_namespace_free(ns);
