@@ -94,6 +94,7 @@ set(AP_CLANG_TOOL_SOURCES
   test/test_formatters.cpp
   test/test_framework.cpp
   test/test_framework.h
+  test/test_alloc_injector.cpp
   test/test_known_args.cpp
   test/test_parse_core.cpp
   test/test_runner.cpp

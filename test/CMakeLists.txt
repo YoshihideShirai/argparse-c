@@ -1,6 +1,7 @@
 add_executable(argparse_test
   test_runner.cpp
   test_framework.cpp
+  test_alloc_injector.cpp
   test_formatters.cpp
   test_parse_core.cpp
   test_known_args.cpp
@@ -18,6 +19,7 @@ target_link_libraries(argparse_test PRIVATE argparse-c ap_warnings)
 add_executable(argparse_test_static
   test_runner.cpp
   test_framework.cpp
+  test_alloc_injector.cpp
   test_formatters.cpp
   test_parse_core.cpp
   test_known_args.cpp
