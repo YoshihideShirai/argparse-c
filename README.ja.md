@@ -52,6 +52,16 @@ Python の `argparse` を使ったことがあれば、parser を作る、引数
 
 `argparse-c` は parse 失敗時に一律で `exit()` しません。構造化されたエラーを受け取り、表示文言や終了コード、回復処理をアプリ側で制御できます。
 
+## 体験をひと目で見る
+
+![`argparse-c` の 1 つの parser 定義から help、shell completion 候補、入力ミス時のわかりやすいエラーまで流れる様子を示すターミナル GIF。](./docs/repository/assets/argparse-c-demo.gif)
+
+この GIF は実際に動く `sample/example_completion.c` から生成しています。1 つの parser 定義を入れると、利用者にどう見えるかを伝える内容にしています。
+
+- `--help`
+- shell completion 用の hidden `__complete` transport
+- 入力ミス時のわかりやすい validation error
+
 ## 最小サンプル
 
 ```c
