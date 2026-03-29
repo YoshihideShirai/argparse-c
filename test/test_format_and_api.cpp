@@ -393,6 +393,26 @@ TEST(FormatHelpPositionalOneNargsPrintsSingleMetavar) {
   ap_parser_free(p);
 }
 
+TEST(FormatHelpPositionalOneOrMoreShowsExpandedMetavarSuffix) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options files = ap_arg_options_default();
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  files.nargs = AP_NARGS_ONE_OR_MORE;
+  files.metavar = "FILE";
+  files.help = "input files";
+  LONGS_EQUAL(0, ap_add_argument(p, "files", files, &err));
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "  FILE [FILE ...]\n    input files") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
 TEST(FormatManpageNestedSubcommandsBalanceRsReIndentation) {
   ap_error err = {};
   ap_parser *root = ap_parser_new("tool", "desc");
@@ -443,6 +463,32 @@ TEST(FormatManpageShowsBuiltinHelpOptionInsteadOfNoneFallback) {
   CHECK(manpage != NULL);
   CHECK(strstr(manpage, ".SH OPTIONS\nNone.\n") == NULL);
   CHECK(strstr(manpage, "\\-h, \\-\\-help") != NULL);
+
+  free(manpage);
+  ap_parser_free(p);
+}
+
+TEST(FormatManpageSynopsisUsesFallbackMetavarAndOptionsExcludePositionals) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options positional = ap_arg_options_default();
+  ap_arg_options mode = ap_arg_options_default();
+  char *manpage = NULL;
+
+  CHECK(p != NULL);
+  positional.help = "path input";
+  LONGS_EQUAL(0, ap_add_argument(p, "file2_path", positional, &err));
+  mode.metavar = "MODE";
+  mode.help = "execution mode";
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  manpage = ap_format_manpage(p);
+  CHECK(manpage != NULL);
+  CHECK(strstr(manpage, ".SH SYNOPSIS\n.B tool") != NULL);
+  CHECK(strstr(manpage, "FILE2\\-PATH") != NULL);
+  CHECK(strstr(manpage, ".SH OPTIONS\n") != NULL);
+  CHECK(strstr(manpage, "\\-\\-mode MODE") != NULL);
+  CHECK(strstr(manpage, ".TP\n.B FILE2\\-PATH") == NULL);
 
   free(manpage);
   ap_parser_free(p);
