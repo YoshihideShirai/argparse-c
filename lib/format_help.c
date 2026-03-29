@@ -5,6 +5,9 @@
 
 #include "ap_internal.h"
 
+extern int ap_test_sb_before_appendf(void) __attribute__((weak));
+extern int ap_test_sb_before_free(void) __attribute__((weak));
+
 void ap_sb_init(ap_string_builder *sb) {
   sb->data = NULL;
   sb->len = 0;
@@ -15,7 +18,9 @@ void ap_sb_free(ap_string_builder *sb) {
   if (!sb) {
     return;
   }
-  free(sb->data);
+  if (!(ap_test_sb_before_free && ap_test_sb_before_free() != 0)) {
+    free(sb->data);
+  }
   sb->data = NULL;
   sb->len = 0;
   sb->cap = 0;
@@ -29,6 +34,9 @@ int ap_sb_appendf(ap_string_builder *sb, const char *fmt, ...) {
   char *next;
 
   if (!sb || !fmt) {
+    return -1;
+  }
+  if (ap_test_sb_before_appendf && ap_test_sb_before_appendf() != 0) {
     return -1;
   }
 

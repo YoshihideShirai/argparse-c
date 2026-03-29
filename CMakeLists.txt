@@ -91,6 +91,7 @@ set(AP_CLANG_TOOL_SOURCES
   sample/consumer/cmake/main.c
   sample/consumer/pkg-config/main.c
   test/test_format_and_api.cpp
+  test/test_formatters.cpp
   test/test_framework.cpp
   test/test_framework.h
   test/test_known_args.cpp
