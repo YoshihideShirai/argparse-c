@@ -1585,6 +1585,60 @@ TEST(CompleteUsesPositionalCompletionMetadataAndCallback) {
   ap_parser_free(p);
 }
 
+TEST(CompleteHandlesInlineOptionValueAndDoubleDashPositionalMode) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  ap_arg_options file = ap_arg_options_default();
+  ap_arg_options target = ap_arg_options_default();
+  ap_completion_result result = {};
+  const char *modes[] = {"fast", "slow"};
+  const char *files[] = {"alpha.txt", "beta.txt"};
+  char arg0[] = "alpha.txt";
+  char arg1[] = "--mode=s";
+  char arg2[] = "";
+  char *argv_inline[] = {arg0, arg1, arg2};
+  char arg3[] = "--";
+  char arg4[] = "a";
+  char *argv_positional[] = {arg3, arg4};
+  char arg5[] = "--mode";
+  char arg6[] = "fast";
+  char arg7[] = "b";
+  char *argv_after_value[] = {arg5, arg6, arg7};
+
+  CHECK(p != NULL);
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+  file.choices.items = files;
+  file.choices.count = 2;
+  target.choices.items = modes;
+  target.choices.count = 2;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "file", file, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "target", target, &err));
+
+  LONGS_EQUAL(0, ap_complete(p, 3, argv_inline, "bash", &result, &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("fast", result.items[0].value);
+  STRCMP_EQUAL("slow", result.items[1].value);
+  ap_completion_result_free(&result);
+
+  LONGS_EQUAL(0, ap_complete(p, 2, argv_positional, "bash", &result, &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("alpha.txt", result.items[0].value);
+  STRCMP_EQUAL("beta.txt", result.items[1].value);
+  ap_completion_result_free(&result);
+
+  LONGS_EQUAL(0, ap_complete(p, 3, argv_after_value, "bash", &result, &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("alpha.txt", result.items[0].value);
+  STRCMP_EQUAL("beta.txt", result.items[1].value);
+  ap_completion_result_free(&result);
+
+  ap_parser_free(p);
+}
+
 TEST(CompleteAppliesCallbackScopeAcrossThreeToFiveSubcommandLevels) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
