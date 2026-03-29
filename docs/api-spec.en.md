@@ -5,7 +5,6 @@ This document is generated from `include/argparse-c.h` via `scripts/sync_api_spe
 
 | Function | Signature | Return/Error Contract | Ownership / free responsibility |
 | --- | --- | --- | --- |
-
 | `ap_parser_new` | `ap_parser * ap_parser_new(const char * prog, const char * description)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | free with `ap_parser_free`. Returns a new parser instance. Caller owns it. |
 | `ap_parser_new_with_options` | `ap_parser * ap_parser_new_with_options(const char * prog, const char * description, ap_parser_options options)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | free with `ap_parser_free`. Returns a new parser instance. Caller owns it. |
 | `ap_parser_set_completion` | `int ap_parser_set_completion(ap_parser * parser, bool enabled, const char * entrypoint, ap_error * err)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. No new ownership transfer in return value. |

@@ -5,7 +5,6 @@
 
 | Function | Signature | Return/Error Contract | Ownership / free responsibility |
 | --- | --- | --- | --- |
-
 | `ap_parser_new` | `ap_parser * ap_parser_new(const char * prog, const char * description)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free: `ap_parser_free`。新しい parser を返します。所有権は呼び出し側です。 |
 | `ap_parser_new_with_options` | `ap_parser * ap_parser_new_with_options(const char * prog, const char * description, ap_parser_options options)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free: `ap_parser_free`。新しい parser を返します。所有権は呼び出し側です。 |
 | `ap_parser_set_completion` | `int ap_parser_set_completion(ap_parser * parser, bool enabled, const char * entrypoint, ap_error * err)` | 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |

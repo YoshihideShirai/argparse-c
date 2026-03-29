@@ -204,11 +204,11 @@ def render_markdown(spec: dict, lang: str) -> str:
         if not is_ja
         else "このドキュメントは `scripts/sync_api_spec.py` が `include/argparse-c.h` から生成します。"
     )
-    hdr = (
-        "| Function | Signature | Return/Error Contract | Ownership / free responsibility |\n"
-        "| --- | --- | --- | --- |\n"
-    )
-    lines = [AUTOGEN_COMMENT.rstrip(), f"# {title}", "", intro, "", hdr]
+    hdr = [
+        "| Function | Signature | Return/Error Contract | Ownership / free responsibility |",
+        "| --- | --- | --- | --- |",
+    ]
+    lines = [AUTOGEN_COMMENT.rstrip(), f"# {title}", "", intro, "", *hdr]
     for fn in spec["functions"]:
         ec = fn["error_contract"]
         ow = fn["ownership"]
