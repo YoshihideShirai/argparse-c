@@ -10,6 +10,9 @@ Build C99 CLIs with a Python `argparse`-style workflow.
 - [README / 日本語](repository/README.ja.md)
 - [GitHub Pages / English](en/index.md)
 - [GitHub Pages / 日本語](ja/index.md)
+- [GitHub Pages / 简体中文](zh-CN/index.md)
+- [GitHub Pages / Español](es/index.md)
+- [GitHub Pages / Português (Brasil)](pt-BR/index.md)
 
 ## Start in three clicks
 
@@ -21,6 +24,9 @@ Build C99 CLIs with a Python `argparse`-style workflow.
 
 - [English / Getting Started](en/getting-started.md)
 - [日本語 / Getting Started](ja/getting-started.md)
+- [简体中文 / Home](zh-CN/index.md)
+- [Español / Home](es/index.md)
+- [Português (Brasil) / Home](pt-BR/index.md)
 - [API Reference (English)](api-spec.en.md)
 - [API Reference (日本語)](api-spec.ja.md)
 - [Coverage report](coverage/index.html)
