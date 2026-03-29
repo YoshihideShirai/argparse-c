@@ -16,6 +16,7 @@ README_TARGETS = {
 PAGES_BASE_URL = "https://yoshihideshirai.github.io/argparse-c"
 README_MD_REPLACEMENTS = [
     ("(./README.ja.md)", "(README.ja.md)"),
+    ("(./docs/repository/assets/argparse-c-demo.gif)", "(assets/argparse-c-demo.gif)"),
     ("(./sample/example1.c)", "(sample/example1.c.md)"),
     ("(./sample/example_completion.c)", "(sample/example_completion.c.md)"),
     ("(./sample/example_subcommands.c)", "(sample/example_subcommands.c.md)"),
@@ -62,6 +63,7 @@ README_MD_REPLACEMENTS = [
 
 README_JA_MD_REPLACEMENTS = [
     ("(./README.md)", "(README.md)"),
+    ("(./docs/repository/assets/argparse-c-demo.gif)", "(assets/argparse-c-demo.gif)"),
     ("(./docs/ja/index.md)", f"({PAGES_BASE_URL}/ja/)"),
     ("(./docs/ja/getting-started.md)", f"({PAGES_BASE_URL}/ja/getting-started/)"),
     ("(./docs/ja/guides/)", f"({PAGES_BASE_URL}/ja/guides/)"),

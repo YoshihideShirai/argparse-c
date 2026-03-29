@@ -58,6 +58,16 @@ A single parser definition can power:
 
 `argparse-c` does not force `exit()` on parse failure. Your program receives structured errors and can decide whether to format them, recover, or continue.
 
+## See the experience
+
+![Animated terminal demo showing `argparse-c` surfacing help output, shell completion candidates, and friendly validation errors from one sample parser definition.](assets/argparse-c-demo.gif)
+
+This animation is generated from the runnable `sample/example_completion.c` flow. It focuses on the end-user experience you get after wiring one parser definition:
+
+- `--help`
+- hidden `__complete` transport for shell completion
+- clear validation errors when input is wrong
+
 ## What kind of CLI can you build quickly?
 
 Examples that are easy to assemble with `argparse-c`:
