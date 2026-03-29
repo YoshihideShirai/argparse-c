@@ -34,6 +34,11 @@ void test_alloc_fail_disable(void);
 void test_alloc_fail_on_nth(int nth_alloc);
 bool test_alloc_injection_available(void);
 
+struct AllocFailGuard {
+  AllocFailGuard() { test_alloc_fail_disable(); }
+  ~AllocFailGuard() { test_alloc_fail_disable(); }
+};
+
 #define TEST(name)                                                             \
   static void name();                                                          \
   static Registrar name##_registrar(#name, &name);                             \

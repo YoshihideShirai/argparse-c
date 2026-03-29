@@ -29,10 +29,6 @@ int dynamic_exec_completion(const ap_completion_request *request,
   return 0;
 }
 
-struct AllocFailGuard {
-  ~AllocFailGuard() { test_alloc_fail_disable(); }
-};
-
 } // namespace
 
 extern "C" {
@@ -1443,6 +1439,50 @@ TEST(ParseKnownArgsNoMemoryOnUnknownCopyClearsOutputsAndCanRetry) {
   STRCMP_EQUAL("1", unknown[1]);
 
   ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseArgsNoMemoryLeavesOutNsNullAndParserCanBeReused) {
+  AllocFailGuard guard;
+  if (!test_alloc_injection_available()) {
+    CHECK_TRUE(true);
+    return;
+  }
+
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options name = ap_arg_options_default();
+  ap_namespace *ns = NULL;
+  char *argv[] = {(char *)"prog", (char *)"--name", (char *)"alice", NULL};
+  const char *parsed_name = NULL;
+  bool saw_no_memory = false;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "--name", name, &err));
+
+  for (int nth = 1; nth <= 128; nth++) {
+    test_alloc_fail_on_nth(nth);
+    ns = (ap_namespace *)0x1;
+    if (ap_parse_args(p, 3, argv, &ns, &err) == 0) {
+      ap_namespace_free(ns);
+      ns = NULL;
+      continue;
+    }
+    CHECK(ns == NULL);
+    if (err.code == AP_ERR_NO_MEMORY) {
+      saw_no_memory = true;
+      break;
+    }
+  }
+
+  CHECK(saw_no_memory);
+
+  test_alloc_fail_disable();
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "name", &parsed_name));
+  STRCMP_EQUAL("alice", parsed_name);
+
   ap_namespace_free(ns);
   ap_parser_free(p);
 }
