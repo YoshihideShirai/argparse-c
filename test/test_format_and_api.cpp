@@ -222,6 +222,35 @@ TEST(FormatHelpCoversOptionalAndPositionalNargsVariants) {
   ap_parser_free(p);
 }
 
+TEST(FormatHelpIncludesPositionalMetadataAndFallbackMetavarTransform) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options user = ap_arg_options_default();
+  const char *choices[] = {"u-1", "u-2"};
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  user.nargs = AP_NARGS_OPTIONAL;
+  user.help = "user identifier";
+  user.default_value = "u-1";
+  user.required = true;
+  user.choices.items = choices;
+  user.choices.count = 2;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "user_id2", user, &err));
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "  USER-ID2 [USER-ID2]") != NULL);
+  CHECK(strstr(help, "user identifier") != NULL);
+  CHECK(strstr(help, "choices: u-1, u-2") != NULL);
+  CHECK(strstr(help, "default: u-1") != NULL);
+  CHECK(strstr(help, "required: true") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
 TEST(FormatUsageShowsRequiredBoolAndConstActions) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -247,6 +276,221 @@ TEST(FormatUsageShowsRequiredBoolAndConstActions) {
   CHECK(strstr(usage, "[--color]") == NULL);
 
   free(usage);
+  ap_parser_free(p);
+}
+
+TEST(FormatUsageCoversFixedNargsForRequiredAndOptionalOptions) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options required_pair = ap_arg_options_default();
+  ap_arg_options optional_triple = ap_arg_options_default();
+  char *usage = NULL;
+
+  CHECK(p != NULL);
+  required_pair.nargs = AP_NARGS_FIXED;
+  required_pair.nargs_count = 2;
+  required_pair.required = true;
+  required_pair.metavar = "PAIR";
+  optional_triple.nargs = AP_NARGS_FIXED;
+  optional_triple.nargs_count = 3;
+  optional_triple.required = false;
+  optional_triple.metavar = "TRIPLE";
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--pair", required_pair, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--triple", optional_triple, &err));
+
+  usage = ap_format_usage(p);
+  CHECK(usage != NULL);
+  CHECK(strstr(usage, " --pair PAIR PAIR") != NULL);
+  CHECK(strstr(usage, " [--triple TRIPLE TRIPLE TRIPLE]") != NULL);
+
+  free(usage);
+  ap_parser_free(p);
+}
+
+TEST(FormatManpageEscapesRoffControlCharactersAndBackslashes) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", ".dot\n'quote\npath\\name-with-dash");
+  ap_arg_options arg = ap_arg_options_default();
+  char *manpage = NULL;
+
+  CHECK(p != NULL);
+  arg.help = ".flag-help\n'flag-help\npath\\flag-with-dash";
+  LONGS_EQUAL(0, ap_add_argument(p, "--flag", arg, &err));
+
+  manpage = ap_format_manpage(p);
+  CHECK(manpage != NULL);
+  CHECK(strstr(manpage, "\\&.dot") != NULL);
+  CHECK(strstr(manpage, "\\&'quote") != NULL);
+  CHECK(strstr(manpage, "path\\\\name\\-with\\-dash") != NULL);
+  CHECK(strstr(manpage, "\\&.flag\\-help") != NULL);
+  CHECK(strstr(manpage, "\\&'flag\\-help") != NULL);
+  CHECK(strstr(manpage, "path\\\\flag\\-with\\-dash") != NULL);
+
+  free(manpage);
+  ap_parser_free(p);
+}
+
+TEST(FormatHelpWithoutPositionalsDoesNotEmitPositionalSection) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--verbose", verbose, &err));
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "positional arguments:\n") == NULL);
+  CHECK(strstr(help, "optional arguments:\n") != NULL);
+  CHECK(strstr(help, "--verbose") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
+TEST(FormatHelpWithoutSubcommandsDoesNotEmitSubcommandsSection) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options output = ap_arg_options_default();
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  output.metavar = "FILE";
+  LONGS_EQUAL(0, ap_add_argument(p, "--output", output, &err));
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "subcommands:\n") == NULL);
+  CHECK(strstr(help, "optional arguments:\n") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
+TEST(FormatHelpPositionalOneNargsPrintsSingleMetavar) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options src = ap_arg_options_default();
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  src.nargs = AP_NARGS_ONE;
+  src.metavar = "SRC";
+  src.help = "source path";
+  LONGS_EQUAL(0, ap_add_argument(p, "src", src, &err));
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "  SRC\n    source path") != NULL);
+  CHECK(strstr(help, "  SRC [SRC]") == NULL);
+  CHECK(strstr(help, "  SRC SRC") == NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
+TEST(FormatHelpPositionalOneOrMoreShowsExpandedMetavarSuffix) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options files = ap_arg_options_default();
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  files.nargs = AP_NARGS_ONE_OR_MORE;
+  files.metavar = "FILE";
+  files.help = "input files";
+  LONGS_EQUAL(0, ap_add_argument(p, "files", files, &err));
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "  FILE [FILE ...]\n    input files") != NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
+TEST(FormatManpageNestedSubcommandsBalanceRsReIndentation) {
+  ap_error err = {};
+  ap_parser *root = ap_parser_new("tool", "desc");
+  ap_parser *alpha = NULL;
+  ap_parser *beta = NULL;
+  char *manpage = NULL;
+  const char *cursor = NULL;
+  int rs_count = 0;
+  int re_count = 0;
+
+  CHECK(root != NULL);
+  alpha = ap_add_subcommand(root, "alpha", "alpha help", &err);
+  CHECK(alpha != NULL);
+  beta = ap_add_subcommand(alpha, "beta", "beta help", &err);
+  CHECK(beta != NULL);
+  CHECK(ap_add_subcommand(beta, "gamma", "gamma help", &err) != NULL);
+
+  manpage = ap_format_manpage(root);
+  CHECK(manpage != NULL);
+
+  cursor = manpage;
+  while ((cursor = strstr(cursor, ".RS\n")) != NULL) {
+    rs_count++;
+    cursor += 4;
+  }
+  cursor = manpage;
+  while ((cursor = strstr(cursor, ".RE\n")) != NULL) {
+    re_count++;
+    cursor += 4;
+  }
+
+  LONGS_EQUAL(rs_count, re_count);
+  CHECK(rs_count > 0);
+  CHECK(strstr(manpage, ".B alpha") != NULL);
+  CHECK(strstr(manpage, ".B beta") != NULL);
+  CHECK(strstr(manpage, ".B gamma") != NULL);
+
+  free(manpage);
+  ap_parser_free(root);
+}
+
+TEST(FormatManpageShowsBuiltinHelpOptionInsteadOfNoneFallback) {
+  ap_parser *p = ap_parser_new("tool", "desc");
+  char *manpage = NULL;
+
+  CHECK(p != NULL);
+  manpage = ap_format_manpage(p);
+  CHECK(manpage != NULL);
+  CHECK(strstr(manpage, ".SH OPTIONS\nNone.\n") == NULL);
+  CHECK(strstr(manpage, "\\-h, \\-\\-help") != NULL);
+
+  free(manpage);
+  ap_parser_free(p);
+}
+
+TEST(FormatManpageSynopsisUsesFallbackMetavarAndOptionsExcludePositionals) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options positional = ap_arg_options_default();
+  ap_arg_options mode = ap_arg_options_default();
+  char *manpage = NULL;
+
+  CHECK(p != NULL);
+  positional.help = "path input";
+  LONGS_EQUAL(0, ap_add_argument(p, "file2_path", positional, &err));
+  mode.metavar = "MODE";
+  mode.help = "execution mode";
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  manpage = ap_format_manpage(p);
+  CHECK(manpage != NULL);
+  CHECK(strstr(manpage, ".SH SYNOPSIS\n.B tool") != NULL);
+  CHECK(strstr(manpage, "FILE2\\-PATH") != NULL);
+  CHECK(strstr(manpage, ".SH OPTIONS\n") != NULL);
+  CHECK(strstr(manpage, "\\-\\-mode MODE") != NULL);
+  CHECK(strstr(manpage, ".TP\n.B FILE2\\-PATH") == NULL);
+
+  free(manpage);
   ap_parser_free(p);
 }
 
