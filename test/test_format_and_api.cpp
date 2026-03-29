@@ -238,6 +238,70 @@ TEST(NamespaceGetterFailurePathsReturnFalseOrNull) {
   ap_parser_free(p);
 }
 
+TEST(NamespaceUint64GetterHandlesBoundsUnsetTypeMismatchAndAppend) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options zero = ap_arg_options_default();
+  ap_arg_options max = ap_arg_options_default();
+  ap_arg_options mismatch = ap_arg_options_default();
+  ap_arg_options values = ap_arg_options_default();
+  uint64_t value = 0;
+  uint64_t first = 0;
+  uint64_t second = 0;
+  char *argv[] = {
+      (char *)"prog",
+      (char *)"--zero",
+      (char *)"0",
+      (char *)"--max",
+      (char *)"18446744073709551615",
+      (char *)"--mismatch",
+      (char *)"11",
+      (char *)"--values",
+      (char *)"0",
+      (char *)"--values",
+      (char *)"18446744073709551615",
+      NULL,
+  };
+  char *argv_unset[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  zero.type = AP_TYPE_UINT64;
+  max.type = AP_TYPE_UINT64;
+  mismatch.type = AP_TYPE_INT32;
+  values.type = AP_TYPE_UINT64;
+  values.action = AP_ACTION_APPEND;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--zero", zero, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--max", max, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--mismatch", mismatch, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--values", values, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 11, argv, &ns, &err));
+  CHECK(ap_ns_get_uint64(ns, "zero", &value));
+  LONGS_EQUAL(0ULL, value);
+  CHECK(ap_ns_get_uint64(ns, "max", &value));
+  LONGS_EQUAL(18446744073709551615ULL, value);
+  CHECK(!ap_ns_get_uint64(ns, "mismatch", &value));
+  CHECK(ap_ns_get_uint64(ns, "values", &value));
+  CHECK(ap_ns_get_uint64_at(ns, "values", 0, &first));
+  CHECK(ap_ns_get_uint64_at(ns, "values", 1, &second));
+  LONGS_EQUAL(first, value);
+  LONGS_EQUAL(0ULL, first);
+  LONGS_EQUAL(18446744073709551615ULL, second);
+  ap_namespace_free(ns);
+  ns = NULL;
+
+  LONGS_EQUAL(0, ap_parse_args(p, 1, argv_unset, &ns, &err));
+  CHECK(!ap_ns_get_uint64(ns, "zero", &value));
+  CHECK(!ap_ns_get_uint64(ns, "max", &value));
+  CHECK(!ap_ns_get_uint64(ns, "values", &value));
+  CHECK(!ap_ns_get_uint64_at(ns, "values", 0, &first));
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
 TEST(FormatHelpShowsPositionalOneOrMoreAndActionFlags) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
