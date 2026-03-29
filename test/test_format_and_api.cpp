@@ -1308,6 +1308,10 @@ TEST(CompletionResultInitNormalizesDirtyStateAndSupportsAddAfterInit) {
 
 TEST(CompletionResultAddNoMemoryViaReallocDoesNotCorruptStateAndCanRetry) {
   AllocFailGuard guard;
+  if (!test_alloc_injection_available()) {
+    CHECK_TRUE(true);
+    return;
+  }
   ap_error err = {};
   ap_completion_result result = {};
 
@@ -1331,6 +1335,10 @@ TEST(CompletionResultAddNoMemoryViaReallocDoesNotCorruptStateAndCanRetry) {
 
 TEST(CompletionResultAddNoMemoryViaStrdupCanRetryWithoutLeakLikeArtifacts) {
   AllocFailGuard guard;
+  if (!test_alloc_injection_available()) {
+    CHECK_TRUE(true);
+    return;
+  }
   ap_error err = {};
   ap_completion_result result = {};
 
@@ -1353,6 +1361,10 @@ TEST(CompletionResultAddNoMemoryViaStrdupCanRetryWithoutLeakLikeArtifacts) {
 
 TEST(AddArgumentNoMemoryLeavesParserStateAndSucceedsOnRetry) {
   AllocFailGuard guard;
+  if (!test_alloc_injection_available()) {
+    CHECK_TRUE(true);
+    return;
+  }
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
   ap_arg_options opts = ap_arg_options_default();
@@ -1389,6 +1401,10 @@ TEST(AddArgumentNoMemoryLeavesParserStateAndSucceedsOnRetry) {
 
 TEST(ParseKnownArgsNoMemoryOnUnknownCopyClearsOutputsAndCanRetry) {
   AllocFailGuard guard;
+  if (!test_alloc_injection_available()) {
+    CHECK_TRUE(true);
+    return;
+  }
   ap_error err = {};
   ap_parser *p = new_base_parser();
   ap_namespace *ns = (ap_namespace *)0x1;
