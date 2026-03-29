@@ -1510,6 +1510,7 @@ TEST(StringBuilderFailureHooksCoverAppendAndFreePaths) {
   fail_appendf_on_call(1);
   LONGS_EQUAL(-1, ap_sb_appendf(&sb, "boom"));
   LONGS_EQUAL(1, g_sb_hook_state.appendf_call_count);
+  ap_sb_free(&sb);
 
   reset_sb_hooks();
   ap_sb_init(&sb);
