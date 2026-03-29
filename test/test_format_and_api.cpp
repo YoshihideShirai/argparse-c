@@ -308,6 +308,48 @@ TEST(FormatUsageCoversFixedNargsForRequiredAndOptionalOptions) {
   ap_parser_free(p);
 }
 
+TEST(FormatUsageCoversRequiredOptionalNargsVariantsAndSubcommandMarker) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options many = ap_arg_options_default();
+  ap_arg_options plus = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  char *usage = NULL;
+
+  CHECK(p != NULL);
+  maybe.required = true;
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  maybe.metavar = "MAYBE";
+  many.required = true;
+  many.nargs = AP_NARGS_ZERO_OR_MORE;
+  many.metavar = "MANY";
+  plus.required = true;
+  plus.nargs = AP_NARGS_ONE_OR_MORE;
+  plus.metavar = "PLUS";
+  pair.required = true;
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+  pair.metavar = "PAIR";
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--many", many, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--plus", plus, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--pair", pair, &err));
+  CHECK(ap_add_subcommand(p, "run", "run command", &err) != NULL);
+
+  usage = ap_format_usage(p);
+  CHECK(usage != NULL);
+  CHECK(strstr(usage, " --maybe [MAYBE]") != NULL);
+  CHECK(strstr(usage, " --many [MANY ...]") != NULL);
+  CHECK(strstr(usage, " --plus PLUS [PLUS ...]") != NULL);
+  CHECK(strstr(usage, " --pair PAIR PAIR") != NULL);
+  CHECK(strstr(usage, " <subcommand>") != NULL);
+
+  free(usage);
+  ap_parser_free(p);
+}
+
 TEST(FormatManpageEscapesRoffControlCharactersAndBackslashes) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("tool", ".dot\n'quote\npath\\name-with-dash");
@@ -410,6 +452,75 @@ TEST(FormatHelpPositionalOneOrMoreShowsExpandedMetavarSuffix) {
   CHECK(strstr(help, "  FILE [FILE ...]\n    input files") != NULL);
 
   free(help);
+  ap_parser_free(p);
+}
+
+TEST(FormatHelpAndManpageCoverRequiredOptionalNargsVariants) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options many = ap_arg_options_default();
+  ap_arg_options plus = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  char *help = NULL;
+  char *manpage = NULL;
+
+  CHECK(p != NULL);
+  maybe.required = true;
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  maybe.metavar = "MAYBE";
+  maybe.help = "maybe value";
+  many.required = true;
+  many.nargs = AP_NARGS_ZERO_OR_MORE;
+  many.metavar = "MANY";
+  many.help = "many values";
+  plus.required = true;
+  plus.nargs = AP_NARGS_ONE_OR_MORE;
+  plus.metavar = "PLUS";
+  plus.help = "plus values";
+  pair.required = true;
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+  pair.metavar = "PAIR";
+  pair.help = "pair values";
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--many", many, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--plus", plus, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--pair", pair, &err));
+
+  help = ap_format_help(p);
+  manpage = ap_format_manpage(p);
+  CHECK(help != NULL);
+  CHECK(manpage != NULL);
+
+  CHECK(
+      strstr(help, "  --maybe [MAYBE]\n    maybe value\n    required: true") !=
+      NULL);
+  CHECK(strstr(help,
+               "  --many [MANY ...]\n    many values\n    required: true") !=
+        NULL);
+  CHECK(
+      strstr(help,
+             "  --plus PLUS [PLUS ...]\n    plus values\n    required: true") !=
+      NULL);
+  CHECK(
+      strstr(help, "  --pair PAIR PAIR\n    pair values\n    required: true") !=
+      NULL);
+
+  CHECK(strstr(manpage, ".SH SYNOPSIS\n.B tool") != NULL);
+  CHECK(strstr(manpage, "\\-\\-maybe [MAYBE]") != NULL);
+  CHECK(strstr(manpage, "\\-\\-many [MANY ...]") != NULL);
+  CHECK(strstr(manpage, "\\-\\-plus PLUS [PLUS ...]") != NULL);
+  CHECK(strstr(manpage, "\\-\\-pair PAIR PAIR") != NULL);
+  CHECK(strstr(manpage, ".TP\n.B \\-\\-maybe [MAYBE]") != NULL);
+  CHECK(strstr(manpage, ".TP\n.B \\-\\-many [MANY ...]") != NULL);
+  CHECK(strstr(manpage, ".TP\n.B \\-\\-plus PLUS [PLUS ...]") != NULL);
+  CHECK(strstr(manpage, ".TP\n.B \\-\\-pair PAIR PAIR") != NULL);
+  CHECK(strstr(manpage, "required: yes") != NULL);
+
+  free(help);
+  free(manpage);
   ap_parser_free(p);
 }
 
