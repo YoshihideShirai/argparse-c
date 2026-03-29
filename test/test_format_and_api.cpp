@@ -1525,6 +1525,7 @@ TEST(ParserCompletionHelperFallsBackToDefaultShellWhenShellValueMissing) {
       0, ap_try_handle_completion(p, 3, argv, "fish", &handled, &result, &err));
   LONGS_EQUAL(1, handled);
   LONGS_EQUAL(0, result.count);
+  LONGS_EQUAL(0, err.code);
 
   ap_completion_result_free(&result);
   ap_parser_free(p);
@@ -1553,6 +1554,7 @@ TEST(ParserCompletionHelperUsesBashWhenDefaultShellIsNull) {
       0, ap_try_handle_completion(p, 5, argv, NULL, &handled, &result, &err));
   LONGS_EQUAL(1, handled);
   LONGS_EQUAL(2, result.count);
+  LONGS_EQUAL(0, err.code);
   STRCMP_EQUAL("fast", result.items[0].value);
   STRCMP_EQUAL("slow", result.items[1].value);
 
@@ -1597,6 +1599,7 @@ TEST(ParserCompletionHelperAcceptsCompletionTargetWithoutDoubleDash) {
   LONGS_EQUAL(2, with_separator.count);
   STRCMP_EQUAL("fast", with_separator.items[0].value);
   STRCMP_EQUAL("slow", with_separator.items[1].value);
+  LONGS_EQUAL(0, err.code);
 
   LONGS_EQUAL(0, ap_try_handle_completion(p, 6, argv_without_separator, "fish",
                                           &handled_without_separator,
@@ -1605,6 +1608,9 @@ TEST(ParserCompletionHelperAcceptsCompletionTargetWithoutDoubleDash) {
   LONGS_EQUAL(2, without_separator.count);
   STRCMP_EQUAL("fast", without_separator.items[0].value);
   STRCMP_EQUAL("slow", without_separator.items[1].value);
+  STRCMP_EQUAL(with_separator.items[0].value, without_separator.items[0].value);
+  STRCMP_EQUAL(with_separator.items[1].value, without_separator.items[1].value);
+  LONGS_EQUAL(0, err.code);
 
   ap_completion_result_free(&with_separator);
   ap_completion_result_free(&without_separator);
