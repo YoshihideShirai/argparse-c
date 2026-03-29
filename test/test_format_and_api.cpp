@@ -1355,6 +1355,113 @@ TEST(ParserCompletionCanBeDisabledAndHelperIgnoresHiddenEntrypoint) {
   ap_parser_free(p);
 }
 
+TEST(ParserCompletionHelperFallsBackToDefaultShellWhenShellValueMissing) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  ap_completion_result result = {};
+  int handled = 0;
+  const char *modes[] = {"fast", "slow"};
+  char arg0[] = "prog";
+  char arg1[] = "__complete";
+  char arg2[] = "--shell";
+  char *argv[] = {arg0, arg1, arg2};
+
+  CHECK(p != NULL);
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  LONGS_EQUAL(
+      0, ap_try_handle_completion(p, 3, argv, "fish", &handled, &result, &err));
+  LONGS_EQUAL(1, handled);
+  LONGS_EQUAL(0, result.count);
+
+  ap_completion_result_free(&result);
+  ap_parser_free(p);
+}
+
+TEST(ParserCompletionHelperUsesBashWhenDefaultShellIsNull) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  ap_completion_result result = {};
+  int handled = 0;
+  const char *modes[] = {"fast", "slow"};
+  char arg0[] = "prog";
+  char arg1[] = "__complete";
+  char arg2[] = "--";
+  char arg3[] = "--mode";
+  char arg4[] = "s";
+  char *argv[] = {arg0, arg1, arg2, arg3, arg4};
+
+  CHECK(p != NULL);
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  LONGS_EQUAL(
+      0, ap_try_handle_completion(p, 5, argv, NULL, &handled, &result, &err));
+  LONGS_EQUAL(1, handled);
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("fast", result.items[0].value);
+  STRCMP_EQUAL("slow", result.items[1].value);
+
+  ap_completion_result_free(&result);
+  ap_parser_free(p);
+}
+
+TEST(ParserCompletionHelperAcceptsCompletionTargetWithoutDoubleDash) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  ap_completion_result with_separator = {};
+  ap_completion_result without_separator = {};
+  int handled_with_separator = 0;
+  int handled_without_separator = 0;
+  const char *modes[] = {"fast", "slow"};
+  char sep0[] = "prog";
+  char sep1[] = "__complete";
+  char sep2[] = "--shell";
+  char sep3[] = "bash";
+  char sep4[] = "--";
+  char sep5[] = "--mode";
+  char sep6[] = "s";
+  char *argv_with_separator[] = {sep0, sep1, sep2, sep3, sep4, sep5, sep6};
+  char nsep0[] = "prog";
+  char nsep1[] = "__complete";
+  char nsep2[] = "--shell";
+  char nsep3[] = "bash";
+  char nsep4[] = "--mode";
+  char nsep5[] = "s";
+  char *argv_without_separator[] = {nsep0, nsep1, nsep2, nsep3, nsep4, nsep5};
+
+  CHECK(p != NULL);
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  LONGS_EQUAL(0, ap_try_handle_completion(p, 7, argv_with_separator, "fish",
+                                          &handled_with_separator,
+                                          &with_separator, &err));
+  LONGS_EQUAL(1, handled_with_separator);
+  LONGS_EQUAL(2, with_separator.count);
+  STRCMP_EQUAL("fast", with_separator.items[0].value);
+  STRCMP_EQUAL("slow", with_separator.items[1].value);
+
+  LONGS_EQUAL(0, ap_try_handle_completion(p, 6, argv_without_separator, "fish",
+                                          &handled_without_separator,
+                                          &without_separator, &err));
+  LONGS_EQUAL(1, handled_without_separator);
+  LONGS_EQUAL(2, without_separator.count);
+  STRCMP_EQUAL("fast", without_separator.items[0].value);
+  STRCMP_EQUAL("slow", without_separator.items[1].value);
+
+  ap_completion_result_free(&with_separator);
+  ap_completion_result_free(&without_separator);
+  ap_parser_free(p);
+}
+
 TEST(NamespaceGettersSupportInt64AndDoubleArrays) {
   ap_error err = {};
   ap_namespace *ns = NULL;
