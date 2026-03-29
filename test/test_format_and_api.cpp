@@ -1277,6 +1277,27 @@ TEST(CompleteRejectsNullArgvWhenArgcIsPositive) {
   ap_parser_free(p);
 }
 
+TEST(CompletionResultInitNormalizesDirtyStateAndSupportsAddAfterInit) {
+  ap_error err = {};
+  ap_completion_result result = {};
+
+  result.items = reinterpret_cast<ap_completion_candidate *>(0x1);
+  result.count = 123;
+  result.cap = 456;
+
+  ap_completion_result_init(&result);
+  CHECK(result.items == NULL);
+  LONGS_EQUAL(0, result.count);
+  LONGS_EQUAL(0, result.cap);
+
+  LONGS_EQUAL(0, ap_completion_result_add(&result, "value", "help", &err));
+  LONGS_EQUAL(1, result.count);
+  STRCMP_EQUAL("value", result.items[0].value);
+  STRCMP_EQUAL("help", result.items[0].help);
+
+  ap_completion_result_free(&result);
+}
+
 TEST(ParserCompletionIsEnabledByDefaultAndHelperHandlesRequests) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
