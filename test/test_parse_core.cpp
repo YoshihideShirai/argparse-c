@@ -400,6 +400,69 @@ TEST(InternalValidationCatchesDeferredNargsCasesAndAcceptsMatchingChoices) {
   ap_parser_free(choices);
 }
 
+TEST(InternalNamespaceBuildCoversRequiredMissingDoubleEmptyAndBoolFallback) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *required = ap_parser_new("prog", "desc");
+  ap_parser *optional_double = ap_parser_new("prog", "desc");
+  ap_parser *fallback_bool = ap_parser_new("prog", "desc");
+  ap_parsed_arg *parsed = NULL;
+  ap_arg_options required_name = ap_arg_options_default();
+  ap_arg_options threshold = ap_arg_options_default();
+  ap_arg_options mystery = ap_arg_options_default();
+
+  CHECK(required != NULL);
+  CHECK(optional_double != NULL);
+  CHECK(fallback_bool != NULL);
+
+  required_name.required = true;
+  LONGS_EQUAL(0, ap_add_argument(required, "--name", required_name, &err));
+  parsed =
+      (ap_parsed_arg *)calloc((size_t)required->defs_count, sizeof(*parsed));
+  CHECK(parsed != NULL);
+  LONGS_EQUAL(-1, ap_build_namespace(required, parsed, &ns, &err));
+  LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+  STRCMP_EQUAL("--name", err.argument);
+  STRCMP_EQUAL("option '--name' is required", err.message);
+  CHECK(ns == NULL);
+  free(parsed);
+
+  threshold.type = AP_TYPE_DOUBLE;
+  LONGS_EQUAL(0,
+              ap_add_argument(optional_double, "--threshold", threshold, &err));
+  parsed = (ap_parsed_arg *)calloc((size_t)optional_double->defs_count,
+                                   sizeof(*parsed));
+  CHECK(parsed != NULL);
+  LONGS_EQUAL(0, ap_build_namespace(optional_double, parsed, &ns, &err));
+  CHECK(ns != NULL);
+  LONGS_EQUAL(AP_NS_VALUE_DOUBLE, ns->entries[1].type);
+  LONGS_EQUAL(0, ns->entries[1].count);
+  CHECK(ns->entries[1].as.doubles == NULL);
+  ap_namespace_free(ns);
+  ns = NULL;
+  free(parsed);
+
+  LONGS_EQUAL(0, ap_add_argument(fallback_bool, "--mystery", mystery, &err));
+  fallback_bool->defs[1].opts.type = (ap_type)99;
+  parsed = (ap_parsed_arg *)calloc((size_t)fallback_bool->defs_count,
+                                   sizeof(*parsed));
+  CHECK(parsed != NULL);
+  parsed[1].seen = true;
+  CHECK(ap_strvec_push(&parsed[1].values, ap_strdup("present")) == 0);
+  LONGS_EQUAL(0, ap_build_namespace(fallback_bool, parsed, &ns, &err));
+  CHECK(ns != NULL);
+  LONGS_EQUAL(AP_NS_VALUE_BOOL, ns->entries[1].type);
+  LONGS_EQUAL(1, ns->entries[1].count);
+  CHECK_TRUE(ns->entries[1].as.boolean);
+  ap_namespace_free(ns);
+  ap_strvec_free(&parsed[1].values);
+  free(parsed);
+
+  ap_parser_free(required);
+  ap_parser_free(optional_double);
+  ap_parser_free(fallback_bool);
+}
+
 TEST(StoreTrueAndStoreFalse) {
   ap_error err = {};
   ap_namespace *ns = NULL;
