@@ -85,6 +85,20 @@ int successful_help_append_count(ap_parser *parser) {
   return append_count;
 }
 
+int successful_bash_completion_append_count(ap_parser *parser) {
+  char *script = NULL;
+  int append_count = 0;
+
+  reset_sb_hooks();
+  script = ap_format_bash_completion(parser);
+  CHECK(script != NULL);
+  append_count = g_sb_hook_state.appendf_call_count;
+  free(script);
+  reset_sb_hooks();
+
+  return append_count;
+}
+
 void assert_manpage_append_failures_return_null(ap_parser *parser) {
   int append_count = successful_manpage_append_count(parser);
 
@@ -119,6 +133,19 @@ void assert_help_append_failures_return_null(ap_parser *parser) {
     reset_sb_hooks();
     fail_appendf_on_call(i);
     CHECK(ap_format_help(parser) == NULL);
+    CHECK(g_sb_hook_state.free_call_count > 0);
+  }
+  reset_sb_hooks();
+}
+
+void assert_bash_completion_append_failures_return_null(ap_parser *parser) {
+  int append_count = successful_bash_completion_append_count(parser);
+
+  CHECK(append_count > 0);
+  for (int i = 1; i <= append_count; i++) {
+    reset_sb_hooks();
+    fail_appendf_on_call(i);
+    CHECK(ap_format_bash_completion(parser) == NULL);
     CHECK(g_sb_hook_state.free_call_count > 0);
   }
   reset_sb_hooks();
@@ -1255,6 +1282,57 @@ TEST(FormatBashCompletionMarksValueModesAndFlagOnlyOptions) {
   ap_parser_free(p);
 }
 
+TEST(FormatBashCompletionCoversSingleNoneAndDynamicFallbackBranches) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options plus = ap_arg_options_default();
+  ap_arg_options fixed_single = ap_arg_options_default();
+  ap_arg_options plain = ap_arg_options_default();
+  ap_arg_options dynamic_choice = ap_arg_options_default();
+  ap_arg_options feature = ap_arg_options_default();
+  const char *modes[] = {"fast", "slow"};
+  static const char *const commands[] = {"git", nullptr};
+  char *script = NULL;
+
+  CHECK(p != NULL);
+  plus.nargs = AP_NARGS_ONE_OR_MORE;
+  fixed_single.nargs = AP_NARGS_FIXED;
+  fixed_single.nargs_count = 1;
+  dynamic_choice.choices.items = modes;
+  dynamic_choice.choices.count = 2;
+  dynamic_choice.completion_callback = dynamic_exec_completion;
+  dynamic_choice.completion_user_data = (void *)commands;
+  feature.action = AP_ACTION_STORE_CONST;
+  feature.const_value = "enabled";
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--plus", plus, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--fixed-single", fixed_single, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--plain", plain, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--dynamic-choice", dynamic_choice, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--feature", feature, &err));
+
+  script = ap_format_bash_completion(p);
+  CHECK(script != NULL);
+  CHECK(strstr(script, "parser_value_options='--plus --fixed-single --plain "
+                       "--dynamic-choice'") != NULL);
+  CHECK(strstr(script, "parser_flag_only_options='-h --help --feature'") !=
+        NULL);
+  CHECK(strstr(script, "root:--plus) printf '%s\\n' 'multi' ;;") != NULL);
+  CHECK(strstr(script, "root:--plus) printf '%d\\n' 1 ;;") != NULL);
+  CHECK(strstr(script, "root:--fixed-single) printf '%s\\n' 'single' ;;") !=
+        NULL);
+  CHECK(strstr(script, "root:--fixed-single) printf '%d\\n' 1 ;;") != NULL);
+  CHECK(strstr(script, "root:--plain) printf '%s\\n' 'none' ;;") != NULL);
+  CHECK(strstr(script, "root:--dynamic-choice) printf '%s\\n' 'dynamic' ;;") !=
+        NULL);
+  CHECK(
+      strstr(script, "root:--dynamic-choice) printf '%s\\n' 'fast' 'slow';;") !=
+      NULL);
+
+  free(script);
+  ap_parser_free(p);
+}
+
 TEST(FormatZshCompletionMarksValueModesCountsAndNoneFallback) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("tool", "desc");
@@ -1571,6 +1649,35 @@ TEST(FormatHelpAndUsageFailureInjectionCoversFallbackBranches) {
   CHECK(root != NULL);
   assert_usage_append_failures_return_null(root);
   assert_help_append_failures_return_null(root);
+  ap_parser_free(root);
+}
+
+TEST(FormatBashCompletionFailureInjectionCoversStructuredBuilderPaths) {
+  ap_error err = {};
+  ap_parser *root = ap_parser_new("tool", "top level parser");
+  ap_parser *config = NULL;
+  ap_arg_options mode = ap_arg_options_default();
+  ap_arg_options input = ap_arg_options_default();
+  ap_arg_options exec = ap_arg_options_default();
+  const char *choices[] = {"fast", "slow"};
+  static const char *const commands[] = {"git", nullptr};
+
+  CHECK(root != NULL);
+  mode.choices.items = choices;
+  mode.choices.count = 2;
+  input.completion_kind = AP_COMPLETION_KIND_FILE;
+  exec.completion_callback = dynamic_exec_completion;
+  exec.completion_user_data = (void *)commands;
+
+  LONGS_EQUAL(0, ap_add_argument(root, "--mode", mode, &err));
+  LONGS_EQUAL(0, ap_add_argument(root, "--input", input, &err));
+  LONGS_EQUAL(0, ap_add_argument(root, "--exec", exec, &err));
+  config = ap_add_subcommand(root, "config", "config commands", &err);
+  CHECK(config != NULL);
+  LONGS_EQUAL(0, ap_add_argument(config, "--mode", mode, &err));
+
+  assert_bash_completion_append_failures_return_null(root);
+
   ap_parser_free(root);
 }
 
