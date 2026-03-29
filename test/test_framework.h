@@ -30,6 +30,8 @@ struct Registrar {
                        const std::string &detail = "");
 
 ap_parser *new_base_parser(void);
+void test_alloc_fail_disable(void);
+void test_alloc_fail_on_nth(int nth_alloc);
 
 #define TEST(name)                                                             \
   static void name();                                                          \

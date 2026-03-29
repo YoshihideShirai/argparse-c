@@ -29,7 +29,15 @@ int dynamic_exec_completion(const ap_completion_request *request,
   return 0;
 }
 
+struct AllocFailGuard {
+  ~AllocFailGuard() { test_alloc_fail_disable(); }
+};
+
 } // namespace
+
+extern "C" {
+#include "../lib/ap_internal.h"
+}
 
 TEST(RequiredStoreTrueOptionMustBePresent) {
   ap_error err = {};
@@ -1296,6 +1304,124 @@ TEST(CompletionResultInitNormalizesDirtyStateAndSupportsAddAfterInit) {
   STRCMP_EQUAL("help", result.items[0].help);
 
   ap_completion_result_free(&result);
+}
+
+TEST(CompletionResultAddNoMemoryViaReallocDoesNotCorruptStateAndCanRetry) {
+  AllocFailGuard guard;
+  ap_error err = {};
+  ap_completion_result result = {};
+
+  LONGS_EQUAL(0, ap_completion_result_add(&result, "a", "first", &err));
+  LONGS_EQUAL(1, result.count);
+
+  test_alloc_fail_on_nth(2);
+  result.cap = result.count;
+  LONGS_EQUAL(-1, ap_completion_result_add(&result, "b", "second", &err));
+  LONGS_EQUAL(AP_ERR_NO_MEMORY, err.code);
+  LONGS_EQUAL(1, result.count);
+  STRCMP_EQUAL("a", result.items[0].value);
+
+  test_alloc_fail_disable();
+  LONGS_EQUAL(0, ap_completion_result_add(&result, "b", "second", &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("b", result.items[1].value);
+
+  ap_completion_result_free(&result);
+}
+
+TEST(CompletionResultAddNoMemoryViaStrdupCanRetryWithoutLeakLikeArtifacts) {
+  AllocFailGuard guard;
+  ap_error err = {};
+  ap_completion_result result = {};
+
+  LONGS_EQUAL(0, ap_completion_result_add(&result, "base", "help", &err));
+  LONGS_EQUAL(1, result.count);
+
+  test_alloc_fail_on_nth(2);
+  LONGS_EQUAL(-1, ap_completion_result_add(&result, "value", "extra", &err));
+  LONGS_EQUAL(AP_ERR_NO_MEMORY, err.code);
+  LONGS_EQUAL(1, result.count);
+
+  test_alloc_fail_disable();
+  LONGS_EQUAL(0, ap_completion_result_add(&result, "value", "extra", &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("value", result.items[1].value);
+  STRCMP_EQUAL("extra", result.items[1].help);
+
+  ap_completion_result_free(&result);
+}
+
+TEST(AddArgumentNoMemoryLeavesParserStateAndSucceedsOnRetry) {
+  AllocFailGuard guard;
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options opts = ap_arg_options_default();
+  int defs_before = 0;
+  bool saw_no_memory = false;
+  ap_namespace *ns = NULL;
+  char *argv[] = {(char *)"prog", (char *)"--name", (char *)"alice", NULL};
+  const char *name = NULL;
+
+  CHECK(p != NULL);
+  defs_before = ((const ap_parser *)p)->defs_count;
+
+  for (int nth = 1; nth <= 8; nth++) {
+    test_alloc_fail_on_nth(nth);
+    LONGS_EQUAL(-1, ap_add_argument(p, "--name", opts, &err));
+    LONGS_EQUAL(defs_before, ((const ap_parser *)p)->defs_count);
+    if (err.code == AP_ERR_NO_MEMORY) {
+      saw_no_memory = true;
+      break;
+    }
+  }
+  CHECK(saw_no_memory);
+
+  test_alloc_fail_disable();
+  LONGS_EQUAL(0, ap_add_argument(p, "--name", opts, &err));
+  LONGS_EQUAL(defs_before + 1, ((const ap_parser *)p)->defs_count);
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "name", &name));
+  STRCMP_EQUAL("alice", name);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseKnownArgsNoMemoryOnUnknownCopyClearsOutputsAndCanRetry) {
+  AllocFailGuard guard;
+  ap_error err = {};
+  ap_parser *p = new_base_parser();
+  ap_namespace *ns = (ap_namespace *)0x1;
+  char **unknown = (char **)0x1;
+  int unknown_count = 77;
+  char *argv[] = {(char *)"prog",
+                  (char *)"-t",
+                  (char *)"hello",
+                  (char *)"file.txt",
+                  (char *)"--x",
+                  (char *)"1",
+                  NULL};
+
+  CHECK(p != NULL);
+
+  test_alloc_fail_on_nth(1);
+  LONGS_EQUAL(
+      -1, ap_parse_known_args(p, 6, argv, &ns, &unknown, &unknown_count, &err));
+  LONGS_EQUAL(AP_ERR_NO_MEMORY, err.code);
+  CHECK(ns == NULL);
+  CHECK(unknown == NULL);
+  LONGS_EQUAL(0, unknown_count);
+
+  test_alloc_fail_disable();
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 6, argv, &ns, &unknown, &unknown_count, &err));
+  LONGS_EQUAL(2, unknown_count);
+  STRCMP_EQUAL("--x", unknown[0]);
+  STRCMP_EQUAL("1", unknown[1]);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
 }
 
 TEST(ParserCompletionIsEnabledByDefaultAndHelperHandlesRequests) {
