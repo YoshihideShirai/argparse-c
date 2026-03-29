@@ -1367,6 +1367,73 @@ TEST(ParseUint64RejectsOverflowInput) {
   ap_parser_free(p);
 }
 
+TEST(NamespaceUint64GetterContractCoversSingleAndAppendValues) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options zero = ap_arg_options_default();
+  ap_arg_options max = ap_arg_options_default();
+  ap_arg_options mismatch = ap_arg_options_default();
+  ap_arg_options values = ap_arg_options_default();
+  uint64_t value_out = 0;
+  uint64_t append0 = 0;
+  uint64_t append1 = 0;
+  int32_t mismatch_value = 0;
+  char *argv[] = {
+      (char *)"prog",
+      (char *)"--zero",
+      (char *)"0",
+      (char *)"--max",
+      (char *)"18446744073709551615",
+      (char *)"--mismatch",
+      (char *)"9",
+      (char *)"--values",
+      (char *)"0",
+      (char *)"--values",
+      (char *)"18446744073709551615",
+      NULL,
+  };
+  char *argv_unset[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  zero.type = AP_TYPE_UINT64;
+  max.type = AP_TYPE_UINT64;
+  mismatch.type = AP_TYPE_INT32;
+  values.type = AP_TYPE_UINT64;
+  values.action = AP_ACTION_APPEND;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--zero", zero, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--max", max, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--mismatch", mismatch, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--values", values, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 11, argv, &ns, &err));
+  CHECK(ap_ns_get_uint64(ns, "zero", &value_out));
+  LONGS_EQUAL(0ULL, value_out);
+  CHECK(ap_ns_get_uint64(ns, "max", &value_out));
+  LONGS_EQUAL(18446744073709551615ULL, value_out);
+  CHECK(!ap_ns_get_uint64(ns, "mismatch", &value_out));
+  CHECK(ap_ns_get_int32(ns, "mismatch", &mismatch_value));
+  LONGS_EQUAL(9, mismatch_value);
+  CHECK(ap_ns_get_uint64(ns, "values", &value_out));
+  CHECK(ap_ns_get_uint64_at(ns, "values", 0, &append0));
+  CHECK(ap_ns_get_uint64_at(ns, "values", 1, &append1));
+  LONGS_EQUAL(append0, value_out);
+  LONGS_EQUAL(0ULL, append0);
+  LONGS_EQUAL(18446744073709551615ULL, append1);
+  ap_namespace_free(ns);
+  ns = NULL;
+
+  LONGS_EQUAL(0, ap_parse_args(p, 1, argv_unset, &ns, &err));
+  CHECK(!ap_ns_get_uint64(ns, "zero", &value_out));
+  CHECK(!ap_ns_get_uint64(ns, "max", &value_out));
+  CHECK(!ap_ns_get_uint64(ns, "values", &value_out));
+  CHECK(!ap_ns_get_uint64_at(ns, "values", 0, &append0));
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
 TEST(ParseInt32RangeBoundariesAndRejectsOverflowInput) {
   ap_error err = {};
   ap_namespace *ns = NULL;
