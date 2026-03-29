@@ -3,22 +3,44 @@
 
 このドキュメントは `scripts/sync_api_spec.py` が `include/argparse-c.h` から生成します。
 
-| Function | Signature | Return/Error Contract | Ownership / free responsibility |
+## 読み方ガイド
+- **成功/失敗**: 戻り値型ごとの標準契約（`0/-1`、`true/false`、`non-NULL/NULL`）。
+- **所有権 / 解放責務**: 返却メモリの所有者と必要な free 関数。
+- API は用途ごとにグルーピングしているため、関連操作をまとめて確認できます。
+
+## Parser の生成・設定・解放
+
+| 関数名 | シグネチャ | 成功/失敗 | 所有権 / 解放責務 |
 | --- | --- | --- | --- |
 | `ap_parser_new` | `ap_parser * ap_parser_new(const char * prog, const char * description)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free: `ap_parser_free`。新しい parser を返します。所有権は呼び出し側です。 |
 | `ap_parser_new_with_options` | `ap_parser * ap_parser_new_with_options(const char * prog, const char * description, ap_parser_options options)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free: `ap_parser_free`。新しい parser を返します。所有権は呼び出し側です。 |
 | `ap_parser_set_completion` | `int ap_parser_set_completion(ap_parser * parser, bool enabled, const char * entrypoint, ap_error * err)` | 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_parser_completion_enabled` | `bool ap_parser_completion_enabled(const ap_parser * parser)` | 成功: `true` / 失敗: `false`。bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_parser_completion_entrypoint` | `const char * ap_parser_completion_entrypoint(const ap_parser * parser)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
+| `ap_parser_free` | `void ap_parser_free(ap_parser * parser)` | 成功: `n/a` / 失敗: `n/a`。戻り値型ごとの意味に従います。 | free 関数指定なし。ライフサイクル補助 API です。解放責務は関数名の規約に従います。 |
+
+## 引数・サブコマンド定義
+
+| 関数名 | シグネチャ | 成功/失敗 | 所有権 / 解放責務 |
+| --- | --- | --- | --- |
 | `ap_add_subcommand` | `ap_parser * ap_add_subcommand(ap_parser * parser, const char * name, const char * description, ap_error * err)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free 関数指定なし。返される parser ポインタの所有権は親 parser ツリー側にあります。 |
 | `ap_add_mutually_exclusive_group` | `ap_mutually_exclusive_group * ap_add_mutually_exclusive_group(ap_parser * parser, bool required, ap_error * err)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
-| `ap_parser_free` | `void ap_parser_free(ap_parser * parser)` | 成功: `n/a` / 失敗: `n/a`。戻り値型ごとの意味に従います。 | free 関数指定なし。ライフサイクル補助 API です。解放責務は関数名の規約に従います。 |
 | `ap_add_argument` | `int ap_add_argument(ap_parser * parser, const char * name_or_flags, ap_arg_options options, ap_error * err)` | 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_group_add_argument` | `int ap_group_add_argument(ap_mutually_exclusive_group * group, const char * name_or_flags, ap_arg_options options, ap_error * err)` | 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
+
+## パース実行と結果メモリ管理
+
+| 関数名 | シグネチャ | 成功/失敗 | 所有権 / 解放責務 |
+| --- | --- | --- | --- |
 | `ap_parse_args` | `int ap_parse_args(ap_parser * parser, int argc, char ** argv, ap_namespace ** out_ns, ap_error * err)` | 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。 | free 関数指定なし。成功時は out_ns を ap_namespace_free で解放します。parse_known_args では unknown 配列を ap_free_tokens で解放します。 |
 | `ap_parse_known_args` | `int ap_parse_known_args(ap_parser * parser, int argc, char ** argv, ap_namespace ** out_ns, char *** out_unknown_args, int * out_unknown_count, ap_error * err)` | 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。 | free 関数指定なし。成功時は out_ns を ap_namespace_free で解放します。parse_known_args では unknown 配列を ap_free_tokens で解放します。 |
 | `ap_namespace_free` | `void ap_namespace_free(ap_namespace * ns)` | 成功: `n/a` / 失敗: `n/a`。戻り値型ごとの意味に従います。 | free 関数指定なし。ライフサイクル補助 API です。解放責務は関数名の規約に従います。 |
 | `ap_free_tokens` | `void ap_free_tokens(char ** tokens, int count)` | 成功: `n/a` / 失敗: `n/a`。戻り値型ごとの意味に従います。 | free 関数指定なし。ライフサイクル補助 API です。解放責務は関数名の規約に従います。 |
+
+## フォーマッタ API
+
+| 関数名 | シグネチャ | 成功/失敗 | 所有権 / 解放責務 |
+| --- | --- | --- | --- |
 | `ap_format_usage` | `char * ap_format_usage(const ap_parser * parser)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free: `free`。返される文字列はヒープ確保です。 |
 | `ap_format_help` | `char * ap_format_help(const ap_parser * parser)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free: `free`。返される文字列はヒープ確保です。 |
 | `ap_format_manpage` | `char * ap_format_manpage(const ap_parser * parser)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free: `free`。返される文字列はヒープ確保です。 |
@@ -26,11 +48,21 @@
 | `ap_format_fish_completion` | `char * ap_format_fish_completion(const ap_parser * parser)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free: `free`。返される文字列はヒープ確保です。 |
 | `ap_format_zsh_completion` | `char * ap_format_zsh_completion(const ap_parser * parser)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free: `free`。返される文字列はヒープ確保です。 |
 | `ap_format_error` | `char * ap_format_error(const ap_parser * parser, const ap_error * err)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free: `free`。返される文字列はヒープ確保です。 |
+
+## 補完 API
+
+| 関数名 | シグネチャ | 成功/失敗 | 所有権 / 解放責務 |
+| --- | --- | --- | --- |
 | `ap_complete` | `int ap_complete(const ap_parser * parser, int argc, char ** argv, const char * shell, ap_completion_result * out_result, ap_error * err)` | 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_try_handle_completion` | `int ap_try_handle_completion(const ap_parser * parser, int argc, char ** argv, const char * default_shell, int * out_handled, ap_completion_result * out_result, ap_error * err)` | 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_completion_result_init` | `void ap_completion_result_init(ap_completion_result * result)` | 成功: `n/a` / 失敗: `n/a`。戻り値型ごとの意味に従います。 | free 関数指定なし。ライフサイクル補助 API です。解放責務は関数名の規約に従います。 |
 | `ap_completion_result_free` | `void ap_completion_result_free(ap_completion_result * result)` | 成功: `n/a` / 失敗: `n/a`。戻り値型ごとの意味に従います。 | free 関数指定なし。ライフサイクル補助 API です。解放責務は関数名の規約に従います。 |
 | `ap_completion_result_add` | `int ap_completion_result_add(ap_completion_result * result, const char * value, const char * help, ap_error * err)` | 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。 | free 関数指定なし。候補メモリは ap_completion_result_free で管理されます。 |
+
+## Parser/引数のイントロスペクション API
+
+| 関数名 | シグネチャ | 成功/失敗 | 所有権 / 解放責務 |
+| --- | --- | --- | --- |
 | `ap_parser_get_info` | `int ap_parser_get_info(const ap_parser * parser, ap_parser_info * out_info)` | 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_parser_get_argument` | `int ap_parser_get_argument(const ap_parser * parser, int index, ap_arg_info * out_info)` | 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_parser_get_subcommand` | `int ap_parser_get_subcommand(const ap_parser * parser, int index, ap_subcommand_info * out_info)` | 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
@@ -38,6 +70,11 @@
 | `ap_arg_short_flag_at` | `const char * ap_arg_short_flag_at(const ap_arg_info * info, int index)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_arg_long_flag_count` | `int ap_arg_long_flag_count(const ap_arg_info * info)` | 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_arg_long_flag_at` | `const char * ap_arg_long_flag_at(const ap_arg_info * info, int index)` | 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
+
+## Namespace 取得 API
+
+| 関数名 | シグネチャ | 成功/失敗 | 所有権 / 解放責務 |
+| --- | --- | --- | --- |
 | `ap_ns_get_bool` | `bool ap_ns_get_bool(const ap_namespace * ns, const char * dest, bool * out_value)` | 成功: `true` / 失敗: `false`。bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_ns_get_string` | `bool ap_ns_get_string(const ap_namespace * ns, const char * dest, const char ** out_value)` | 成功: `true` / 失敗: `false`。bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_ns_get_int32` | `bool ap_ns_get_int32(const ap_namespace * ns, const char * dest, int32_t * out_value)` | 成功: `true` / 失敗: `false`。bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
@@ -50,5 +87,11 @@
 | `ap_ns_get_int64_at` | `bool ap_ns_get_int64_at(const ap_namespace * ns, const char * dest, int index, int64_t * out_value)` | 成功: `true` / 失敗: `false`。bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_ns_get_uint64_at` | `bool ap_ns_get_uint64_at(const ap_namespace * ns, const char * dest, int index, uint64_t * out_value)` | 成功: `true` / 失敗: `false`。bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_ns_get_double_at` | `bool ap_ns_get_double_at(const ap_namespace * ns, const char * dest, int index, double * out_value)` | 成功: `true` / 失敗: `false`。bool 戻り値 API は true が成功/存在、false が失敗/未存在を表します。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
+
+## デフォルトオプション生成 API
+
+| 関数名 | シグネチャ | 成功/失敗 | 所有権 / 解放責務 |
+| --- | --- | --- | --- |
 | `ap_arg_options_default` | `ap_arg_options ap_arg_options_default(void)` | 成功: `n/a` / 失敗: `n/a`。戻り値型ごとの意味に従います。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
 | `ap_parser_options_default` | `ap_parser_options ap_parser_options_default(void)` | 成功: `n/a` / 失敗: `n/a`。戻り値型ごとの意味に従います。 | free 関数指定なし。戻り値で新規所有権の移譲はありません。 |
+
