@@ -196,6 +196,58 @@ def format_params_en(params: list[dict[str, str]]) -> str:
     return ", ".join(f"{p['type']} {p['name']}".strip() for p in params)
 
 
+def render_function_block(fn: dict, is_ja: bool) -> list[str]:
+    ec = fn["error_contract"]
+    ow = fn["ownership"]
+    sig = f"`{fn['return_type']} {fn['name']}({format_params_en(fn['parameters'])})`"
+    if is_ja:
+        contract = f"成功: `{ec['success_return']}` / 失敗: `{ec['failure_return']}`。{ec['notes_ja']}"
+        ownership = (
+            f"free: `{ow['caller_must_free_with']}`。" if ow["caller_must_free_with"] else "free 関数指定なし。"
+        ) + ow["notes_ja"]
+        return [
+            f"### `{fn['name']}`",
+            f"- シグネチャ: {sig}",
+            f"- 成功/失敗: {contract}",
+            f"- 所有権 / 解放責務: {ownership}",
+            "",
+        ]
+
+    contract = f"success: `{ec['success_return']}` / failure: `{ec['failure_return']}`. {ec['notes_en']}"
+    ownership = (
+        f"free with `{ow['caller_must_free_with']}`. "
+        if ow["caller_must_free_with"]
+        else "no dedicated free function in return value. "
+    ) + ow["notes_en"]
+    return [
+        f"### `{fn['name']}`",
+        f"- Signature: {sig}",
+        f"- Success/Failure: {contract}",
+        f"- Ownership / free responsibility: {ownership}",
+        "",
+    ]
+
+
+def section_for_function(name: str) -> str:
+    if name.endswith("_options_default"):
+        return "defaults"
+    if name in {"ap_parser_new", "ap_parser_new_with_options", "ap_parser_free", "ap_parser_set_completion", "ap_parser_completion_enabled", "ap_parser_completion_entrypoint"}:
+        return "parser_lifecycle"
+    if name in {"ap_add_argument", "ap_group_add_argument", "ap_add_subcommand", "ap_add_mutually_exclusive_group"}:
+        return "definition"
+    if name in {"ap_parse_args", "ap_parse_known_args", "ap_namespace_free", "ap_free_tokens"}:
+        return "parsing"
+    if name.startswith("ap_format_"):
+        return "formatting"
+    if name.startswith("ap_completion_") or name in {"ap_complete", "ap_try_handle_completion"}:
+        return "completion"
+    if name.startswith("ap_parser_get_") or name.startswith("ap_arg_"):
+        return "introspection"
+    if name.startswith("ap_ns_get_"):
+        return "namespace_access"
+    return "other"
+
+
 def render_markdown(spec: dict, lang: str) -> str:
     is_ja = lang == "ja"
     title = "argparse-c API Machine-readable Spec" if not is_ja else "argparse-c API 機械可読仕様"
@@ -204,26 +256,72 @@ def render_markdown(spec: dict, lang: str) -> str:
         if not is_ja
         else "このドキュメントは `scripts/sync_api_spec.py` が `include/argparse-c.h` から生成します。"
     )
-    hdr = (
-        "| Function | Signature | Return/Error Contract | Ownership / free responsibility |\n"
-        "| --- | --- | --- | --- |\n"
+    section_order = [
+        "parser_lifecycle",
+        "definition",
+        "parsing",
+        "formatting",
+        "completion",
+        "introspection",
+        "namespace_access",
+        "defaults",
+        "other",
+    ]
+    section_titles = {
+        "en": {
+            "parser_lifecycle": "Parser lifecycle and setup",
+            "definition": "Argument/subcommand definitions",
+            "parsing": "Parsing and result memory management",
+            "formatting": "Formatter APIs",
+            "completion": "Completion APIs",
+            "introspection": "Parser/argument introspection APIs",
+            "namespace_access": "Namespace getters",
+            "defaults": "Default option builders",
+            "other": "Other APIs",
+        },
+        "ja": {
+            "parser_lifecycle": "Parser の生成・設定・解放",
+            "definition": "引数・サブコマンド定義",
+            "parsing": "パース実行と結果メモリ管理",
+            "formatting": "フォーマッタ API",
+            "completion": "補完 API",
+            "introspection": "Parser/引数のイントロスペクション API",
+            "namespace_access": "Namespace 取得 API",
+            "defaults": "デフォルトオプション生成 API",
+            "other": "その他の API",
+        },
+    }
+    guide = (
+        [
+            "## Reading guide",
+            "- **Signature**: C declaration-level function signature.",
+            "- **Success/Failure**: Normal return contract by return type (`0/-1`, `true/false`, `non-NULL/NULL`).",
+            "- **Ownership / free responsibility**: Who owns returned memory and which free function is required.",
+            "- APIs are grouped by purpose so related operations can be read together.",
+        ]
+        if not is_ja
+        else [
+            "## 読み方ガイド",
+            "- **シグネチャ**: C 宣言レベルの関数シグネチャ。",
+            "- **成功/失敗**: 戻り値型ごとの標準契約（`0/-1`、`true/false`、`non-NULL/NULL`）。",
+            "- **所有権 / 解放責務**: 返却メモリの所有者と必要な free 関数。",
+            "- API は用途ごとにグルーピングしているため、関連操作をまとめて確認できます。",
+        ]
     )
-    lines = [AUTOGEN_COMMENT.rstrip(), f"# {title}", "", intro, "", hdr]
+
+    grouped: dict[str, list[dict]] = {key: [] for key in section_order}
     for fn in spec["functions"]:
-        ec = fn["error_contract"]
-        ow = fn["ownership"]
-        sig = f"`{fn['return_type']} {fn['name']}({format_params_en(fn['parameters'])})`"
-        if is_ja:
-            contract = f"成功: `{ec['success_return']}` / 失敗: `{ec['failure_return']}`。{ec['notes_ja']}"
-            ownership = (
-                f"free: `{ow['caller_must_free_with']}`。" if ow["caller_must_free_with"] else "free 関数指定なし。"
-            ) + ow["notes_ja"]
-        else:
-            contract = f"success: `{ec['success_return']}` / failure: `{ec['failure_return']}`. {ec['notes_en']}"
-            ownership = (
-                f"free with `{ow['caller_must_free_with']}`. " if ow["caller_must_free_with"] else "no dedicated free function in return value. "
-            ) + ow["notes_en"]
-        lines.append(f"| `{fn['name']}` | {sig} | {contract} | {ownership} |")
+        grouped[section_for_function(fn["name"])].append(fn)
+
+    lines = [AUTOGEN_COMMENT.rstrip(), f"# {title}", "", intro, "", *guide, ""]
+    for key in section_order:
+        functions = grouped[key]
+        if not functions:
+            continue
+        lines.append(f"## {section_titles['ja' if is_ja else 'en'][key]}")
+        lines.append("")
+        for fn in functions:
+            lines.extend(render_function_block(fn, is_ja))
     lines.append("")
     return "\n".join(lines)
 

@@ -3,53 +3,260 @@
 
 This document is generated from `include/argparse-c.h` via `scripts/sync_api_spec.py`.
 
-| Function | Signature | Return/Error Contract | Ownership / free responsibility |
-| --- | --- | --- | --- |
+## Reading guide
+- **Signature**: C declaration-level function signature.
+- **Success/Failure**: Normal return contract by return type (`0/-1`, `true/false`, `non-NULL/NULL`).
+- **Ownership / free responsibility**: Who owns returned memory and which free function is required.
+- APIs are grouped by purpose so related operations can be read together.
 
-| `ap_parser_new` | `ap_parser * ap_parser_new(const char * prog, const char * description)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | free with `ap_parser_free`. Returns a new parser instance. Caller owns it. |
-| `ap_parser_new_with_options` | `ap_parser * ap_parser_new_with_options(const char * prog, const char * description, ap_parser_options options)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | free with `ap_parser_free`. Returns a new parser instance. Caller owns it. |
-| `ap_parser_set_completion` | `int ap_parser_set_completion(ap_parser * parser, bool enabled, const char * entrypoint, ap_error * err)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_parser_completion_enabled` | `bool ap_parser_completion_enabled(const ap_parser * parser)` | success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_parser_completion_entrypoint` | `const char * ap_parser_completion_entrypoint(const ap_parser * parser)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_add_subcommand` | `ap_parser * ap_add_subcommand(ap_parser * parser, const char * name, const char * description, ap_error * err)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | no dedicated free function in return value. Returned parser pointer is owned by the parent parser tree. |
-| `ap_add_mutually_exclusive_group` | `ap_mutually_exclusive_group * ap_add_mutually_exclusive_group(ap_parser * parser, bool required, ap_error * err)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_parser_free` | `void ap_parser_free(ap_parser * parser)` | success: `n/a` / failure: `n/a`. See return type specific semantics. | no dedicated free function in return value. Lifecycle helper; see function naming for ownership release semantics. |
-| `ap_add_argument` | `int ap_add_argument(ap_parser * parser, const char * name_or_flags, ap_arg_options options, ap_error * err)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_group_add_argument` | `int ap_group_add_argument(ap_mutually_exclusive_group * group, const char * name_or_flags, ap_arg_options options, ap_error * err)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_parse_args` | `int ap_parse_args(ap_parser * parser, int argc, char ** argv, ap_namespace ** out_ns, ap_error * err)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. On success, out_ns must be released with ap_namespace_free. parse_known_args also requires ap_free_tokens for unknown args. |
-| `ap_parse_known_args` | `int ap_parse_known_args(ap_parser * parser, int argc, char ** argv, ap_namespace ** out_ns, char *** out_unknown_args, int * out_unknown_count, ap_error * err)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. On success, out_ns must be released with ap_namespace_free. parse_known_args also requires ap_free_tokens for unknown args. |
-| `ap_namespace_free` | `void ap_namespace_free(ap_namespace * ns)` | success: `n/a` / failure: `n/a`. See return type specific semantics. | no dedicated free function in return value. Lifecycle helper; see function naming for ownership release semantics. |
-| `ap_free_tokens` | `void ap_free_tokens(char ** tokens, int count)` | success: `n/a` / failure: `n/a`. See return type specific semantics. | no dedicated free function in return value. Lifecycle helper; see function naming for ownership release semantics. |
-| `ap_format_usage` | `char * ap_format_usage(const ap_parser * parser)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | free with `free`. Returned string is heap-allocated. |
-| `ap_format_help` | `char * ap_format_help(const ap_parser * parser)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | free with `free`. Returned string is heap-allocated. |
-| `ap_format_manpage` | `char * ap_format_manpage(const ap_parser * parser)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | free with `free`. Returned string is heap-allocated. |
-| `ap_format_bash_completion` | `char * ap_format_bash_completion(const ap_parser * parser)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | free with `free`. Returned string is heap-allocated. |
-| `ap_format_fish_completion` | `char * ap_format_fish_completion(const ap_parser * parser)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | free with `free`. Returned string is heap-allocated. |
-| `ap_format_zsh_completion` | `char * ap_format_zsh_completion(const ap_parser * parser)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | free with `free`. Returned string is heap-allocated. |
-| `ap_format_error` | `char * ap_format_error(const ap_parser * parser, const ap_error * err)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | free with `free`. Returned string is heap-allocated. |
-| `ap_complete` | `int ap_complete(const ap_parser * parser, int argc, char ** argv, const char * shell, ap_completion_result * out_result, ap_error * err)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_try_handle_completion` | `int ap_try_handle_completion(const ap_parser * parser, int argc, char ** argv, const char * default_shell, int * out_handled, ap_completion_result * out_result, ap_error * err)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_completion_result_init` | `void ap_completion_result_init(ap_completion_result * result)` | success: `n/a` / failure: `n/a`. See return type specific semantics. | no dedicated free function in return value. Lifecycle helper; see function naming for ownership release semantics. |
-| `ap_completion_result_free` | `void ap_completion_result_free(ap_completion_result * result)` | success: `n/a` / failure: `n/a`. See return type specific semantics. | no dedicated free function in return value. Lifecycle helper; see function naming for ownership release semantics. |
-| `ap_completion_result_add` | `int ap_completion_result_add(ap_completion_result * result, const char * value, const char * help, ap_error * err)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. Candidate memory is managed by ap_completion_result_free. |
-| `ap_parser_get_info` | `int ap_parser_get_info(const ap_parser * parser, ap_parser_info * out_info)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_parser_get_argument` | `int ap_parser_get_argument(const ap_parser * parser, int index, ap_arg_info * out_info)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_parser_get_subcommand` | `int ap_parser_get_subcommand(const ap_parser * parser, int index, ap_subcommand_info * out_info)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_arg_short_flag_count` | `int ap_arg_short_flag_count(const ap_arg_info * info)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_arg_short_flag_at` | `const char * ap_arg_short_flag_at(const ap_arg_info * info, int index)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_arg_long_flag_count` | `int ap_arg_long_flag_count(const ap_arg_info * info)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_arg_long_flag_at` | `const char * ap_arg_long_flag_at(const ap_arg_info * info, int index)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_ns_get_bool` | `bool ap_ns_get_bool(const ap_namespace * ns, const char * dest, bool * out_value)` | success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_ns_get_string` | `bool ap_ns_get_string(const ap_namespace * ns, const char * dest, const char ** out_value)` | success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_ns_get_int32` | `bool ap_ns_get_int32(const ap_namespace * ns, const char * dest, int32_t * out_value)` | success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_ns_get_int64` | `bool ap_ns_get_int64(const ap_namespace * ns, const char * dest, int64_t * out_value)` | success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_ns_get_uint64` | `bool ap_ns_get_uint64(const ap_namespace * ns, const char * dest, uint64_t * out_value)` | success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_ns_get_double` | `bool ap_ns_get_double(const ap_namespace * ns, const char * dest, double * out_value)` | success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_ns_get_count` | `int ap_ns_get_count(const ap_namespace * ns, const char * dest)` | success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_ns_get_string_at` | `const char * ap_ns_get_string_at(const ap_namespace * ns, const char * dest, int index)` | success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_ns_get_int32_at` | `bool ap_ns_get_int32_at(const ap_namespace * ns, const char * dest, int index, int32_t * out_value)` | success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_ns_get_int64_at` | `bool ap_ns_get_int64_at(const ap_namespace * ns, const char * dest, int index, int64_t * out_value)` | success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_ns_get_uint64_at` | `bool ap_ns_get_uint64_at(const ap_namespace * ns, const char * dest, int index, uint64_t * out_value)` | success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_ns_get_double_at` | `bool ap_ns_get_double_at(const ap_namespace * ns, const char * dest, int index, double * out_value)` | success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_arg_options_default` | `ap_arg_options ap_arg_options_default(void)` | success: `n/a` / failure: `n/a`. See return type specific semantics. | no dedicated free function in return value. No new ownership transfer in return value. |
-| `ap_parser_options_default` | `ap_parser_options ap_parser_options_default(void)` | success: `n/a` / failure: `n/a`. See return type specific semantics. | no dedicated free function in return value. No new ownership transfer in return value. |
+## Parser lifecycle and setup
+
+### `ap_parser_new`
+- Signature: `ap_parser * ap_parser_new(const char * prog, const char * description)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: free with `ap_parser_free`. Returns a new parser instance. Caller owns it.
+
+### `ap_parser_new_with_options`
+- Signature: `ap_parser * ap_parser_new_with_options(const char * prog, const char * description, ap_parser_options options)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: free with `ap_parser_free`. Returns a new parser instance. Caller owns it.
+
+### `ap_parser_set_completion`
+- Signature: `int ap_parser_set_completion(ap_parser * parser, bool enabled, const char * entrypoint, ap_error * err)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_parser_completion_enabled`
+- Signature: `bool ap_parser_completion_enabled(const ap_parser * parser)`
+- Success/Failure: success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_parser_completion_entrypoint`
+- Signature: `const char * ap_parser_completion_entrypoint(const ap_parser * parser)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_parser_free`
+- Signature: `void ap_parser_free(ap_parser * parser)`
+- Success/Failure: success: `n/a` / failure: `n/a`. See return type specific semantics.
+- Ownership / free responsibility: no dedicated free function in return value. Lifecycle helper; see function naming for ownership release semantics.
+
+## Argument/subcommand definitions
+
+### `ap_add_subcommand`
+- Signature: `ap_parser * ap_add_subcommand(ap_parser * parser, const char * name, const char * description, ap_error * err)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: no dedicated free function in return value. Returned parser pointer is owned by the parent parser tree.
+
+### `ap_add_mutually_exclusive_group`
+- Signature: `ap_mutually_exclusive_group * ap_add_mutually_exclusive_group(ap_parser * parser, bool required, ap_error * err)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_add_argument`
+- Signature: `int ap_add_argument(ap_parser * parser, const char * name_or_flags, ap_arg_options options, ap_error * err)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_group_add_argument`
+- Signature: `int ap_group_add_argument(ap_mutually_exclusive_group * group, const char * name_or_flags, ap_arg_options options, ap_error * err)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+## Parsing and result memory management
+
+### `ap_parse_args`
+- Signature: `int ap_parse_args(ap_parser * parser, int argc, char ** argv, ap_namespace ** out_ns, ap_error * err)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. On success, out_ns must be released with ap_namespace_free. parse_known_args also requires ap_free_tokens for unknown args.
+
+### `ap_parse_known_args`
+- Signature: `int ap_parse_known_args(ap_parser * parser, int argc, char ** argv, ap_namespace ** out_ns, char *** out_unknown_args, int * out_unknown_count, ap_error * err)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. On success, out_ns must be released with ap_namespace_free. parse_known_args also requires ap_free_tokens for unknown args.
+
+### `ap_namespace_free`
+- Signature: `void ap_namespace_free(ap_namespace * ns)`
+- Success/Failure: success: `n/a` / failure: `n/a`. See return type specific semantics.
+- Ownership / free responsibility: no dedicated free function in return value. Lifecycle helper; see function naming for ownership release semantics.
+
+### `ap_free_tokens`
+- Signature: `void ap_free_tokens(char ** tokens, int count)`
+- Success/Failure: success: `n/a` / failure: `n/a`. See return type specific semantics.
+- Ownership / free responsibility: no dedicated free function in return value. Lifecycle helper; see function naming for ownership release semantics.
+
+## Formatter APIs
+
+### `ap_format_usage`
+- Signature: `char * ap_format_usage(const ap_parser * parser)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: free with `free`. Returned string is heap-allocated.
+
+### `ap_format_help`
+- Signature: `char * ap_format_help(const ap_parser * parser)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: free with `free`. Returned string is heap-allocated.
+
+### `ap_format_manpage`
+- Signature: `char * ap_format_manpage(const ap_parser * parser)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: free with `free`. Returned string is heap-allocated.
+
+### `ap_format_bash_completion`
+- Signature: `char * ap_format_bash_completion(const ap_parser * parser)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: free with `free`. Returned string is heap-allocated.
+
+### `ap_format_fish_completion`
+- Signature: `char * ap_format_fish_completion(const ap_parser * parser)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: free with `free`. Returned string is heap-allocated.
+
+### `ap_format_zsh_completion`
+- Signature: `char * ap_format_zsh_completion(const ap_parser * parser)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: free with `free`. Returned string is heap-allocated.
+
+### `ap_format_error`
+- Signature: `char * ap_format_error(const ap_parser * parser, const ap_error * err)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: free with `free`. Returned string is heap-allocated.
+
+## Completion APIs
+
+### `ap_complete`
+- Signature: `int ap_complete(const ap_parser * parser, int argc, char ** argv, const char * shell, ap_completion_result * out_result, ap_error * err)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_try_handle_completion`
+- Signature: `int ap_try_handle_completion(const ap_parser * parser, int argc, char ** argv, const char * default_shell, int * out_handled, ap_completion_result * out_result, ap_error * err)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_completion_result_init`
+- Signature: `void ap_completion_result_init(ap_completion_result * result)`
+- Success/Failure: success: `n/a` / failure: `n/a`. See return type specific semantics.
+- Ownership / free responsibility: no dedicated free function in return value. Lifecycle helper; see function naming for ownership release semantics.
+
+### `ap_completion_result_free`
+- Signature: `void ap_completion_result_free(ap_completion_result * result)`
+- Success/Failure: success: `n/a` / failure: `n/a`. See return type specific semantics.
+- Ownership / free responsibility: no dedicated free function in return value. Lifecycle helper; see function naming for ownership release semantics.
+
+### `ap_completion_result_add`
+- Signature: `int ap_completion_result_add(ap_completion_result * result, const char * value, const char * help, ap_error * err)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. Candidate memory is managed by ap_completion_result_free.
+
+## Parser/argument introspection APIs
+
+### `ap_parser_get_info`
+- Signature: `int ap_parser_get_info(const ap_parser * parser, ap_parser_info * out_info)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_parser_get_argument`
+- Signature: `int ap_parser_get_argument(const ap_parser * parser, int index, ap_arg_info * out_info)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_parser_get_subcommand`
+- Signature: `int ap_parser_get_subcommand(const ap_parser * parser, int index, ap_subcommand_info * out_info)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_arg_short_flag_count`
+- Signature: `int ap_arg_short_flag_count(const ap_arg_info * info)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_arg_short_flag_at`
+- Signature: `const char * ap_arg_short_flag_at(const ap_arg_info * info, int index)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_arg_long_flag_count`
+- Signature: `int ap_arg_long_flag_count(const ap_arg_info * info)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_arg_long_flag_at`
+- Signature: `const char * ap_arg_long_flag_at(const ap_arg_info * info, int index)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+## Namespace getters
+
+### `ap_ns_get_bool`
+- Signature: `bool ap_ns_get_bool(const ap_namespace * ns, const char * dest, bool * out_value)`
+- Success/Failure: success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_ns_get_string`
+- Signature: `bool ap_ns_get_string(const ap_namespace * ns, const char * dest, const char ** out_value)`
+- Success/Failure: success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_ns_get_int32`
+- Signature: `bool ap_ns_get_int32(const ap_namespace * ns, const char * dest, int32_t * out_value)`
+- Success/Failure: success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_ns_get_int64`
+- Signature: `bool ap_ns_get_int64(const ap_namespace * ns, const char * dest, int64_t * out_value)`
+- Success/Failure: success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_ns_get_uint64`
+- Signature: `bool ap_ns_get_uint64(const ap_namespace * ns, const char * dest, uint64_t * out_value)`
+- Success/Failure: success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_ns_get_double`
+- Signature: `bool ap_ns_get_double(const ap_namespace * ns, const char * dest, double * out_value)`
+- Success/Failure: success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_ns_get_count`
+- Signature: `int ap_ns_get_count(const ap_namespace * ns, const char * dest)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_ns_get_string_at`
+- Signature: `const char * ap_ns_get_string_at(const ap_namespace * ns, const char * dest, int index)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_ns_get_int32_at`
+- Signature: `bool ap_ns_get_int32_at(const ap_namespace * ns, const char * dest, int index, int32_t * out_value)`
+- Success/Failure: success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_ns_get_int64_at`
+- Signature: `bool ap_ns_get_int64_at(const ap_namespace * ns, const char * dest, int index, int64_t * out_value)`
+- Success/Failure: success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_ns_get_uint64_at`
+- Signature: `bool ap_ns_get_uint64_at(const ap_namespace * ns, const char * dest, int index, uint64_t * out_value)`
+- Success/Failure: success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_ns_get_double_at`
+- Signature: `bool ap_ns_get_double_at(const ap_namespace * ns, const char * dest, int index, double * out_value)`
+- Success/Failure: success: `true` / failure: `false`. Boolean APIs signal presence/success by true and miss/failure by false.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+## Default option builders
+
+### `ap_arg_options_default`
+- Signature: `ap_arg_options ap_arg_options_default(void)`
+- Success/Failure: success: `n/a` / failure: `n/a`. See return type specific semantics.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_parser_options_default`
+- Signature: `ap_parser_options ap_parser_options_default(void)`
+- Success/Failure: success: `n/a` / failure: `n/a`. See return type specific semantics.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
