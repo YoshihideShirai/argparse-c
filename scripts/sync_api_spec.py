@@ -196,6 +196,38 @@ def format_params_en(params: list[dict[str, str]]) -> str:
     return ", ".join(f"{p['type']} {p['name']}".strip() for p in params)
 
 
+def render_function_block(fn: dict, is_ja: bool) -> list[str]:
+    ec = fn["error_contract"]
+    ow = fn["ownership"]
+    sig = f"`{fn['return_type']} {fn['name']}({format_params_en(fn['parameters'])})`"
+    if is_ja:
+        contract = f"成功: `{ec['success_return']}` / 失敗: `{ec['failure_return']}`。{ec['notes_ja']}"
+        ownership = (
+            f"free: `{ow['caller_must_free_with']}`。" if ow["caller_must_free_with"] else "free 関数指定なし。"
+        ) + ow["notes_ja"]
+        return [
+            f"### `{fn['name']}`",
+            f"- シグネチャ: {sig}",
+            f"- 成功/失敗: {contract}",
+            f"- 所有権 / 解放責務: {ownership}",
+            "",
+        ]
+
+    contract = f"success: `{ec['success_return']}` / failure: `{ec['failure_return']}`. {ec['notes_en']}"
+    ownership = (
+        f"free with `{ow['caller_must_free_with']}`. "
+        if ow["caller_must_free_with"]
+        else "no dedicated free function in return value. "
+    ) + ow["notes_en"]
+    return [
+        f"### `{fn['name']}`",
+        f"- Signature: {sig}",
+        f"- Success/Failure: {contract}",
+        f"- Ownership / free responsibility: {ownership}",
+        "",
+    ]
+
+
 def section_for_function(name: str) -> str:
     if name.endswith("_options_default"):
         return "defaults"
@@ -259,19 +291,10 @@ def render_markdown(spec: dict, lang: str) -> str:
             "other": "その他の API",
         },
     }
-    table_headers = {
-        "en": [
-            "| Function | Signature | Success/Failure | Ownership / free responsibility |",
-            "| --- | --- | --- | --- |",
-        ],
-        "ja": [
-            "| 関数名 | シグネチャ | 成功/失敗 | 所有権 / 解放責務 |",
-            "| --- | --- | --- | --- |",
-        ],
-    }
     guide = (
         [
             "## Reading guide",
+            "- **Signature**: C declaration-level function signature.",
             "- **Success/Failure**: Normal return contract by return type (`0/-1`, `true/false`, `non-NULL/NULL`).",
             "- **Ownership / free responsibility**: Who owns returned memory and which free function is required.",
             "- APIs are grouped by purpose so related operations can be read together.",
@@ -279,6 +302,7 @@ def render_markdown(spec: dict, lang: str) -> str:
         if not is_ja
         else [
             "## 読み方ガイド",
+            "- **シグネチャ**: C 宣言レベルの関数シグネチャ。",
             "- **成功/失敗**: 戻り値型ごとの標準契約（`0/-1`、`true/false`、`non-NULL/NULL`）。",
             "- **所有権 / 解放責務**: 返却メモリの所有者と必要な free 関数。",
             "- API は用途ごとにグルーピングしているため、関連操作をまとめて確認できます。",
@@ -296,25 +320,8 @@ def render_markdown(spec: dict, lang: str) -> str:
             continue
         lines.append(f"## {section_titles['ja' if is_ja else 'en'][key]}")
         lines.append("")
-        lines.extend(table_headers["ja" if is_ja else "en"])
         for fn in functions:
-            ec = fn["error_contract"]
-            ow = fn["ownership"]
-            sig = f"`{fn['return_type']} {fn['name']}({format_params_en(fn['parameters'])})`"
-            if is_ja:
-                contract = f"成功: `{ec['success_return']}` / 失敗: `{ec['failure_return']}`。{ec['notes_ja']}"
-                ownership = (
-                    f"free: `{ow['caller_must_free_with']}`。" if ow["caller_must_free_with"] else "free 関数指定なし。"
-                ) + ow["notes_ja"]
-            else:
-                contract = f"success: `{ec['success_return']}` / failure: `{ec['failure_return']}`. {ec['notes_en']}"
-                ownership = (
-                    f"free with `{ow['caller_must_free_with']}`. "
-                    if ow["caller_must_free_with"]
-                    else "no dedicated free function in return value. "
-                ) + ow["notes_en"]
-            lines.append(f"| `{fn['name']}` | {sig} | {contract} | {ownership} |")
-        lines.append("")
+            lines.extend(render_function_block(fn, is_ja))
     lines.append("")
     return "\n".join(lines)
 
