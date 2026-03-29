@@ -1285,25 +1285,32 @@ TEST(CompleteRejectsNullArgvWhenArgcIsPositive) {
   ap_parser_free(p);
 }
 
-TEST(CompletionResultInitNormalizesDirtyStateAndSupportsAddAfterInit) {
+TEST(CompletionResultInitResetsFieldsAndSupportsAddAndFreeLifecycle) {
   ap_error err = {};
   ap_completion_result result = {};
 
+  /* 1) Fill with dummy values (dirty state). */
   result.items = reinterpret_cast<ap_completion_candidate *>(0x1);
   result.count = 123;
   result.cap = 456;
 
+  /* 2) Initialize and 3) verify normalized fields. */
   ap_completion_result_init(&result);
   CHECK(result.items == NULL);
   LONGS_EQUAL(0, result.count);
   LONGS_EQUAL(0, result.cap);
 
+  /* 4) Ensure add still works after init. */
   LONGS_EQUAL(0, ap_completion_result_add(&result, "value", "help", &err));
   LONGS_EQUAL(1, result.count);
   STRCMP_EQUAL("value", result.items[0].value);
   STRCMP_EQUAL("help", result.items[0].help);
 
+  /* 5) Verify cleanup path. */
   ap_completion_result_free(&result);
+  CHECK(result.items == NULL);
+  LONGS_EQUAL(0, result.count);
+  LONGS_EQUAL(0, result.cap);
 }
 
 TEST(CompletionResultAddNoMemoryViaReallocDoesNotCorruptStateAndCanRetry) {
