@@ -43,6 +43,33 @@ void fail_free_on_call(int call_index) {
   g_sb_hook_state.free_fail_on_call = call_index;
 }
 
+int successful_manpage_append_count(ap_parser *parser) {
+  char *manpage = NULL;
+  int append_count = 0;
+
+  reset_sb_hooks();
+  manpage = ap_format_manpage(parser);
+  CHECK(manpage != NULL);
+  append_count = g_sb_hook_state.appendf_call_count;
+  free(manpage);
+  reset_sb_hooks();
+
+  return append_count;
+}
+
+void assert_manpage_append_failures_return_null(ap_parser *parser) {
+  int append_count = successful_manpage_append_count(parser);
+
+  CHECK(append_count > 0);
+  for (int i = 1; i <= append_count; i++) {
+    reset_sb_hooks();
+    fail_appendf_on_call(i);
+    CHECK(ap_format_manpage(parser) == NULL);
+    CHECK(g_sb_hook_state.free_call_count > 0);
+  }
+  reset_sb_hooks();
+}
+
 std::string shell_quote(const std::string &value) {
   std::string quoted = "'";
 
@@ -1403,4 +1430,48 @@ TEST(FormatterBuildersReturnNullWhenAppendFailsAndCleanUp) {
 
   reset_sb_hooks();
   ap_parser_free(p);
+}
+
+TEST(FormatManpageFailureInjectionCoversRichStructuredBuilderPaths) {
+  ap_error err = {};
+  ap_parser *root = ap_parser_new("tool", "top level parser");
+  ap_parser *config = NULL;
+  ap_parser *set = NULL;
+  ap_arg_options mode = ap_arg_options_default();
+  ap_arg_options output = ap_arg_options_default();
+  ap_arg_options input = ap_arg_options_default();
+  const char *choices[] = {"fast", "slow"};
+
+  CHECK(root != NULL);
+  mode.help = "select execution mode";
+  mode.metavar = "MODE";
+  mode.default_value = "fast";
+  mode.required = true;
+  mode.choices.items = choices;
+  mode.choices.count = 2;
+  output.help = "write output";
+  output.metavar = "FILE";
+  input.help = "input path";
+
+  LONGS_EQUAL(0, ap_add_argument(root, "-m, --mode", mode, &err));
+  LONGS_EQUAL(0, ap_add_argument(root, "--output", output, &err));
+  LONGS_EQUAL(0, ap_add_argument(root, "input_path", input, &err));
+
+  config = ap_add_subcommand(root, "config", "manage configuration", &err);
+  CHECK(config != NULL);
+  set = ap_add_subcommand(config, "set", "set a value", &err);
+  CHECK(set != NULL);
+  CHECK(ap_add_subcommand(set, "leaf", "leaf command", &err) != NULL);
+
+  assert_manpage_append_failures_return_null(root);
+
+  ap_parser_free(root);
+}
+
+TEST(FormatManpageFailureInjectionCoversFallbackDescriptionBranch) {
+  ap_parser *root = ap_parser_new("tool", "");
+
+  CHECK(root != NULL);
+  assert_manpage_append_failures_return_null(root);
+  ap_parser_free(root);
 }
