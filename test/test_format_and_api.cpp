@@ -1955,6 +1955,67 @@ TEST(FormatBashCompletionMarksValueModesAndFlagOnlyOptions) {
   ap_parser_free(p);
 }
 
+TEST(FormatZshCompletionMarksValueModesCountsAndNoneFallback) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options extras = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  ap_arg_options exec = ap_arg_options_default();
+  ap_arg_options plain = ap_arg_options_default();
+  char *script = NULL;
+
+  CHECK(p != NULL);
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  extras.nargs = AP_NARGS_ZERO_OR_MORE;
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+  exec.completion_kind = AP_COMPLETION_KIND_COMMAND;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--extras", extras, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--pair", pair, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--exec", exec, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--plain", plain, &err));
+
+  script = ap_format_zsh_completion(p);
+  CHECK(script != NULL);
+  CHECK(strstr(script, "root:--maybe) printf '%s\\n' 'optional' ;;") != NULL);
+  CHECK(strstr(script, "root:--extras) printf '%s\\n' 'multi' ;;") != NULL);
+  CHECK(strstr(script, "root:--pair) printf '%s\\n' 'fixed' ;;") != NULL);
+  CHECK(strstr(script, "root:--exec) printf '%s\\n' 'command' ;;") != NULL);
+  CHECK(strstr(script, "root:--plain) printf '%s\\n' 'none' ;;") != NULL);
+  CHECK(strstr(script, "root:--maybe) printf '%d\\n' 1 ;;") != NULL);
+  CHECK(strstr(script, "root:--pair) printf '%d\\n' 2 ;;") != NULL);
+
+  free(script);
+  ap_parser_free(p);
+}
+
+TEST(FormatFishCompletionUsesFallbackMetavarForUnderscoredDestinations) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options config_path = ap_arg_options_default();
+  ap_arg_options versioned = ap_arg_options_default();
+  ap_arg_options named = ap_arg_options_default();
+  char *script = NULL;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "--config-path", config_path, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--v2-mode", versioned, &err));
+  named.metavar = "META.FILE";
+  LONGS_EQUAL(0, ap_add_argument(p, "--named", named, &err));
+
+  script = ap_format_fish_completion(p);
+  CHECK(script != NULL);
+  CHECK(strstr(script, "-l config-path -d \"CONFIG-PATH\" -r") != NULL);
+  CHECK(strstr(script, "-l v2-mode -d \"V2-MODE\" -r") != NULL);
+  CHECK(strstr(script, "-l named -d \"META.FILE\" -r") != NULL);
+
+  free(script);
+  ap_parser_free(p);
+}
+
 TEST(GeneratedBashCompletionScriptPassesBashSyntaxCheck) {
   const std::string temp_dir = make_temp_dir();
   const std::filesystem::path script_path =

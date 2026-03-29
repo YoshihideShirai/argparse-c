@@ -1,6 +1,13 @@
 #include <cmath>
 #include <string>
 #include <vector>
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "../lib/ap_internal.h"
+#ifdef __cplusplus
+}
+#endif
 #include "test_framework.h"
 
 TEST(SuccessParse) {
@@ -260,6 +267,137 @@ TEST(DefaultValueMustMatchChoices) {
   LONGS_EQUAL(AP_ERR_INVALID_CHOICE, err.code);
 
   ap_parser_free(p);
+}
+
+TEST(NextPositionalDefResolvesOptionalZeroOrMoreOneOrMoreAndFixedLayouts) {
+  ap_error err = {};
+  ap_parser *optional_then_required = ap_parser_new("prog", "desc");
+  ap_parser *many_then_required = ap_parser_new("prog", "desc");
+  ap_parser *fixed_then_tail = ap_parser_new("prog", "desc");
+  ap_arg_options optional = ap_arg_options_default();
+  ap_arg_options many = ap_arg_options_default();
+  ap_arg_options plus = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  const ap_arg_def *def = NULL;
+
+  CHECK(optional_then_required != NULL);
+  CHECK(many_then_required != NULL);
+  CHECK(fixed_then_tail != NULL);
+
+  optional.nargs = AP_NARGS_OPTIONAL;
+  LONGS_EQUAL(0,
+              ap_add_argument(optional_then_required, "maybe", optional, &err));
+  LONGS_EQUAL(0, ap_add_argument(optional_then_required, "target",
+                                 ap_arg_options_default(), &err));
+  def = ap_next_positional_def(optional_then_required, 0);
+  CHECK(def != NULL);
+  STRCMP_EQUAL("target", def->dest);
+
+  many.nargs = AP_NARGS_ZERO_OR_MORE;
+  many.action = AP_ACTION_APPEND;
+  LONGS_EQUAL(0, ap_add_argument(many_then_required, "extras", many, &err));
+  LONGS_EQUAL(0, ap_add_argument(many_then_required, "target",
+                                 ap_arg_options_default(), &err));
+  def = ap_next_positional_def(many_then_required, 0);
+  CHECK(def != NULL);
+  STRCMP_EQUAL("target", def->dest);
+
+  plus.nargs = AP_NARGS_ONE_OR_MORE;
+  LONGS_EQUAL(0, ap_add_argument(many_then_required, "items", plus, &err));
+  def = ap_next_positional_def(many_then_required, 1);
+  CHECK(def != NULL);
+  STRCMP_EQUAL("items", def->dest);
+
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+  LONGS_EQUAL(0, ap_add_argument(fixed_then_tail, "coords", pair, &err));
+  LONGS_EQUAL(0, ap_add_argument(fixed_then_tail, "target",
+                                 ap_arg_options_default(), &err));
+  def = ap_next_positional_def(fixed_then_tail, 0);
+  CHECK(def != NULL);
+  STRCMP_EQUAL("coords", def->dest);
+  def = ap_next_positional_def(fixed_then_tail, 1);
+  CHECK(def != NULL);
+  STRCMP_EQUAL("coords", def->dest);
+  def = ap_next_positional_def(fixed_then_tail, 2);
+  CHECK(def != NULL);
+  STRCMP_EQUAL("target", def->dest);
+  CHECK(ap_next_positional_def(fixed_then_tail, -1) == NULL);
+  CHECK(ap_next_positional_def(NULL, 0) == NULL);
+
+  ap_parser_free(optional_then_required);
+  ap_parser_free(many_then_required);
+  ap_parser_free(fixed_then_tail);
+}
+
+TEST(InternalValidationCatchesDeferredNargsCasesAndAcceptsMatchingChoices) {
+  ap_error err = {};
+  ap_parser *one = ap_parser_new("prog", "desc");
+  ap_parser *plus = ap_parser_new("prog", "desc");
+  ap_parser *fixed = ap_parser_new("prog", "desc");
+  ap_parser *choices = ap_parser_new("prog", "desc");
+  ap_parsed_arg *parsed = NULL;
+  ap_arg_options files = ap_arg_options_default();
+  ap_arg_options coords = ap_arg_options_default();
+  ap_arg_options mode = ap_arg_options_default();
+  const char *valid_modes[] = {"fast", "slow"};
+
+  CHECK(one != NULL);
+  CHECK(plus != NULL);
+  CHECK(fixed != NULL);
+  CHECK(choices != NULL);
+
+  LONGS_EQUAL(0,
+              ap_add_argument(one, "--name", ap_arg_options_default(), &err));
+  parsed = (ap_parsed_arg *)calloc((size_t)one->defs_count, sizeof(*parsed));
+  CHECK(parsed != NULL);
+  parsed[1].seen = true;
+  LONGS_EQUAL(-1, ap_validate_args(one, parsed, &err));
+  LONGS_EQUAL(AP_ERR_MISSING_VALUE, err.code);
+  STRCMP_EQUAL("--name", err.argument);
+  STRCMP_EQUAL("option '--name' requires a value", err.message);
+  free(parsed);
+
+  files.nargs = AP_NARGS_ONE_OR_MORE;
+  LONGS_EQUAL(0, ap_add_argument(plus, "--files", files, &err));
+  parsed = (ap_parsed_arg *)calloc((size_t)plus->defs_count, sizeof(*parsed));
+  CHECK(parsed != NULL);
+  parsed[1].seen = true;
+  LONGS_EQUAL(-1, ap_validate_args(plus, parsed, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_NARGS, err.code);
+  STRCMP_EQUAL("--files", err.argument);
+  STRCMP_EQUAL("option '--files' requires at least one value", err.message);
+  free(parsed);
+
+  coords.nargs = AP_NARGS_FIXED;
+  coords.nargs_count = 2;
+  LONGS_EQUAL(0, ap_add_argument(fixed, "coords", coords, &err));
+  parsed = (ap_parsed_arg *)calloc((size_t)fixed->defs_count, sizeof(*parsed));
+  CHECK(parsed != NULL);
+  CHECK(ap_strvec_push(&parsed[1].values, ap_strdup("10")) == 0);
+  LONGS_EQUAL(-1, ap_validate_args(fixed, parsed, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_NARGS, err.code);
+  STRCMP_EQUAL("coords", err.argument);
+  STRCMP_EQUAL("argument 'coords' requires exactly 2 values", err.message);
+  ap_strvec_free(&parsed[1].values);
+  free(parsed);
+
+  mode.choices.items = valid_modes;
+  mode.choices.count = 2;
+  LONGS_EQUAL(0, ap_add_argument(choices, "--mode", mode, &err));
+  parsed =
+      (ap_parsed_arg *)calloc((size_t)choices->defs_count, sizeof(*parsed));
+  CHECK(parsed != NULL);
+  parsed[1].seen = true;
+  CHECK(ap_strvec_push(&parsed[1].values, ap_strdup("fast")) == 0);
+  LONGS_EQUAL(0, ap_validate_args(choices, parsed, &err));
+  ap_strvec_free(&parsed[1].values);
+  free(parsed);
+
+  ap_parser_free(one);
+  ap_parser_free(plus);
+  ap_parser_free(fixed);
+  ap_parser_free(choices);
 }
 
 TEST(StoreTrueAndStoreFalse) {
