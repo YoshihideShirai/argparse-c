@@ -1504,6 +1504,7 @@ TEST(FormatErrorSurvivesVeryLongInvalidNumericMessages) {
 
 TEST(StringBuilderFailureHooksCoverAppendAndFreePaths) {
   ap_string_builder sb = {};
+  char *allocated = NULL;
 
   reset_sb_hooks();
   ap_sb_init(&sb);
@@ -1516,6 +1517,7 @@ TEST(StringBuilderFailureHooksCoverAppendAndFreePaths) {
   ap_sb_init(&sb);
   LONGS_EQUAL(0, ap_sb_appendf(&sb, "hello"));
   CHECK(sb.data != NULL);
+  allocated = sb.data;
   fail_free_on_call(1);
   ap_sb_free(&sb);
   LONGS_EQUAL(1, g_sb_hook_state.free_call_count);
@@ -1523,6 +1525,7 @@ TEST(StringBuilderFailureHooksCoverAppendAndFreePaths) {
   CHECK(sb.data == NULL);
   LONGS_EQUAL(0U, sb.len);
   LONGS_EQUAL(0U, sb.cap);
+  free(allocated);
 
   reset_sb_hooks();
 }
