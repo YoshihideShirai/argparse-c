@@ -57,6 +57,34 @@ int successful_manpage_append_count(ap_parser *parser) {
   return append_count;
 }
 
+int successful_usage_append_count(ap_parser *parser) {
+  char *usage = NULL;
+  int append_count = 0;
+
+  reset_sb_hooks();
+  usage = ap_format_usage(parser);
+  CHECK(usage != NULL);
+  append_count = g_sb_hook_state.appendf_call_count;
+  free(usage);
+  reset_sb_hooks();
+
+  return append_count;
+}
+
+int successful_help_append_count(ap_parser *parser) {
+  char *help = NULL;
+  int append_count = 0;
+
+  reset_sb_hooks();
+  help = ap_format_help(parser);
+  CHECK(help != NULL);
+  append_count = g_sb_hook_state.appendf_call_count;
+  free(help);
+  reset_sb_hooks();
+
+  return append_count;
+}
+
 void assert_manpage_append_failures_return_null(ap_parser *parser) {
   int append_count = successful_manpage_append_count(parser);
 
@@ -65,6 +93,32 @@ void assert_manpage_append_failures_return_null(ap_parser *parser) {
     reset_sb_hooks();
     fail_appendf_on_call(i);
     CHECK(ap_format_manpage(parser) == NULL);
+    CHECK(g_sb_hook_state.free_call_count > 0);
+  }
+  reset_sb_hooks();
+}
+
+void assert_usage_append_failures_return_null(ap_parser *parser) {
+  int append_count = successful_usage_append_count(parser);
+
+  CHECK(append_count > 0);
+  for (int i = 1; i <= append_count; i++) {
+    reset_sb_hooks();
+    fail_appendf_on_call(i);
+    CHECK(ap_format_usage(parser) == NULL);
+    CHECK(g_sb_hook_state.free_call_count > 0);
+  }
+  reset_sb_hooks();
+}
+
+void assert_help_append_failures_return_null(ap_parser *parser) {
+  int append_count = successful_help_append_count(parser);
+
+  CHECK(append_count > 0);
+  for (int i = 1; i <= append_count; i++) {
+    reset_sb_hooks();
+    fail_appendf_on_call(i);
+    CHECK(ap_format_help(parser) == NULL);
     CHECK(g_sb_hook_state.free_call_count > 0);
   }
   reset_sb_hooks();
@@ -1474,4 +1528,90 @@ TEST(FormatManpageFailureInjectionCoversFallbackDescriptionBranch) {
   CHECK(root != NULL);
   assert_manpage_append_failures_return_null(root);
   ap_parser_free(root);
+}
+
+TEST(FormatHelpAndUsageFailureInjectionCoversStructuredBuilderPaths) {
+  ap_error err = {};
+  ap_parser *root = ap_parser_new("tool", "top level parser");
+  ap_parser *config = NULL;
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options output = ap_arg_options_default();
+  ap_arg_options item = ap_arg_options_default();
+  const char *choices[] = {"json", "yaml"};
+
+  CHECK(root != NULL);
+  verbose.type = AP_TYPE_INT32;
+  verbose.action = AP_ACTION_COUNT;
+  verbose.help = "increase verbosity";
+  output.help = "write output";
+  output.metavar = "FILE";
+  output.default_value = "stdout";
+  output.required = true;
+  output.choices.items = choices;
+  output.choices.count = 2;
+  item.nargs = AP_NARGS_ONE_OR_MORE;
+  item.metavar = "ITEM";
+  item.help = "input item";
+
+  LONGS_EQUAL(0, ap_add_argument(root, "-v, --verbose", verbose, &err));
+  LONGS_EQUAL(0, ap_add_argument(root, "--output", output, &err));
+  LONGS_EQUAL(0, ap_add_argument(root, "item", item, &err));
+  config = ap_add_subcommand(root, "config", "config commands", &err);
+  CHECK(config != NULL);
+
+  assert_usage_append_failures_return_null(root);
+  assert_help_append_failures_return_null(root);
+
+  ap_parser_free(root);
+}
+
+TEST(FormatHelpAndUsageFailureInjectionCoversFallbackBranches) {
+  ap_parser *root = ap_parser_new("tool", "");
+
+  CHECK(root != NULL);
+  assert_usage_append_failures_return_null(root);
+  assert_help_append_failures_return_null(root);
+  ap_parser_free(root);
+}
+
+TEST(FormatHelpAndUsageTolerateUnexpectedInternalNargsValues) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options opt = ap_arg_options_default();
+  ap_arg_options pos = ap_arg_options_default();
+  char *usage = NULL;
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  opt.help = "optional value";
+  pos.help = "positional value";
+  LONGS_EQUAL(0, ap_add_argument(p, "--mystery", opt, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "target", pos, &err));
+
+  p->defs[1].opts.nargs = (ap_nargs)99;
+  p->defs[2].opts.nargs = (ap_nargs)99;
+
+  usage = ap_format_usage(p);
+  help = ap_format_help(p);
+  CHECK(usage != NULL);
+  CHECK(help != NULL);
+  CHECK(strstr(usage, "usage: tool") != NULL);
+  CHECK(strstr(usage, " TARGET") == NULL);
+  CHECK(strstr(help, "optional arguments:\n") != NULL);
+  CHECK(strstr(help, "positional arguments:\n") != NULL);
+  CHECK(strstr(help, "  TARGET\n    positional value") != NULL);
+
+  free(usage);
+  free(help);
+  ap_parser_free(p);
+}
+
+TEST(StringBuilderHelpersRejectNullInputs) {
+  ap_string_builder sb = {};
+
+  ap_sb_free(NULL);
+  ap_sb_init(&sb);
+  LONGS_EQUAL(-1, ap_sb_appendf(NULL, "%s", "x"));
+  LONGS_EQUAL(-1, ap_sb_appendf(&sb, NULL));
+  ap_sb_free(&sb);
 }
