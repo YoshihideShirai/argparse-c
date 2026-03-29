@@ -250,6 +250,45 @@ TEST(ParseKnownArgsRequiresAllOutputPointers) {
   ap_parser_free(p);
 }
 
+TEST(ParseArgsRequiresParserAndOutputNamespace) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+
+  LONGS_EQUAL(-1, ap_parse_args(NULL, 1, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("", err.argument);
+  STRCMP_EQUAL("parser and out_ns are required", err.message);
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, NULL, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("", err.argument);
+  STRCMP_EQUAL("parser and out_ns are required", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(ParseKnownArgsFailureClearsUnknownOutputs) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char *argv[] = {(char *)"prog", (char *)"file.txt", NULL};
+  char **unknown = (char **)0x1;
+  int unknown_count = 99;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(
+      -1, ap_parse_known_args(p, 2, argv, &ns, &unknown, &unknown_count, &err));
+  LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+  CHECK(unknown == NULL);
+  LONGS_EQUAL(0, unknown_count);
+
+  ap_parser_free(p);
+}
+
 TEST(FormatErrorUsesFallbackMessageWhenErrorMissing) {
   ap_parser *p = ap_parser_new("prog", "desc");
   char *text = NULL;
