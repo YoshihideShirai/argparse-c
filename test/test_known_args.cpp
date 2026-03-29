@@ -245,6 +245,56 @@ TEST(ParseKnownArgsCollectsLongTokenSequenceAfterDoubleDashInOrder) {
   ap_parser_free(p);
 }
 
+TEST(ParseKnownArgsMergesNestedSubcommandUnknownsAndPreservesPath) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *config = NULL;
+  ap_parser *set = NULL;
+  ap_arg_options level = ap_arg_options_default();
+  ap_arg_options force = ap_arg_options_default();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  const char *subcommand = NULL;
+  const char *subcommand_path = NULL;
+  const char *level_value = NULL;
+  bool force_enabled = false;
+  char *argv[] = {(char *)"prog",  (char *)"config",
+                  (char *)"set",   (char *)"--unknown",
+                  (char *)"u1",    (char *)"--level",
+                  (char *)"debug", (char *)"--force",
+                  (char *)"tail",  NULL};
+
+  CHECK(p != NULL);
+  config = ap_add_subcommand(p, "config", "config commands", &err);
+  CHECK(config != NULL);
+  set = ap_add_subcommand(config, "set", "set values", &err);
+  CHECK(set != NULL);
+  force.type = AP_TYPE_BOOL;
+  force.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(set, "--level", level, &err));
+  LONGS_EQUAL(0, ap_add_argument(set, "--force", force, &err));
+
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 9, argv, &ns, &unknown, &unknown_count, &err));
+  CHECK(ap_ns_get_string(ns, "subcommand", &subcommand));
+  CHECK(ap_ns_get_string(ns, "subcommand_path", &subcommand_path));
+  CHECK(ap_ns_get_string(ns, "level", &level_value));
+  CHECK(ap_ns_get_bool(ns, "force", &force_enabled));
+  STRCMP_EQUAL("set", subcommand);
+  STRCMP_EQUAL("config set", subcommand_path);
+  STRCMP_EQUAL("debug", level_value);
+  CHECK_TRUE(force_enabled);
+  LONGS_EQUAL(3, unknown_count);
+  STRCMP_EQUAL("--unknown", unknown[0]);
+  STRCMP_EQUAL("u1", unknown[1]);
+  STRCMP_EQUAL("tail", unknown[2]);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
 TEST(OptionalNargsDoesNotConsumeFollowingKnownOption) {
   ap_error err = {};
   ap_namespace *ns = NULL;

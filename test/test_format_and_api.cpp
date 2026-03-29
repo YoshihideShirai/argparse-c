@@ -308,6 +308,48 @@ TEST(FormatUsageCoversFixedNargsForRequiredAndOptionalOptions) {
   ap_parser_free(p);
 }
 
+TEST(FormatUsageCoversRequiredOptionalNargsVariantsAndSubcommandMarker) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options many = ap_arg_options_default();
+  ap_arg_options plus = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  char *usage = NULL;
+
+  CHECK(p != NULL);
+  maybe.required = true;
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  maybe.metavar = "MAYBE";
+  many.required = true;
+  many.nargs = AP_NARGS_ZERO_OR_MORE;
+  many.metavar = "MANY";
+  plus.required = true;
+  plus.nargs = AP_NARGS_ONE_OR_MORE;
+  plus.metavar = "PLUS";
+  pair.required = true;
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+  pair.metavar = "PAIR";
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--many", many, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--plus", plus, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--pair", pair, &err));
+  CHECK(ap_add_subcommand(p, "run", "run command", &err) != NULL);
+
+  usage = ap_format_usage(p);
+  CHECK(usage != NULL);
+  CHECK(strstr(usage, " --maybe [MAYBE]") != NULL);
+  CHECK(strstr(usage, " --many [MANY ...]") != NULL);
+  CHECK(strstr(usage, " --plus PLUS [PLUS ...]") != NULL);
+  CHECK(strstr(usage, " --pair PAIR PAIR") != NULL);
+  CHECK(strstr(usage, " <subcommand>") != NULL);
+
+  free(usage);
+  ap_parser_free(p);
+}
+
 TEST(FormatManpageEscapesRoffControlCharactersAndBackslashes) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("tool", ".dot\n'quote\npath\\name-with-dash");
@@ -410,6 +452,75 @@ TEST(FormatHelpPositionalOneOrMoreShowsExpandedMetavarSuffix) {
   CHECK(strstr(help, "  FILE [FILE ...]\n    input files") != NULL);
 
   free(help);
+  ap_parser_free(p);
+}
+
+TEST(FormatHelpAndManpageCoverRequiredOptionalNargsVariants) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options many = ap_arg_options_default();
+  ap_arg_options plus = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  char *help = NULL;
+  char *manpage = NULL;
+
+  CHECK(p != NULL);
+  maybe.required = true;
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  maybe.metavar = "MAYBE";
+  maybe.help = "maybe value";
+  many.required = true;
+  many.nargs = AP_NARGS_ZERO_OR_MORE;
+  many.metavar = "MANY";
+  many.help = "many values";
+  plus.required = true;
+  plus.nargs = AP_NARGS_ONE_OR_MORE;
+  plus.metavar = "PLUS";
+  plus.help = "plus values";
+  pair.required = true;
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+  pair.metavar = "PAIR";
+  pair.help = "pair values";
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--many", many, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--plus", plus, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--pair", pair, &err));
+
+  help = ap_format_help(p);
+  manpage = ap_format_manpage(p);
+  CHECK(help != NULL);
+  CHECK(manpage != NULL);
+
+  CHECK(
+      strstr(help, "  --maybe [MAYBE]\n    maybe value\n    required: true") !=
+      NULL);
+  CHECK(strstr(help,
+               "  --many [MANY ...]\n    many values\n    required: true") !=
+        NULL);
+  CHECK(
+      strstr(help,
+             "  --plus PLUS [PLUS ...]\n    plus values\n    required: true") !=
+      NULL);
+  CHECK(
+      strstr(help, "  --pair PAIR PAIR\n    pair values\n    required: true") !=
+      NULL);
+
+  CHECK(strstr(manpage, ".SH SYNOPSIS\n.B tool") != NULL);
+  CHECK(strstr(manpage, "\\-\\-maybe [MAYBE]") != NULL);
+  CHECK(strstr(manpage, "\\-\\-many [MANY ...]") != NULL);
+  CHECK(strstr(manpage, "\\-\\-plus PLUS [PLUS ...]") != NULL);
+  CHECK(strstr(manpage, "\\-\\-pair PAIR PAIR") != NULL);
+  CHECK(strstr(manpage, ".TP\n.B \\-\\-maybe [MAYBE]") != NULL);
+  CHECK(strstr(manpage, ".TP\n.B \\-\\-many [MANY ...]") != NULL);
+  CHECK(strstr(manpage, ".TP\n.B \\-\\-plus PLUS [PLUS ...]") != NULL);
+  CHECK(strstr(manpage, ".TP\n.B \\-\\-pair PAIR PAIR") != NULL);
+  CHECK(strstr(manpage, "required: yes") != NULL);
+
+  free(help);
+  free(manpage);
   ap_parser_free(p);
 }
 
@@ -1585,6 +1696,60 @@ TEST(CompleteUsesPositionalCompletionMetadataAndCallback) {
   ap_parser_free(p);
 }
 
+TEST(CompleteHandlesInlineOptionValueAndDoubleDashPositionalMode) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  ap_arg_options file = ap_arg_options_default();
+  ap_arg_options target = ap_arg_options_default();
+  ap_completion_result result = {};
+  const char *modes[] = {"fast", "slow"};
+  const char *files[] = {"alpha.txt", "beta.txt"};
+  char arg0[] = "alpha.txt";
+  char arg1[] = "--mode=s";
+  char arg2[] = "";
+  char *argv_inline[] = {arg0, arg1, arg2};
+  char arg3[] = "--";
+  char arg4[] = "a";
+  char *argv_positional[] = {arg3, arg4};
+  char arg5[] = "--mode";
+  char arg6[] = "fast";
+  char arg7[] = "b";
+  char *argv_after_value[] = {arg5, arg6, arg7};
+
+  CHECK(p != NULL);
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+  file.choices.items = files;
+  file.choices.count = 2;
+  target.choices.items = modes;
+  target.choices.count = 2;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "file", file, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "target", target, &err));
+
+  LONGS_EQUAL(0, ap_complete(p, 3, argv_inline, "bash", &result, &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("fast", result.items[0].value);
+  STRCMP_EQUAL("slow", result.items[1].value);
+  ap_completion_result_free(&result);
+
+  LONGS_EQUAL(0, ap_complete(p, 2, argv_positional, "bash", &result, &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("alpha.txt", result.items[0].value);
+  STRCMP_EQUAL("beta.txt", result.items[1].value);
+  ap_completion_result_free(&result);
+
+  LONGS_EQUAL(0, ap_complete(p, 3, argv_after_value, "bash", &result, &err));
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("alpha.txt", result.items[0].value);
+  STRCMP_EQUAL("beta.txt", result.items[1].value);
+  ap_completion_result_free(&result);
+
+  ap_parser_free(p);
+}
+
 TEST(CompleteAppliesCallbackScopeAcrossThreeToFiveSubcommandLevels) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
@@ -1950,6 +2115,67 @@ TEST(FormatBashCompletionMarksValueModesAndFlagOnlyOptions) {
   CHECK(strstr(script, "'fixed' ;;") != NULL);
   CHECK(strstr(script, "root:--pair) printf") != NULL);
   CHECK(strstr(script, " 2 ;;") != NULL);
+
+  free(script);
+  ap_parser_free(p);
+}
+
+TEST(FormatZshCompletionMarksValueModesCountsAndNoneFallback) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options extras = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  ap_arg_options exec = ap_arg_options_default();
+  ap_arg_options plain = ap_arg_options_default();
+  char *script = NULL;
+
+  CHECK(p != NULL);
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  extras.nargs = AP_NARGS_ZERO_OR_MORE;
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+  exec.completion_kind = AP_COMPLETION_KIND_COMMAND;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--extras", extras, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--pair", pair, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--exec", exec, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--plain", plain, &err));
+
+  script = ap_format_zsh_completion(p);
+  CHECK(script != NULL);
+  CHECK(strstr(script, "root:--maybe) printf '%s\\n' 'optional' ;;") != NULL);
+  CHECK(strstr(script, "root:--extras) printf '%s\\n' 'multi' ;;") != NULL);
+  CHECK(strstr(script, "root:--pair) printf '%s\\n' 'fixed' ;;") != NULL);
+  CHECK(strstr(script, "root:--exec) printf '%s\\n' 'command' ;;") != NULL);
+  CHECK(strstr(script, "root:--plain) printf '%s\\n' 'none' ;;") != NULL);
+  CHECK(strstr(script, "root:--maybe) printf '%d\\n' 1 ;;") != NULL);
+  CHECK(strstr(script, "root:--pair) printf '%d\\n' 2 ;;") != NULL);
+
+  free(script);
+  ap_parser_free(p);
+}
+
+TEST(FormatFishCompletionUsesFallbackMetavarForUnderscoredDestinations) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_arg_options config_path = ap_arg_options_default();
+  ap_arg_options versioned = ap_arg_options_default();
+  ap_arg_options named = ap_arg_options_default();
+  char *script = NULL;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "--config-path", config_path, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--v2-mode", versioned, &err));
+  named.metavar = "META.FILE";
+  LONGS_EQUAL(0, ap_add_argument(p, "--named", named, &err));
+
+  script = ap_format_fish_completion(p);
+  CHECK(script != NULL);
+  CHECK(strstr(script, "-l config-path -d \"CONFIG-PATH\" -r") != NULL);
+  CHECK(strstr(script, "-l v2-mode -d \"V2-MODE\" -r") != NULL);
+  CHECK(strstr(script, "-l named -d \"META.FILE\" -r") != NULL);
 
   free(script);
   ap_parser_free(p);

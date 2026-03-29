@@ -1,7 +1,11 @@
 
+.codex
 .cache/
 build/
 build-clang/
+build-coverage/
+*.gcov
+
 # Created by https://www.toptal.com/developers/gitignore/api/c,cmake,vscode
 # Edit at https://www.toptal.com/developers/gitignore?templates=c,cmake,vscode
 
