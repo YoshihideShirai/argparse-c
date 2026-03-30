@@ -1,20 +1,23 @@
 # argparse-c
 
-Bem-vindo à documentação do `argparse-c` (entrada em português do Brasil).
+## Referência de API (tradução planejada)
 
-Estamos expandindo o conteúdo em pt-BR em etapas. Por enquanto, recomendamos usar também as versões em inglês ou japonês:
+A referência completa de API está disponível, por enquanto, em inglês e japonês (tradução futura):
+- [API Reference (English)](../api-spec.en.md)
+- [API仕様（日本語）](../api-spec.ja.md)
 
-- [English index](../en/index.md)
-- [日本語トップ](../ja/index.md)
+## Navegação
 
-## Início rápido
+[Início](index.md) | [Getting Started](getting-started.md) | [Guia básico](guides/basic-usage.md) | [FAQ](faq.md)
 
-1. Leia [Getting Started (English)](../en/getting-started.md)
-2. Consulte [Getting Started (日本語)](../ja/getting-started.md)
-3. Veja [API Reference (English)](../api-spec.en.md) / [API仕様（日本語）](../api-spec.ja.md)
+## Conjunto mínimo
 
-## Exemplos de código
+- [Getting Started](getting-started.md)
+- [Basic Guide](guides/basic-usage.md)
+- [FAQ](faq.md)
 
-- [`sample/example1.c`](../repository/sample/example1.c.md)
-- [`sample/example_subcommands.c`](../repository/sample/example_subcommands.c.md)
-- [`sample/example_completion.c`](../repository/sample/example_completion.c.md)
+## Critérios de conclusão do conjunto mínimo
+
+- Existem as páginas Home + Getting Started + Basic Guide + FAQ neste idioma.
+- Há links em ciclo entre as páginas: Home → Getting Started → Basic Guide → FAQ → Home.
+- Todas as páginas exibem no topo o atalho para API em inglês/japonês com rótulo de tradução futura.

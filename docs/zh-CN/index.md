@@ -1,20 +1,23 @@
 # argparse-c
 
-欢迎使用 `argparse-c` 文档（简体中文入口）。
+## API 参考（计划翻译）
 
-我们正在逐步完善简体中文文档。当前建议先结合英文或日文版本使用：
+完整 API 文档当前提供英文与日文版本（本地化版本计划中）：
+- [API Reference (English)](../api-spec.en.md)
+- [API仕様（日本語）](../api-spec.ja.md)
 
-- [English index](../en/index.md)
-- [日本語トップ](../ja/index.md)
+## 导航
 
-## 快速开始
+[首页](index.md) | [Getting Started](getting-started.md) | [基础指南](guides/basic-usage.md) | [FAQ](faq.md)
 
-1. 阅读 [Getting Started（English）](../en/getting-started.md)
-2. 参考 [Getting Started（日本語）](../ja/getting-started.md)
-3. 查看 [API Reference（English）](../api-spec.en.md) / [API仕様（日本語）](../api-spec.ja.md)
+## 最小集合
 
-## 代码示例
+- [Getting Started](getting-started.md)
+- [Basic Guide](guides/basic-usage.md)
+- [FAQ](faq.md)
 
-- [`sample/example1.c`](../repository/sample/example1.c.md)
-- [`sample/example_subcommands.c`](../repository/sample/example_subcommands.c.md)
-- [`sample/example_completion.c`](../repository/sample/example_completion.c.md)
+## 最小文档集完成条件
+
+- 存在 Home + Getting Started + Basic Guide + FAQ 四个页面。
+- 四个页面之间有循环导航：Home → Getting Started → Basic Guide → FAQ → Home。
+- 各页面顶部都有 API 参考导线，并标注“计划翻译”。
