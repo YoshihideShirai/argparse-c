@@ -76,10 +76,22 @@ nav:
       - FAQ: en/faq.md
   - 简体中文:
       - Home: zh-CN/index.md
+      - Getting Started: zh-CN/getting-started.md
+      - Guides:
+          - Basic usage: zh-CN/guides/basic-usage.md
+      - FAQ: zh-CN/faq.md
   - Español:
       - Home: es/index.md
+      - Getting Started: es/getting-started.md
+      - Guides:
+          - Basic usage: es/guides/basic-usage.md
+      - FAQ: es/faq.md
   - Português (Brasil):
       - Home: pt-BR/index.md
+      - Getting Started: pt-BR/getting-started.md
+      - Guides:
+          - Basic usage: pt-BR/guides/basic-usage.md
+      - FAQ: pt-BR/faq.md
   - Development:
       - Implementation Plan: implementation-plan.md
   - Repository Mirror:
