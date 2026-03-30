@@ -11,14 +11,26 @@
 [![README (日本語)](https://img.shields.io/badge/README-日本語-0A66C2?style=for-the-badge)](README.ja.md)
 [![Docs (English)](https://img.shields.io/badge/GitHub%20Pages-English-0A66C2?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/en/)
 [![Docs (日本語)](https://img.shields.io/badge/GitHub%20Pages-日本語-0A66C2?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/ja/)
+[![Docs (简体中文)](https://img.shields.io/badge/GitHub%20Pages-简体中文-8A8A8A?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/zh-CN/)
+[![Docs (Español)](https://img.shields.io/badge/GitHub%20Pages-Español-8A8A8A?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/es/)
+[![Docs (Português (Brasil))](https://img.shields.io/badge/GitHub%20Pages-Portugu%C3%AAs%20(Brasil)-8A8A8A?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/pt-BR/)
 
 ## Start here
 
+- **README / English**: [README.md](./README.md)
 - **README / 日本語**: [README.ja.md](README.ja.md)
 - **GitHub Pages / English**: [https://yoshihideshirai.github.io/argparse-c/en/](https://yoshihideshirai.github.io/argparse-c/en/)
 - **GitHub Pages / 日本語**: [https://yoshihideshirai.github.io/argparse-c/ja/](https://yoshihideshirai.github.io/argparse-c/ja/)
+- **GitHub Pages / 简体中文**: <https://yoshihideshirai.github.io/argparse-c/zh-CN/> _(Partial support)_
+- **GitHub Pages / Español**: <https://yoshihideshirai.github.io/argparse-c/es/> _(Partial support)_
+- **GitHub Pages / Português (Brasil)**: <https://yoshihideshirai.github.io/argparse-c/pt-BR/> _(Partial support)_
 - **Getting Started / English**: [https://yoshihideshirai.github.io/argparse-c/en/getting-started/](https://yoshihideshirai.github.io/argparse-c/en/getting-started/)
 - **Getting Started / 日本語**: [https://yoshihideshirai.github.io/argparse-c/ja/getting-started/](https://yoshihideshirai.github.io/argparse-c/ja/getting-started/)
+
+Legend:
+
+- **Full support**: English / 日本語 (README + GitHub Pages are maintained together).
+- **Partial support**: 简体中文 / Español / Português (Brasil) (GitHub Pages is available with staged rollout coverage).
 
 If you want the installation steps, completion setup, package metadata, or API details, jump to GitHub Pages first. The repository README now stays focused on **what this library is**, **why it is useful**, and **which examples to open next**.
 
