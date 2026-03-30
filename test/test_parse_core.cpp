@@ -495,16 +495,58 @@ TEST(StoreTrueRejectsInlineValue) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
-  ap_arg_options verbose = ap_arg_options_default();
-  char *argv[] = {(char *)"prog", (char *)"--verbose=yes", NULL};
+  ap_arg_options flag = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--flag=yes", NULL};
 
   CHECK(p != NULL);
-  verbose.type = AP_TYPE_BOOL;
-  verbose.action = AP_ACTION_STORE_TRUE;
-  LONGS_EQUAL(0, ap_add_argument(p, "--verbose", verbose, &err));
+  flag.type = AP_TYPE_BOOL;
+  flag.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--flag", flag, &err));
 
   LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
   LONGS_EQUAL(AP_ERR_INVALID_NARGS, err.code);
+  STRCMP_EQUAL("--flag", err.argument);
+  STRCMP_EQUAL("option '--flag' does not take a value", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(CountRejectsInlineValue) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options flag = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--flag=yes", NULL};
+
+  CHECK(p != NULL);
+  flag.type = AP_TYPE_INT32;
+  flag.action = AP_ACTION_COUNT;
+  LONGS_EQUAL(0, ap_add_argument(p, "--flag", flag, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_NARGS, err.code);
+  STRCMP_EQUAL("--flag", err.argument);
+  STRCMP_EQUAL("option '--flag' does not take a value", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(StoreConstRejectsInlineValue) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options flag = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--flag=yes", NULL};
+
+  CHECK(p != NULL);
+  flag.action = AP_ACTION_STORE_CONST;
+  flag.const_value = "const";
+  LONGS_EQUAL(0, ap_add_argument(p, "--flag", flag, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_NARGS, err.code);
+  STRCMP_EQUAL("--flag", err.argument);
+  STRCMP_EQUAL("option '--flag' does not take a value", err.message);
 
   ap_parser_free(p);
 }
