@@ -8,13 +8,27 @@
 
 [![README (English)](https://img.shields.io/badge/README-English-0A66C2?style=for-the-badge)](./README.md)
 [![GitHub%20Pages (日本語)](https://img.shields.io/badge/GitHub%20Pages-日本語-0A66C2?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/ja/)
+[![GitHub%20Pages (English)](https://img.shields.io/badge/GitHub%20Pages-English-0A66C2?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/en/)
+[![GitHub%20Pages (简体中文)](https://img.shields.io/badge/GitHub%20Pages-简体中文-8A8A8A?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/zh-CN/)
+[![GitHub%20Pages (Español)](https://img.shields.io/badge/GitHub%20Pages-Español-8A8A8A?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/es/)
+[![GitHub%20Pages (Português (Brasil))](https://img.shields.io/badge/GitHub%20Pages-Portugu%C3%AAs%20(Brasil)-8A8A8A?style=for-the-badge)](https://yoshihideshirai.github.io/argparse-c/pt-BR/)
 
 ## ここから始める
 
 - **README / English**: [README.md](./README.md)
-- **日本語ドキュメント**: [docs/ja/index.md](./docs/ja/index.md)
-- **GitHub Pages / 日本語トップ**: <https://yoshihideshirai.github.io/argparse-c/ja/>
+- **README / 日本語**: [README.ja.md](./README.ja.md)
+- **GitHub Pages / English**: <https://yoshihideshirai.github.io/argparse-c/en/>
+- **GitHub Pages / 日本語**: <https://yoshihideshirai.github.io/argparse-c/ja/>
+- **GitHub Pages / 简体中文**: <https://yoshihideshirai.github.io/argparse-c/zh-CN/>（_Partial support_）
+- **GitHub Pages / Español**: <https://yoshihideshirai.github.io/argparse-c/es/>（_Partial support_）
+- **GitHub Pages / Português (Brasil)**: <https://yoshihideshirai.github.io/argparse-c/pt-BR/>（_Partial support_）
+- **Getting Started / English**: <https://yoshihideshirai.github.io/argparse-c/en/getting-started/>
 - **Getting Started / 日本語**: [docs/ja/getting-started.md](./docs/ja/getting-started.md)
+
+凡例:
+
+- **Full support**: English / 日本語（README と GitHub Pages を並行して保守）。
+- **Partial support**: 简体中文 / Español / Português (Brasil)（GitHub Pages を段階公開中）。
 
 インストール手順、completion の設定、パッケージング、API の詳細は GitHub Pages または `docs/ja/` 配下にまとめています。この README では **ライブラリの概要**、**主な利点**、**最初に読むサンプル**、**日本語ドキュメントへの導線** に絞って説明します。
 
