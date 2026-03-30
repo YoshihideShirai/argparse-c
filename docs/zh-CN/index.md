@@ -10,11 +10,13 @@
 
 [首页](index.md) | [Getting Started](getting-started.md) | [基础指南](guides/basic-usage.md) | [FAQ](faq.md)
 
-## 最小集合
+## 本语言可阅读页面
 
+- [Home](index.md)
 - [Getting Started](getting-started.md)
 - [Basic Guide](guides/basic-usage.md)
 - [FAQ](faq.md)
+- [即将推出（Coming soon）](coming-soon.md)
 
 ## 最小文档集完成条件
 
