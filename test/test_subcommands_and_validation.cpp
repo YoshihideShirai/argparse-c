@@ -163,14 +163,21 @@ TEST(MissingSubcommandFails) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
-  char *argv[] = {(char *)"prog", NULL};
+  char *argv_missing[] = {(char *)"prog", NULL};
+  char *argv_help[] = {(char *)"prog", (char *)"--help", NULL};
 
   CHECK(p != NULL);
   CHECK(ap_add_subcommand(p, "run", "run the job", &err) != NULL);
 
-  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &err));
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv_missing, &ns, &err));
   LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, err.code);
+  STRCMP_EQUAL("subcommand", err.argument);
+  STRCMP_EQUAL("a subcommand is required", err.message);
 
+  err = {};
+  LONGS_EQUAL(0, ap_parse_args(p, 2, argv_help, &ns, &err));
+
+  ap_namespace_free(ns);
   ap_parser_free(p);
 }
 
