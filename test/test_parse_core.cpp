@@ -509,6 +509,60 @@ TEST(StoreTrueRejectsInlineValue) {
   ap_parser_free(p);
 }
 
+TEST(ShortOptionClusterRejectsValueOptionWithInvalidNargs) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options flag_a = ap_arg_options_default();
+  ap_arg_options flag_b = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"-ab", NULL};
+
+  CHECK(p != NULL);
+  flag_a.type = AP_TYPE_BOOL;
+  flag_a.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "-a", flag_a, &err));
+  flag_b.nargs = AP_NARGS_ONE;
+  LONGS_EQUAL(0, ap_add_argument(p, "-b", flag_b, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_NARGS, err.code);
+  STRCMP_EQUAL("option '-b' cannot be used in a short option cluster",
+               err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(ParseKnownArgsFallsBackFromShortClusterToUnknownTokenBoundary) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options flag_a = ap_arg_options_default();
+  ap_arg_options flag_b = ap_arg_options_default();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  const char *value_b = NULL;
+  char *argv[] = {(char *)"prog", (char *)"-ab", (char *)"-b", (char *)"x",
+                  NULL};
+
+  CHECK(p != NULL);
+  flag_a.type = AP_TYPE_BOOL;
+  flag_a.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "-a", flag_a, &err));
+  flag_b.nargs = AP_NARGS_ONE;
+  LONGS_EQUAL(0, ap_add_argument(p, "-b", flag_b, &err));
+
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 4, argv, &ns, &unknown, &unknown_count, &err));
+  LONGS_EQUAL(1, unknown_count);
+  STRCMP_EQUAL("-ab", unknown[0]);
+  CHECK(ap_ns_get_string(ns, "b", &value_b));
+  STRCMP_EQUAL("x", value_b);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
 TEST(HelpShowsChoicesDefaultAndRequired) {
   static const char *choices[] = {"fast", "slow"};
   ap_error err = {};
