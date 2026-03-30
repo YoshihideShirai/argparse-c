@@ -10,11 +10,13 @@ La referencia completa de API está disponible por ahora en inglés y japonés (
 
 [Inicio](index.md) | [Getting Started](getting-started.md) | [Guía básica](guides/basic-usage.md) | [FAQ](faq.md)
 
-## Conjunto mínimo
+## Páginas disponibles en este idioma
 
+- [Inicio](index.md)
 - [Getting Started](getting-started.md)
-- [Basic Guide](guides/basic-usage.md)
+- [Guía básica](guides/basic-usage.md)
 - [FAQ](faq.md)
+- [Próximamente (Coming soon)](coming-soon.md)
 
 ## Criterios de finalización del conjunto mínimo
 
