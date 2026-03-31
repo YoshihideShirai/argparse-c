@@ -116,6 +116,7 @@ struct ap_namespace {
 
 typedef struct {
   bool seen;
+  ap_strvec tokens;
   ap_strvec values;
 } ap_parsed_arg;
 

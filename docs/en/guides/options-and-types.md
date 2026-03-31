@@ -106,3 +106,32 @@ ap_add_argument(parser, "--weight", weights, &err);
 ```
 
 Use `ap_ns_get_int64_at(...)`, `ap_ns_get_uint64_at(...)`, and `ap_ns_get_double_at(...)` to read typed appended values.
+
+## `action_callback` execution model
+
+`action_callback` is a parse-time hook for **already accepted arguments**.
+It runs after the built-in `AP_ACTION_*` behavior for each argument has been
+applied to the namespace entry.
+
+- Input: the callback receives the current argument token sequence (`argc` /
+  `argv`) that matched that argument.
+- State: it also receives the current namespace, so it can inspect values that
+  were already materialized.
+- Failure: return `-1` to fail parsing. If the callback does not populate
+  `ap_error`, argparse-c sets a fallback
+  `AP_ERR_INVALID_DEFINITION` message for that argument.
+
+This keeps `AP_ACTION_*` as the primary storage/conversion mechanism while
+allowing custom per-argument validation/side effects.
+
+## `action_callback` vs `completion_callback`
+
+`action_callback` and `completion_callback` have different responsibilities:
+
+- `completion_callback`: suggestion-time only (shell completion generation and
+  completion query handling). It must not be used for parse-time validation.
+- `action_callback`: parse-time only (normal argument parsing flow). It must
+  not emit completion candidates.
+
+In short: completion callbacks answer "what can the user type next?", while
+action callbacks answer "is this parsed argument acceptable right now?".
