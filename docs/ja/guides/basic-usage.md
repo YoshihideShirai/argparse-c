@@ -30,6 +30,30 @@ ap_add_argument(parser, "input", input, &err);
 - positional はフラグ無しで宣言します
 - usage / help にも positional として表示されます
 
+## argument group（カスタム help セクション）
+
+関連する引数を help 上でまとまった見出しにしたい場合は、
+argument group を使います。
+
+```c
+ap_argument_group *output = ap_add_argument_group(
+    parser, "output", "output formatting controls", &err);
+
+ap_arg_options color = ap_arg_options_default();
+color.help = "color mode";
+ap_argument_group_add_argument(output, "--color", color, &err);
+
+ap_arg_options target = ap_arg_options_default();
+target.help = "target file";
+ap_argument_group_add_argument(output, "target", target, &err);
+```
+
+ポイント:
+
+- `ap_add_argument_group(...)` の `title` は必須です
+- grouped argument でも parse の挙動は通常の引数と同じです
+- `ap_format_help(...)` ではカスタムセクションとして表示されます
+
 ## エラー処理
 
 `argparse-c` はライブラリ内部で `exit()` しません。失敗時は `ap_error` を確認し、必要なら `ap_format_error(...)` で表示用文字列を生成します。

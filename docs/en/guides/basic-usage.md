@@ -30,6 +30,30 @@ ap_add_argument(parser, "input", input, &err);
 - positionals are declared without flags
 - they appear as positional entries in usage/help
 
+## Argument groups (custom help sections)
+
+Use argument groups when you want related arguments to appear under a titled
+section in help output.
+
+```c
+ap_argument_group *output = ap_add_argument_group(
+    parser, "output", "output formatting controls", &err);
+
+ap_arg_options color = ap_arg_options_default();
+color.help = "color mode";
+ap_argument_group_add_argument(output, "--color", color, &err);
+
+ap_arg_options target = ap_arg_options_default();
+target.help = "target file";
+ap_argument_group_add_argument(output, "target", target, &err);
+```
+
+Notes:
+
+- `title` is required for `ap_add_argument_group(...)`
+- grouped arguments are parsed the same way as regular arguments
+- grouped arguments are shown in their custom section in `ap_format_help(...)`
+
 ## Error handling
 
 `argparse-c` does not call `exit()` inside the library. On failure, inspect `ap_error` and optionally render a user-facing message with `ap_format_error(...)`.
