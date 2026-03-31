@@ -1,4 +1,5 @@
 #include <cmath>
+#include <cstdio>
 #include <string>
 #include <vector>
 #ifdef __cplusplus
@@ -1701,4 +1702,89 @@ TEST(DeepSubcommandDoubleDashBoundaryRejectsTailPositionals) {
   CHECK(ns == NULL);
 
   ap_parser_free(p);
+}
+
+TEST(ParseIntermixedAliasParsesMixedOrder) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options count = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"a.txt", (char *)"--count",
+                  (char *)"2",    (char *)"b.txt", NULL};
+  const char *first = NULL;
+  const char *second = NULL;
+  int32_t parsed_count = 0;
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, "src", ap_arg_options_default(), &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "dst", ap_arg_options_default(), &err));
+  count.type = AP_TYPE_INT32;
+  LONGS_EQUAL(0, ap_add_argument(p, "--count", count, &err));
+
+  LONGS_EQUAL(0, ap_parse_intermixed_args(p, 5, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "src", &first));
+  CHECK(ap_ns_get_string(ns, "dst", &second));
+  CHECK(ap_ns_get_int32(ns, "count", &parsed_count));
+  STRCMP_EQUAL("a.txt", first);
+  STRCMP_EQUAL("b.txt", second);
+  LONGS_EQUAL(2, parsed_count);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(CustomPrefixCharsAndAbbrevResolveLongOption) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser_options options = ap_parser_options_default();
+  ap_parser *p = NULL;
+  ap_arg_options value = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"++val", (char *)"123", NULL};
+  int32_t parsed = 0;
+
+  options.prefix_chars = "+";
+  options.allow_abbrev = true;
+  p = ap_parser_new_with_options("prog", "desc", options);
+  CHECK(p != NULL);
+
+  value.type = AP_TYPE_INT32;
+  value.dest = "value";
+  LONGS_EQUAL(0, ap_add_argument(p, "++value", value, &err));
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv, &ns, &err));
+  CHECK(ap_ns_get_int32(ns, "value", &parsed));
+  LONGS_EQUAL(123, parsed);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(FromfilePrefixExpandsArguments) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser_options options = ap_parser_options_default();
+  ap_parser *p = NULL;
+  ap_arg_options num = ap_arg_options_default();
+  const char *path = "/tmp/argparse_c_fromfile_args.txt";
+  FILE *fp = fopen(path, "w");
+  char *argv[] = {(char *)"prog", (char *)"@/tmp/argparse_c_fromfile_args.txt",
+                  NULL};
+  int32_t parsed = 0;
+
+  CHECK(fp != NULL);
+  fputs("--num 42", fp);
+  fclose(fp);
+
+  options.fromfile_prefix_chars = "@";
+  p = ap_parser_new_with_options("prog", "desc", options);
+  CHECK(p != NULL);
+  num.type = AP_TYPE_INT32;
+  LONGS_EQUAL(0, ap_add_argument(p, "--num", num, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 2, argv, &ns, &err));
+  CHECK(ap_ns_get_int32(ns, "num", &parsed));
+  LONGS_EQUAL(42, parsed);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+  remove(path);
 }

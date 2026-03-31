@@ -192,6 +192,17 @@ bool ap_starts_with_dash(const char *s) {
   return s && s[0] == '-' && s[1] != '\0';
 }
 
+bool ap_token_has_prefix(const ap_parser *parser, const char *s) {
+  const char *prefixes;
+  if (!s || s[0] == '\0' || s[1] == '\0') {
+    return false;
+  }
+  prefixes = (parser && parser->prefix_chars && parser->prefix_chars[0] != '\0')
+                 ? parser->prefix_chars
+                 : "-";
+  return strchr(prefixes, s[0]) != NULL;
+}
+
 bool ap_is_long_flag(const char *flag) {
   return flag && strncmp(flag, "--", 2) == 0 && flag[2] != '\0';
 }
@@ -358,6 +369,9 @@ ap_parser_options ap_parser_options_default(void) {
   ap_parser_options options;
   options.completion_enabled = true;
   options.completion_entrypoint = default_completion_entrypoint();
+  options.prefix_chars = "-";
+  options.allow_abbrev = false;
+  options.fromfile_prefix_chars = NULL;
   return options;
 }
 
@@ -431,6 +445,12 @@ int ap_completion_result_add(ap_completion_result *result, const char *value,
 static int add_builtin_help(ap_parser *parser) {
   ap_arg_options opts;
   ap_error ignored_err;
+  char flags_buf[32];
+  char prefix = '-';
+
+  if (parser && parser->prefix_chars && parser->prefix_chars[0] != '\0') {
+    prefix = parser->prefix_chars[0];
+  }
 
   opts = ap_arg_options_default();
   opts.type = AP_TYPE_BOOL;
@@ -438,7 +458,9 @@ static int add_builtin_help(ap_parser *parser) {
   opts.nargs = AP_NARGS_ONE;
   opts.help = "show this help message and exit";
   opts.dest = "help";
-  return ap_add_argument(parser, "-h, --help", opts, &ignored_err);
+  snprintf(flags_buf, sizeof(flags_buf), "%ch, %c%chelp", prefix, prefix,
+           prefix);
+  return ap_add_argument(parser, flags_buf, opts, &ignored_err);
 }
 
 static ap_parser *parser_alloc(const char *prog, const char *description,
@@ -456,9 +478,16 @@ static ap_parser *parser_alloc(const char *prog, const char *description,
   parser->completion_entrypoint = ap_strdup(
       options.completion_entrypoint ? options.completion_entrypoint
                                     : default_completion_entrypoint());
+  parser->prefix_chars =
+      ap_strdup(options.prefix_chars ? options.prefix_chars : "-");
+  parser->allow_abbrev = options.allow_abbrev;
+  parser->fromfile_prefix_chars = options.fromfile_prefix_chars
+                                      ? ap_strdup(options.fromfile_prefix_chars)
+                                      : NULL;
   parser->parent = parent;
   if (!parser->prog || !parser->description || !parser->command_name ||
-      !parser->completion_entrypoint) {
+      !parser->completion_entrypoint || !parser->prefix_chars ||
+      (options.fromfile_prefix_chars && !parser->fromfile_prefix_chars)) {
     ap_parser_free(parser);
     return NULL;
   }
@@ -610,7 +639,7 @@ int ap_add_argument(ap_parser *parser, const char *name_or_flags,
   }
 
   memset(&def, 0, sizeof(def));
-  def.is_optional = ap_starts_with_dash(name_or_flags);
+  def.is_optional = ap_token_has_prefix(parser, name_or_flags);
   def.mutex_group_index = -1;
 
   if (split_flags(name_or_flags, &def.flags, &def.flags_count) != 0) {
@@ -621,14 +650,15 @@ int ap_add_argument(ap_parser *parser, const char *name_or_flags,
 
   if (def.is_optional) {
     for (i = 0; i < def.flags_count; i++) {
-      if (!ap_starts_with_dash(def.flags[i])) {
+      if (!ap_token_has_prefix(parser, def.flags[i])) {
         ap_error_set(err, AP_ERR_INVALID_DEFINITION, def.flags[i],
                      "optional argument flags must start with '-'");
         arg_def_free(&def);
         return -1;
       }
     }
-  } else if (def.flags_count != 1 || ap_starts_with_dash(def.flags[0])) {
+  } else if (def.flags_count != 1 ||
+             ap_token_has_prefix(parser, def.flags[0])) {
     ap_error_set(err, AP_ERR_INVALID_DEFINITION, name_or_flags,
                  "positional argument must be a single non-flag token");
     arg_def_free(&def);
@@ -731,8 +761,8 @@ ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
   size_t prog_len;
   int i;
 
-  if (!parser || !name || name[0] == '\0' || ap_starts_with_dash(name) ||
-      strchr(name, ' ') != NULL) {
+  if (!parser || !name || name[0] == '\0' ||
+      ap_token_has_prefix(parser, name) || strchr(name, ' ') != NULL) {
     ap_error_set(err, AP_ERR_INVALID_DEFINITION, name ? name : "",
                  "subcommand name must be a single non-flag token");
     return NULL;
@@ -766,6 +796,9 @@ ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
     ap_parser_options child_options = ap_parser_options_default();
     child_options.completion_enabled = parser->completion_enabled;
     child_options.completion_entrypoint = parser->completion_entrypoint;
+    child_options.prefix_chars = parser->prefix_chars;
+    child_options.allow_abbrev = parser->allow_abbrev;
+    child_options.fromfile_prefix_chars = parser->fromfile_prefix_chars;
     def.parser = parser_alloc(prog, description ? description : "", name,
                               parser, child_options);
   }
@@ -832,7 +865,7 @@ static int find_subcommand_arg_index(const ap_parser *parser, int argc,
       continue;
     }
 
-    if (!positional_only && ap_starts_with_dash(token)) {
+    if (!positional_only && ap_token_has_prefix(parser, token)) {
       const char *eq = strchr(token, '=');
       for (j = 0; j < parser->defs_count; j++) {
         const ap_arg_def *def = &parser->defs[j];
@@ -858,7 +891,7 @@ static int find_subcommand_arg_index(const ap_parser *parser, int argc,
                      (def->opts.action == AP_ACTION_STORE ||
                       def->opts.action == AP_ACTION_APPEND) &&
                      def->opts.nargs == AP_NARGS_OPTIONAL && i + 1 < argc &&
-                     !ap_starts_with_dash(argv[i + 1])) {
+                     !ap_token_has_prefix(parser, argv[i + 1])) {
             i++;
           } else if (!inline_match &&
                      (def->opts.action == AP_ACTION_STORE ||
@@ -871,7 +904,7 @@ static int find_subcommand_arg_index(const ap_parser *parser, int argc,
                      (def->opts.nargs == AP_NARGS_ZERO_OR_MORE ||
                       def->opts.nargs == AP_NARGS_ONE_OR_MORE)) {
             while (i + 1 < argc && strcmp(argv[i + 1], "--") != 0 &&
-                   !ap_starts_with_dash(argv[i + 1])) {
+                   !ap_token_has_prefix(parser, argv[i + 1])) {
               i++;
             }
           }
@@ -1074,6 +1107,98 @@ static int add_subcommand_path_entry(ap_namespace *ns, const char *name,
   return add_string_entry(ns, "subcommand_path", name, err);
 }
 
+static int read_fromfile_tokens(ap_strvec *out_tokens, const char *path,
+                                ap_error *err) {
+  FILE *fp;
+  char line[1024];
+  if (!out_tokens || !path) {
+    return -1;
+  }
+  fp = fopen(path, "r");
+  if (!fp) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, path,
+                 "failed to open args file '%s'", path);
+    return -1;
+  }
+  while (fgets(line, sizeof(line), fp) != NULL) {
+    char *cursor = line;
+    while (*cursor != '\0') {
+      char *start;
+      while (*cursor != '\0' && isspace((unsigned char)*cursor)) {
+        cursor++;
+      }
+      if (*cursor == '\0') {
+        break;
+      }
+      if (*cursor == '#') {
+        break;
+      }
+      start = cursor;
+      while (*cursor != '\0' && !isspace((unsigned char)*cursor)) {
+        cursor++;
+      }
+      if (cursor > start) {
+        char *token = ap_strndup(start, (size_t)(cursor - start));
+        if (!token || ap_strvec_push(out_tokens, token) != 0) {
+          free(token);
+          fclose(fp);
+          ap_error_set(err, AP_ERR_NO_MEMORY, path, "out of memory");
+          return -1;
+        }
+      }
+    }
+  }
+  fclose(fp);
+  return 0;
+}
+
+static int expand_fromfile_argv(const ap_parser *parser, int argc, char **argv,
+                                ap_strvec *owned_tokens, char ***out_argv,
+                                int *out_argc, ap_error *err) {
+  int i;
+  const char *prefixes = NULL;
+  if (!owned_tokens || !out_argv || !out_argc) {
+    return -1;
+  }
+  *out_argv = argv;
+  *out_argc = argc;
+  if (!parser || !parser->fromfile_prefix_chars ||
+      parser->fromfile_prefix_chars[0] == '\0') {
+    return 0;
+  }
+  prefixes = parser->fromfile_prefix_chars;
+  for (i = 1; i < argc; i++) {
+    const char *token = argv[i];
+    if (token && token[0] != '\0' && strchr(prefixes, token[0]) != NULL &&
+        token[1] != '\0') {
+      if (read_fromfile_tokens(owned_tokens, token + 1, err) != 0) {
+        return -1;
+      }
+    } else {
+      char *copy = ap_strdup(token ? token : "");
+      if (!copy || ap_strvec_push(owned_tokens, copy) != 0) {
+        free(copy);
+        ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+        return -1;
+      }
+    }
+  }
+  if (owned_tokens->count > 0) {
+    char **expanded = calloc((size_t)owned_tokens->count + 1, sizeof(char *));
+    if (!expanded) {
+      ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+      return -1;
+    }
+    expanded[0] = argv[0];
+    for (i = 0; i < owned_tokens->count; i++) {
+      expanded[i + 1] = owned_tokens->items[i];
+    }
+    *out_argv = expanded;
+    *out_argc = owned_tokens->count + 1;
+  }
+  return 0;
+}
+
 static int parse_internal(ap_parser *parser, int argc, char **argv,
                           bool allow_unknown, ap_namespace **out_ns,
                           char ***out_unknown_args, int *out_unknown_count,
@@ -1087,6 +1212,10 @@ static int parse_internal(ap_parser *parser, int argc, char **argv,
   int sub_unknown_count = 0;
   int subcommand_arg_index = -1;
   int subcommand_index = -1;
+  ap_strvec expanded_tokens;
+  char **effective_argv = argv;
+  int effective_argc = argc;
+  char **expanded_argv = NULL;
   int rc;
 
   if (!parser || !out_ns) {
@@ -1097,6 +1226,7 @@ static int parse_internal(ap_parser *parser, int argc, char **argv,
 
   memset(&positionals, 0, sizeof(positionals));
   memset(&unknown_args, 0, sizeof(unknown_args));
+  memset(&expanded_tokens, 0, sizeof(expanded_tokens));
   *out_ns = NULL;
   if (out_unknown_args) {
     *out_unknown_args = NULL;
@@ -1105,16 +1235,23 @@ static int parse_internal(ap_parser *parser, int argc, char **argv,
     *out_unknown_count = 0;
   }
 
-  rc = find_subcommand_arg_index(parser, argc, argv, &subcommand_arg_index,
-                                 &subcommand_index);
+  rc = expand_fromfile_argv(parser, argc, argv, &expanded_tokens,
+                            &effective_argv, &effective_argc, err);
+  if (rc != 0) {
+    goto done;
+  }
+  expanded_argv = effective_argv != argv ? effective_argv : NULL;
+
+  rc = find_subcommand_arg_index(parser, effective_argc, effective_argv,
+                                 &subcommand_arg_index, &subcommand_index);
   if (rc != 0) {
     goto done;
   }
 
-  rc = ap_parser_parse(parser,
-                       subcommand_arg_index >= 0 ? subcommand_arg_index : argc,
-                       argv, allow_unknown, &parsed, &positionals,
-                       allow_unknown ? &unknown_args : NULL, err);
+  rc = ap_parser_parse(
+      parser, subcommand_arg_index >= 0 ? subcommand_arg_index : effective_argc,
+      effective_argv, allow_unknown, &parsed, &positionals,
+      allow_unknown ? &unknown_args : NULL, err);
   if (rc != 0) {
     goto done;
   }
@@ -1131,9 +1268,9 @@ static int parse_internal(ap_parser *parser, int argc, char **argv,
 
   if (subcommand_arg_index >= 0) {
     ap_parser *subparser = parser->subcommands[subcommand_index].parser;
-    rc = parse_internal(subparser, argc - subcommand_arg_index,
-                        argv + subcommand_arg_index, allow_unknown, &sub_ns,
-                        allow_unknown ? &sub_unknown_args : NULL,
+    rc = parse_internal(subparser, effective_argc - subcommand_arg_index,
+                        effective_argv + subcommand_arg_index, allow_unknown,
+                        &sub_ns, allow_unknown ? &sub_unknown_args : NULL,
                         allow_unknown ? &sub_unknown_count : NULL, err);
     if (rc != 0) {
       goto done;
@@ -1196,6 +1333,8 @@ done:
   ap_strvec_free(&positionals);
   ap_strvec_free(&unknown_args);
   ap_free_tokens(sub_unknown_args, sub_unknown_count);
+  free(expanded_argv);
+  ap_strvec_free(&expanded_tokens);
   ap_namespace_free(sub_ns);
   ap_namespace_free(ns);
   return rc;
@@ -1216,6 +1355,19 @@ int ap_parse_known_args(ap_parser *parser, int argc, char **argv,
   }
   return parse_internal(parser, argc, argv, true, out_ns, out_unknown_args,
                         out_unknown_count, err);
+}
+
+int ap_parse_intermixed_args(ap_parser *parser, int argc, char **argv,
+                             ap_namespace **out_ns, ap_error *err) {
+  return ap_parse_args(parser, argc, argv, out_ns, err);
+}
+
+int ap_parse_known_intermixed_args(ap_parser *parser, int argc, char **argv,
+                                   ap_namespace **out_ns,
+                                   char ***out_unknown_args,
+                                   int *out_unknown_count, ap_error *err) {
+  return ap_parse_known_args(parser, argc, argv, out_ns, out_unknown_args,
+                             out_unknown_count, err);
 }
 
 char *ap_format_usage(const ap_parser *parser) {
@@ -1468,7 +1620,8 @@ int ap_complete(const ap_parser *parser, int argc, char **argv,
     }
   }
 
-  if (!active_def && (positional_only || !ap_starts_with_dash(current_token))) {
+  if (!active_def &&
+      (positional_only || !ap_token_has_prefix(parser, current_token))) {
     active_def = ap_next_positional_def(active_parser, positional_count);
   }
 
@@ -1670,6 +1823,8 @@ void ap_parser_free(ap_parser *parser) {
   free(parser->description);
   free(parser->command_name);
   free(parser->completion_entrypoint);
+  free(parser->prefix_chars);
+  free(parser->fromfile_prefix_chars);
   free(parser);
 }
 
