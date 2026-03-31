@@ -94,6 +94,7 @@ See these runnable samples in this repository:
 - [`sample/example1.c`](sample/example1.c.md): minimal options + positionals + validation flow
 - [`sample/example_completion.c`](sample/example_completion.c.md): completion / manpage generation entrypoints
 - [`sample/example_subcommands.c`](sample/example_subcommands.c.md): nested subcommands and `subcommand_path`
+- [`sample/example_test_runner.c`](sample/example_test_runner.c.md): minimal sample for unit-test-style argument parsing verification
 
 For the walkthrough behind those examples, use GitHub Pages:
 

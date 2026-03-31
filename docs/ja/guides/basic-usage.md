@@ -75,3 +75,22 @@ char *help = ap_format_help(parser);
 printf("%s", help);
 free(help);
 ```
+
+## サンプル: `example_test_runner`
+
+`sample/example_test_runner.c` は、引数パースの成功/失敗ケースを
+単体テスト風に検証する最小サンプルです。
+
+ビルドと実行:
+
+```bash
+cmake --build build --target example_test_runner
+./build/sample/example_test_runner
+```
+
+期待される出力例（PASS/FAIL）:
+
+- `PASS: success case parsed --count=3 name=alice`
+- `PASS: invalid-int case failed as expected`
+- `PASS: missing-positional case failed as expected`
+- `PASS: all tests passed`

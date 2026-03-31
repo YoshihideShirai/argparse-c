@@ -76,6 +76,13 @@ Python の `argparse` を使ったことがあれば、parser を作る、引数
 - shell completion 用の hidden `__complete` transport
 - 入力ミス時のわかりやすい validation error
 
+## リポジトリ内の実行可能サンプル
+
+- [`sample/example1.c`](./sample/example1.c): option / positional / 検証エラーの最小構成
+- [`sample/example_completion.c`](./sample/example_completion.c): completion と manpage 生成の入口
+- [`sample/example_subcommands.c`](./sample/example_subcommands.c): ネストした subcommand と `subcommand_path`
+- [`sample/example_test_runner.c`](./sample/example_test_runner.c): 引数パースを単体テスト風に検証する最小サンプル
+
 ## 最小サンプル
 
 ```c
