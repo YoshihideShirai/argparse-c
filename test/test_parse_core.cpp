@@ -846,6 +846,45 @@ TEST(ParseArgsAllowsOnlyExpectedPositionalsAfterDoubleDashBoundary) {
   ap_parser_free(p);
 }
 
+TEST(
+    ParseArgsDoubleDashTreatsDashPrefixedTokensAsPositionalsInMixedNargsLayout) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options extras = ap_arg_options_default();
+  ap_arg_options pair = ap_arg_options_default();
+  const char *target_value = NULL;
+  char *argv[] = {(char *)"prog",
+                  (char *)"--",
+                  (char *)"--as-data",
+                  (char *)"left",
+                  (char *)"right",
+                  (char *)"dest.out",
+                  NULL};
+
+  CHECK(p != NULL);
+  extras.nargs = AP_NARGS_ZERO_OR_MORE;
+  extras.action = AP_ACTION_APPEND;
+  pair.nargs = AP_NARGS_FIXED;
+  pair.nargs_count = 2;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "extras", extras, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "pair", pair, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "target", ap_arg_options_default(), &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 6, argv, &ns, &err));
+  LONGS_EQUAL(1, ap_ns_get_count(ns, "extras"));
+  STRCMP_EQUAL("--as-data", ap_ns_get_string_at(ns, "extras", 0));
+  LONGS_EQUAL(2, ap_ns_get_count(ns, "pair"));
+  STRCMP_EQUAL("left", ap_ns_get_string_at(ns, "pair", 0));
+  STRCMP_EQUAL("right", ap_ns_get_string_at(ns, "pair", 1));
+  CHECK(ap_ns_get_string(ns, "target", &target_value));
+  STRCMP_EQUAL("dest.out", target_value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
 TEST(ParseArgsHandlesLongMixedSequenceWithOptionalPositionalAndFixedTail) {
   ap_error err = {};
   ap_namespace *ns = NULL;
