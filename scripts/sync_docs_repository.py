@@ -22,6 +22,7 @@ README_MD_REPLACEMENTS = [
     ("(./sample/example_subcommands.c)", "(sample/example_subcommands.c.md)"),
     ("(./sample/example_manpage.c)", "(sample/example_manpage.c.md)"),
     ("(./sample/example_introspection.c)", "(sample/example_introspection.c.md)"),
+    ("(./sample/example_test_runner.c)", "(sample/example_test_runner.c.md)"),
     ("(./docs/en/index.md)", f"({PAGES_BASE_URL}/en/)"),
     ("(./docs/en/getting-started.md)", f"({PAGES_BASE_URL}/en/getting-started/)"),
     ("(./docs/en/guides/)", f"({PAGES_BASE_URL}/en/guides/)"),
@@ -64,6 +65,10 @@ README_MD_REPLACEMENTS = [
 README_JA_MD_REPLACEMENTS = [
     ("(./README.md)", "(README.md)"),
     ("(./docs/repository/assets/argparse-c-demo.gif)", "(assets/argparse-c-demo.gif)"),
+    ("(./sample/example1.c)", "(sample/example1.c.md)"),
+    ("(./sample/example_completion.c)", "(sample/example_completion.c.md)"),
+    ("(./sample/example_subcommands.c)", "(sample/example_subcommands.c.md)"),
+    ("(./sample/example_test_runner.c)", "(sample/example_test_runner.c.md)"),
     ("(./docs/ja/index.md)", f"({PAGES_BASE_URL}/ja/)"),
     ("(./docs/ja/getting-started.md)", f"({PAGES_BASE_URL}/ja/getting-started/)"),
     ("(./docs/ja/guides/)", f"({PAGES_BASE_URL}/ja/guides/)"),

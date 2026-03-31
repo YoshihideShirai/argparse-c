@@ -75,3 +75,23 @@ char *help = ap_format_help(parser);
 printf("%s", help);
 free(help);
 ```
+
+## Sample: `example_test_runner`
+
+`sample/example_test_runner.c` is a minimal sample that verifies argument
+parsing behavior in a unit-test-like style (success and failure cases in one
+small program).
+
+Build and run:
+
+```bash
+cmake --build build --target example_test_runner
+./build/sample/example_test_runner
+```
+
+Expected output includes PASS lines for each case, for example:
+
+- `PASS: success case parsed --count=3 name=alice`
+- `PASS: invalid-int case failed as expected`
+- `PASS: missing-positional case failed as expected`
+- `PASS: all tests passed`
