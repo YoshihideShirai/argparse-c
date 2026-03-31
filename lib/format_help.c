@@ -347,8 +347,10 @@ char *ap_usage_build(const ap_parser *parser) {
 char *ap_help_build(const ap_parser *parser) {
   ap_string_builder sb;
   int i;
+  int j;
   bool has_positionals = false;
   bool has_optionals = false;
+  bool has_argument_groups = false;
   bool has_subcommands = false;
 
   if (!parser) {
@@ -378,6 +380,10 @@ char *ap_help_build(const ap_parser *parser) {
   }
 
   for (i = 0; i < parser->defs_count; i++) {
+    if (parser->defs[i].arg_group_index >= 0) {
+      has_argument_groups = true;
+      continue;
+    }
     if (parser->defs[i].is_optional) {
       has_optionals = true;
     } else {
@@ -392,7 +398,7 @@ char *ap_help_build(const ap_parser *parser) {
       return NULL;
     }
     for (i = 0; i < parser->defs_count; i++) {
-      if (!parser->defs[i].is_optional &&
+      if (parser->defs[i].arg_group_index < 0 && !parser->defs[i].is_optional &&
           append_help_line(&sb, &parser->defs[i]) != 0) {
         ap_sb_free(&sb);
         return NULL;
@@ -406,10 +412,33 @@ char *ap_help_build(const ap_parser *parser) {
       return NULL;
     }
     for (i = 0; i < parser->defs_count; i++) {
-      if (parser->defs[i].is_optional &&
+      if (parser->defs[i].arg_group_index < 0 && parser->defs[i].is_optional &&
           append_help_line(&sb, &parser->defs[i]) != 0) {
         ap_sb_free(&sb);
         return NULL;
+      }
+    }
+  }
+
+  if (has_argument_groups) {
+    for (i = 0; i < parser->arg_groups_count; i++) {
+      if (ap_sb_appendf(&sb, "\n%s:\n", parser->arg_groups[i].title) != 0) {
+        ap_sb_free(&sb);
+        return NULL;
+      }
+      if (parser->arg_groups[i].description &&
+          parser->arg_groups[i].description[0] != '\0' &&
+          ap_sb_appendf(&sb, "  %s\n", parser->arg_groups[i].description) !=
+              0) {
+        ap_sb_free(&sb);
+        return NULL;
+      }
+      for (j = 0; j < parser->defs_count; j++) {
+        if (parser->defs[j].arg_group_index == i &&
+            append_help_line(&sb, &parser->defs[j]) != 0) {
+          ap_sb_free(&sb);
+          return NULL;
+        }
       }
     }
   }

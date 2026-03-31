@@ -26,6 +26,7 @@ typedef struct {
   int flags_count;
   ap_arg_options opts;
   int mutex_group_index;
+  int arg_group_index;
 } ap_arg_def;
 
 typedef struct ap_subcommand_def {
@@ -38,6 +39,20 @@ struct ap_mutually_exclusive_group {
   struct ap_parser *parser;
   int index;
 };
+
+struct ap_argument_group {
+  struct ap_parser *parser;
+  int index;
+};
+
+typedef struct {
+  char *title;
+  char *description;
+  int *arg_indexes;
+  int arg_count;
+  int arg_cap;
+  struct ap_argument_group handle;
+} ap_arg_group_def;
 
 typedef struct {
   bool required;
@@ -63,6 +78,9 @@ struct ap_parser {
   ap_mutex_group_def *mutex_groups;
   int mutex_groups_count;
   int mutex_groups_cap;
+  ap_arg_group_def *arg_groups;
+  int arg_groups_count;
+  int arg_groups_cap;
   ap_subcommand_def *subcommands;
   int subcommands_count;
   int subcommands_cap;

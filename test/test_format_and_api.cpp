@@ -462,6 +462,11 @@ TEST(ApiGuardsRejectMissingParserPointers) {
   LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
   STRCMP_EQUAL("", err.argument);
   STRCMP_EQUAL("parser is required", err.message);
+
+  CHECK(ap_add_argument_group(NULL, "grp", "desc", &err) == NULL);
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("", err.argument);
+  STRCMP_EQUAL("parser and title are required", err.message);
 }
 
 TEST(ParserCompletionApiRejectsMissingParser) {
@@ -722,6 +727,59 @@ TEST(MutuallyExclusiveGroupRejectsConflicts) {
 
   LONGS_EQUAL(-1, ap_parse_args(p, 3, argv, &ns, &err));
 
+  ap_parser_free(p);
+}
+
+TEST(ArgumentGroupApiRejectsInvalidInputs) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_argument_group *group = NULL;
+
+  CHECK(p != NULL);
+
+  CHECK(ap_add_argument_group(p, NULL, "desc", &err) == NULL);
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("parser and title are required", err.message);
+
+  group = ap_add_argument_group(p, "output", "output controls", &err);
+  CHECK(group != NULL);
+
+  LONGS_EQUAL(-1, ap_argument_group_add_argument(
+                      NULL, "--color", ap_arg_options_default(), &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("group is required", err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(ArgumentGroupAddArgumentParsesLikeRegularArguments) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_argument_group *group = NULL;
+  ap_arg_options color = ap_arg_options_default();
+  ap_arg_options target = ap_arg_options_default();
+  const char *parsed_color = NULL;
+  const char *parsed_target = NULL;
+  char *argv[] = {(char *)"prog", (char *)"--color", (char *)"always",
+                  (char *)"dst.txt", NULL};
+
+  CHECK(p != NULL);
+  group = ap_add_argument_group(p, "output", "output controls", &err);
+  CHECK(group != NULL);
+
+  color.help = "color mode";
+  target.help = "target file";
+  LONGS_EQUAL(0, ap_argument_group_add_argument(group, "--color", color, &err));
+  LONGS_EQUAL(0, ap_argument_group_add_argument(group, "target", target, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 4, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "color", &parsed_color));
+  CHECK(ap_ns_get_string(ns, "target", &parsed_target));
+  STRCMP_EQUAL("always", parsed_color);
+  STRCMP_EQUAL("dst.txt", parsed_target);
+
+  ap_namespace_free(ns);
   ap_parser_free(p);
 }
 

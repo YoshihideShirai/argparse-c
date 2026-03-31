@@ -262,6 +262,16 @@ This document is generated from `include/argparse-c.h` via `scripts/sync_api_spe
 
 ## Other APIs
 
+### `ap_add_argument_group`
+- Signature: `ap_argument_group * ap_add_argument_group(ap_parser * parser, const char * title, const char * description, ap_error * err)`
+- Success/Failure: success: `non-NULL` / failure: `NULL`. Pointer-returning APIs use NULL as failure sentinel.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_argument_group_add_argument`
+- Signature: `int ap_argument_group_add_argument(ap_argument_group * group, const char * name_or_flags, ap_arg_options options, ap_error * err)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
 ### `ap_parse_intermixed_args`
 - Signature: `int ap_parse_intermixed_args(ap_parser * parser, int argc, char ** argv, ap_namespace ** out_ns, ap_error * err)`
 - Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.

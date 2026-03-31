@@ -262,6 +262,16 @@
 
 ## その他の API
 
+### `ap_add_argument_group`
+- シグネチャ: `ap_argument_group * ap_add_argument_group(ap_parser * parser, const char * title, const char * description, ap_error * err)`
+- 成功/失敗: 成功: `non-NULL` / 失敗: `NULL`。ポインタ戻り値 API は NULL を失敗値として使います。
+- 所有権 / 解放責務: free 関数指定なし。戻り値で新規所有権の移譲はありません。
+
+### `ap_argument_group_add_argument`
+- シグネチャ: `int ap_argument_group_add_argument(ap_argument_group * group, const char * name_or_flags, ap_arg_options options, ap_error * err)`
+- 成功/失敗: 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。
+- 所有権 / 解放責務: free 関数指定なし。戻り値で新規所有権の移譲はありません。
+
 ### `ap_parse_intermixed_args`
 - シグネチャ: `int ap_parse_intermixed_args(ap_parser * parser, int argc, char ** argv, ap_namespace ** out_ns, ap_error * err)`
 - 成功/失敗: 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。
