@@ -1551,6 +1551,150 @@ TEST(ParseArgsNoMemoryLeavesOutNsNullAndParserCanBeReused) {
   ap_parser_free(p);
 }
 
+TEST(ParserNewWithOptionsNoMemoryCanRetryAndRemainUsable) {
+  AllocFailGuard guard;
+  if (!test_alloc_injection_available()) {
+    CHECK_TRUE(true);
+    return;
+  }
+
+  ap_parser_options options = ap_parser_options_default();
+  ap_parser *p = NULL;
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_arg_options mode = ap_arg_options_default();
+  const char *value = NULL;
+  bool saw_allocation_failure = false;
+  char *argv[] = {(char *)"prog", (char *)"--mode", (char *)"fast", NULL};
+
+  options.completion_entrypoint = "__custom_complete";
+
+  for (int nth = 1; nth <= 64; nth++) {
+    test_alloc_fail_on_nth(nth);
+    p = ap_parser_new_with_options("prog", "desc", options);
+    if (p == NULL) {
+      saw_allocation_failure = true;
+      break;
+    }
+    ap_parser_free(p);
+    p = NULL;
+  }
+  CHECK(saw_allocation_failure);
+
+  test_alloc_fail_disable();
+  p = ap_parser_new_with_options("prog", "desc", options);
+  CHECK(p != NULL);
+  STRCMP_EQUAL("__custom_complete", ap_parser_completion_entrypoint(p));
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "mode", &value));
+  STRCMP_EQUAL("fast", value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(AddSubcommandNoMemoryLeavesParentStateAndCanRetry) {
+  AllocFailGuard guard;
+  if (!test_alloc_injection_available()) {
+    CHECK_TRUE(true);
+    return;
+  }
+
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *child = NULL;
+  bool saw_no_memory = false;
+  int count_before = 0;
+
+  CHECK(p != NULL);
+  count_before = ((const ap_parser *)p)->subcommands_count;
+
+  for (int nth = 1; nth <= 16; nth++) {
+    test_alloc_fail_on_nth(nth);
+    child = ap_add_subcommand(p, "config", "config commands", &err);
+    if (child == NULL && err.code == AP_ERR_NO_MEMORY) {
+      saw_no_memory = true;
+      LONGS_EQUAL(count_before, ((const ap_parser *)p)->subcommands_count);
+      break;
+    }
+    if (child != NULL) {
+      ap_parser_free(p);
+      p = ap_parser_new("prog", "desc");
+      CHECK(p != NULL);
+      count_before = ((const ap_parser *)p)->subcommands_count;
+    }
+  }
+  CHECK(saw_no_memory);
+
+  test_alloc_fail_disable();
+  child = ap_add_subcommand(p, "config", "config commands", &err);
+  CHECK(child != NULL);
+  LONGS_EQUAL(count_before + 1, ((const ap_parser *)p)->subcommands_count);
+  CHECK(child->parent == p);
+
+  ap_parser_free(p);
+}
+
+TEST(TryHandleCompletionNoMemoryCanRetryAndSucceed) {
+  AllocFailGuard guard;
+  if (!test_alloc_injection_available()) {
+    CHECK_TRUE(true);
+    return;
+  }
+
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  const char *modes[] = {"fast", "slow"};
+  ap_completion_result result = {};
+  int handled = 0;
+  bool saw_no_memory = false;
+  char arg0[] = "prog";
+  char arg1[] = "__complete";
+  char arg2[] = "--shell";
+  char arg3[] = "bash";
+  char arg4[] = "--";
+  char arg5[] = "--mode";
+  char arg6[] = "s";
+  char *argv[] = {arg0, arg1, arg2, arg3, arg4, arg5, arg6};
+
+  CHECK(p != NULL);
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  for (int nth = 1; nth <= 64; nth++) {
+    test_alloc_fail_on_nth(nth);
+    handled = 0;
+    ap_completion_result_init(&result);
+    if (ap_try_handle_completion(p, 7, argv, "bash", &handled, &result, &err) ==
+            -1 &&
+        err.code == AP_ERR_NO_MEMORY) {
+      saw_no_memory = true;
+      LONGS_EQUAL(1, handled);
+      ap_completion_result_free(&result);
+      break;
+    }
+    ap_completion_result_free(&result);
+  }
+  CHECK(saw_no_memory);
+
+  test_alloc_fail_disable();
+  handled = 0;
+  ap_completion_result_init(&result);
+  LONGS_EQUAL(
+      0, ap_try_handle_completion(p, 7, argv, "bash", &handled, &result, &err));
+  LONGS_EQUAL(1, handled);
+  LONGS_EQUAL(2, result.count);
+  STRCMP_EQUAL("fast", result.items[0].value);
+  STRCMP_EQUAL("slow", result.items[1].value);
+
+  ap_completion_result_free(&result);
+  ap_parser_free(p);
+}
+
 TEST(ParserCompletionIsEnabledByDefaultAndHelperHandlesRequests) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");

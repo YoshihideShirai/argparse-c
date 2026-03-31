@@ -617,6 +617,41 @@ TEST(ParseKnownArgsCollectsAllTokensAfterDoubleDashInOrder) {
   ap_parser_free(p);
 }
 
+TEST(ParseKnownArgsMixedUnknownKnownAndDoubleDashPreservesStrictOrder) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = new_base_parser();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  const char *text = NULL;
+  const char *input = NULL;
+  int32_t num = 0;
+  char *argv[] = {
+      (char *)"prog",  (char *)"--u-pre",  (char *)"pv", (char *)"-t",
+      (char *)"hello", (char *)"file.txt", (char *)"--", (char *)"--u-post",
+      (char *)"-n",    (char *)"99",       NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 10, argv, &ns, &unknown, &unknown_count, &err));
+  LONGS_EQUAL(5, unknown_count);
+  STRCMP_EQUAL("--u-pre", unknown[0]);
+  STRCMP_EQUAL("pv", unknown[1]);
+  STRCMP_EQUAL("--u-post", unknown[2]);
+  STRCMP_EQUAL("-n", unknown[3]);
+  STRCMP_EQUAL("99", unknown[4]);
+
+  CHECK(ap_ns_get_string(ns, "text", &text));
+  CHECK(ap_ns_get_string(ns, "input", &input));
+  CHECK(!ap_ns_get_int32(ns, "num", &num));
+  STRCMP_EQUAL("hello", text);
+  STRCMP_EQUAL("file.txt", input);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
 TEST(
     ParseKnownArgsCollectsAlternatingUnknownValueKnownSegmentsAcrossLongSequence) {
   ap_error err = {};
