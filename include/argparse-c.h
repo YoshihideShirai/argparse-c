@@ -73,6 +73,7 @@ typedef enum {
 typedef struct ap_completion_request ap_completion_request;
 typedef struct ap_completion_result ap_completion_result;
 typedef struct ap_parser ap_parser;
+typedef struct ap_argument_group ap_argument_group;
 typedef struct ap_mutually_exclusive_group ap_mutually_exclusive_group;
 typedef struct ap_namespace ap_namespace;
 
@@ -176,6 +177,9 @@ bool ap_parser_completion_enabled(const ap_parser *parser);
 const char *ap_parser_completion_entrypoint(const ap_parser *parser);
 ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
                              const char *description, ap_error *err);
+ap_argument_group *ap_add_argument_group(ap_parser *parser, const char *title,
+                                         const char *description,
+                                         ap_error *err);
 ap_mutually_exclusive_group *ap_add_mutually_exclusive_group(ap_parser *parser,
                                                              bool required,
                                                              ap_error *err);
@@ -186,6 +190,9 @@ int ap_add_argument(ap_parser *parser, const char *name_or_flags,
 int ap_group_add_argument(ap_mutually_exclusive_group *group,
                           const char *name_or_flags, ap_arg_options options,
                           ap_error *err);
+int ap_argument_group_add_argument(ap_argument_group *group,
+                                   const char *name_or_flags,
+                                   ap_arg_options options, ap_error *err);
 
 int ap_parse_args(ap_parser *parser, int argc, char **argv,
                   ap_namespace **out_ns, ap_error *err);

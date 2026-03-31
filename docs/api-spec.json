@@ -2,7 +2,7 @@
   "$schema": "./api-spec.schema.json",
   "spec_version": "1.0.0",
   "source_header": "include/argparse-c.h",
-  "function_count": 49,
+  "function_count": 51,
   "functions": [
     {
       "name": "ap_parser_new",
@@ -179,6 +179,41 @@
       }
     },
     {
+      "name": "ap_add_argument_group",
+      "return_type": "ap_argument_group *",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "ap_parser *"
+        },
+        {
+          "name": "title",
+          "type": "const char *"
+        },
+        {
+          "name": "description",
+          "type": "const char *"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "non-NULL",
+        "failure_return": "NULL",
+        "notes_en": "Pointer-returning APIs use NULL as failure sentinel.",
+        "notes_ja": "ポインタ戻り値 API は NULL を失敗値として使います。"
+      }
+    },
+    {
       "name": "ap_add_mutually_exclusive_group",
       "return_type": "ap_mutually_exclusive_group *",
       "parameters": [
@@ -274,6 +309,41 @@
         {
           "name": "group",
           "type": "ap_mutually_exclusive_group *"
+        },
+        {
+          "name": "name_or_flags",
+          "type": "const char *"
+        },
+        {
+          "name": "options",
+          "type": "ap_arg_options"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_argument_group_add_argument",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "group",
+          "type": "ap_argument_group *"
         },
         {
           "name": "name_or_flags",

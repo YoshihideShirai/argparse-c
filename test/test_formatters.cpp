@@ -1829,6 +1829,38 @@ TEST(FormatHelpAndUsageTolerateUnexpectedInternalNargsValues) {
   ap_parser_free(p);
 }
 
+TEST(FormatHelpRendersCustomArgumentGroups) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("tool", "desc");
+  ap_argument_group *output = NULL;
+  ap_arg_options color = ap_arg_options_default();
+  ap_arg_options target = ap_arg_options_default();
+  char *help = NULL;
+
+  CHECK(p != NULL);
+  output = ap_add_argument_group(p, "output", "output controls", &err);
+  CHECK(output != NULL);
+
+  color.help = "color mode";
+  target.help = "target file";
+  LONGS_EQUAL(0,
+              ap_argument_group_add_argument(output, "--color", color, &err));
+  LONGS_EQUAL(0,
+              ap_argument_group_add_argument(output, "target", target, &err));
+
+  help = ap_format_help(p);
+  CHECK(help != NULL);
+  CHECK(strstr(help, "\noutput:\n") != NULL);
+  CHECK(strstr(help, "  output controls\n") != NULL);
+  CHECK(strstr(help, "  --color COLOR\n    color mode\n") != NULL);
+  CHECK(strstr(help, "  TARGET\n    target file\n") != NULL);
+  CHECK(strstr(help, "optional arguments:\n") != NULL);
+  CHECK(strstr(help, "positional arguments:\n") == NULL);
+
+  free(help);
+  ap_parser_free(p);
+}
+
 TEST(StringBuilderHelpersRejectNullInputs) {
   ap_string_builder sb = {};
 

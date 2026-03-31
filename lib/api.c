@@ -52,7 +52,40 @@ static int ensure_mutex_groups_capacity(ap_parser *parser) {
   return 0;
 }
 
+static int ensure_arg_groups_capacity(ap_parser *parser) {
+  if (parser->arg_groups_count < parser->arg_groups_cap) {
+    return 0;
+  }
+  int next_cap = parser->arg_groups_cap == 0 ? 4 : parser->arg_groups_cap * 2;
+  ap_arg_group_def *next =
+      realloc(parser->arg_groups, sizeof(ap_arg_group_def) * (size_t)next_cap);
+  if (!next) {
+    return -1;
+  }
+  parser->arg_groups = next;
+  parser->arg_groups_cap = next_cap;
+  return 0;
+}
+
 static int mutex_group_push_arg(ap_mutex_group_def *group, int arg_index) {
+  int *next;
+  int next_cap;
+  if (group->arg_count < group->arg_cap) {
+    group->arg_indexes[group->arg_count++] = arg_index;
+    return 0;
+  }
+  next_cap = group->arg_cap == 0 ? 4 : group->arg_cap * 2;
+  next = realloc(group->arg_indexes, sizeof(int) * (size_t)next_cap);
+  if (!next) {
+    return -1;
+  }
+  group->arg_indexes = next;
+  group->arg_cap = next_cap;
+  group->arg_indexes[group->arg_count++] = arg_index;
+  return 0;
+}
+
+static int argument_group_push_arg(ap_arg_group_def *group, int arg_index) {
   int *next;
   int next_cap;
   if (group->arg_count < group->arg_cap) {
@@ -641,6 +674,7 @@ int ap_add_argument(ap_parser *parser, const char *name_or_flags,
   memset(&def, 0, sizeof(def));
   def.is_optional = ap_token_has_prefix(parser, name_or_flags);
   def.mutex_group_index = -1;
+  def.arg_group_index = -1;
 
   if (split_flags(name_or_flags, &def.flags, &def.flags_count) != 0) {
     ap_error_set(err, AP_ERR_INVALID_DEFINITION, name_or_flags,
@@ -730,6 +764,38 @@ ap_mutually_exclusive_group *ap_add_mutually_exclusive_group(ap_parser *parser,
   return &def->handle;
 }
 
+ap_argument_group *ap_add_argument_group(ap_parser *parser, const char *title,
+                                         const char *description,
+                                         ap_error *err) {
+  ap_arg_group_def *def;
+
+  if (!parser || !title || title[0] == '\0') {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "",
+                 "parser and title are required");
+    return NULL;
+  }
+  if (ensure_arg_groups_capacity(parser) != 0) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+    return NULL;
+  }
+  def = &parser->arg_groups[parser->arg_groups_count];
+  memset(def, 0, sizeof(*def));
+  def->title = ap_strdup(title);
+  def->description = ap_strdup(description ? description : "");
+  if (!def->title || !def->description) {
+    free(def->title);
+    free(def->description);
+    def->title = NULL;
+    def->description = NULL;
+    ap_error_set(err, AP_ERR_NO_MEMORY, title, "out of memory");
+    return NULL;
+  }
+  def->handle.parser = parser;
+  def->handle.index = parser->arg_groups_count;
+  parser->arg_groups_count++;
+  return &def->handle;
+}
+
 int ap_group_add_argument(ap_mutually_exclusive_group *group,
                           const char *name_or_flags, ap_arg_options options,
                           ap_error *err) {
@@ -747,6 +813,30 @@ int ap_group_add_argument(ap_mutually_exclusive_group *group,
   }
   parser->defs[arg_index].mutex_group_index = group->index;
   if (mutex_group_push_arg(&parser->mutex_groups[group->index], arg_index) !=
+      0) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, name_or_flags, "out of memory");
+    return -1;
+  }
+  return 0;
+}
+
+int ap_argument_group_add_argument(ap_argument_group *group,
+                                   const char *name_or_flags,
+                                   ap_arg_options options, ap_error *err) {
+  ap_parser *parser;
+  int arg_index;
+
+  if (!group || !group->parser) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, "", "group is required");
+    return -1;
+  }
+  parser = group->parser;
+  arg_index = parser->defs_count;
+  if (ap_add_argument(parser, name_or_flags, options, err) != 0) {
+    return -1;
+  }
+  parser->defs[arg_index].arg_group_index = group->index;
+  if (argument_group_push_arg(&parser->arg_groups[group->index], arg_index) !=
       0) {
     ap_error_set(err, AP_ERR_NO_MEMORY, name_or_flags, "out of memory");
     return -1;
@@ -1813,6 +1903,12 @@ void ap_parser_free(ap_parser *parser) {
     free(parser->mutex_groups[i].arg_indexes);
   }
   free(parser->mutex_groups);
+  for (i = 0; i < parser->arg_groups_count; i++) {
+    free(parser->arg_groups[i].title);
+    free(parser->arg_groups[i].description);
+    free(parser->arg_groups[i].arg_indexes);
+  }
+  free(parser->arg_groups);
   for (i = 0; i < parser->subcommands_count; i++) {
     free(parser->subcommands[i].name);
     free(parser->subcommands[i].help);
