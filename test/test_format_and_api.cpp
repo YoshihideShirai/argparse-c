@@ -1586,6 +1586,145 @@ TEST(ParserCompletionIsEnabledByDefaultAndHelperHandlesRequests) {
   ap_parser_free(p);
 }
 
+TEST(ParserCompletionHelperRejectsInvalidArguments) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_completion_result result = {};
+  int handled = 7;
+  char arg0[] = "prog";
+  char *argv[] = {arg0};
+
+  CHECK(p != NULL);
+
+  LONGS_EQUAL(-1, ap_try_handle_completion(NULL, 1, argv, "bash", &handled,
+                                           &result, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  LONGS_EQUAL(0, handled);
+
+  LONGS_EQUAL(
+      -1, ap_try_handle_completion(p, 1, argv, "bash", &handled, NULL, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  LONGS_EQUAL(0, handled);
+
+  LONGS_EQUAL(-1, ap_try_handle_completion(p, 1, NULL, "bash", &handled,
+                                           &result, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  LONGS_EQUAL(0, handled);
+
+  ap_parser_free(p);
+}
+
+TEST(ParserCompletionHelperReturnsNoOpWhenCompletionDisabled) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_completion_result result = {};
+  int handled = 9;
+  char arg0[] = "prog";
+  char arg1[] = "__complete";
+  char *argv[] = {arg0, arg1};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_parser_set_completion(p, false, NULL, &err));
+
+  LONGS_EQUAL(
+      0, ap_try_handle_completion(p, 2, argv, "bash", &handled, &result, &err));
+  LONGS_EQUAL(0, handled);
+  LONGS_EQUAL(0, result.count);
+  LONGS_EQUAL(0, err.code);
+
+  ap_completion_result_free(&result);
+  ap_parser_free(p);
+}
+
+TEST(ParserCompletionHelperReturnsNoOpWhenEntrypointDoesNotMatch) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_completion_result result = {};
+  int handled = 5;
+  char arg0[] = "prog";
+  char arg1[] = "run";
+  char *argv[] = {arg0, arg1};
+
+  CHECK(p != NULL);
+
+  LONGS_EQUAL(
+      0, ap_try_handle_completion(p, 2, argv, "bash", &handled, &result, &err));
+  LONGS_EQUAL(0, handled);
+  LONGS_EQUAL(0, result.count);
+  LONGS_EQUAL(0, err.code);
+
+  ap_completion_result_free(&result);
+  ap_parser_free(p);
+}
+
+TEST(ParserCompletionHelperTracksHandledAcrossShellAndSeparatorVariants) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_completion_result with_shell_and_separator = {};
+  ap_completion_result with_shell_without_separator = {};
+  ap_completion_result without_shell_with_separator = {};
+  ap_completion_result without_shell_without_separator = {};
+  int handled = -1;
+  char a0[] = "prog";
+  char a1[] = "__complete";
+  char a2[] = "--shell";
+  char a3[] = "fish";
+  char a4[] = "--";
+  char *argv_with_shell_and_separator[] = {a0, a1, a2, a3, a4};
+  char b0[] = "prog";
+  char b1[] = "__complete";
+  char b2[] = "--shell";
+  char b3[] = "fish";
+  char *argv_with_shell_without_separator[] = {b0, b1, b2, b3};
+  char c0[] = "prog";
+  char c1[] = "__complete";
+  char c2[] = "--";
+  char *argv_without_shell_with_separator[] = {c0, c1, c2};
+  char d0[] = "prog";
+  char d1[] = "__complete";
+  char *argv_without_shell_without_separator[] = {d0, d1};
+
+  CHECK(p != NULL);
+
+  handled = -1;
+  LONGS_EQUAL(0, ap_try_handle_completion(p, 5, argv_with_shell_and_separator,
+                                          "bash", &handled,
+                                          &with_shell_and_separator, &err));
+  LONGS_EQUAL(1, handled);
+  LONGS_EQUAL(0, with_shell_and_separator.count);
+  LONGS_EQUAL(0, err.code);
+
+  handled = -1;
+  LONGS_EQUAL(0, ap_try_handle_completion(
+                     p, 4, argv_with_shell_without_separator, "bash", &handled,
+                     &with_shell_without_separator, &err));
+  LONGS_EQUAL(1, handled);
+  LONGS_EQUAL(0, with_shell_without_separator.count);
+  LONGS_EQUAL(0, err.code);
+
+  handled = -1;
+  LONGS_EQUAL(0, ap_try_handle_completion(
+                     p, 3, argv_without_shell_with_separator, "bash", &handled,
+                     &without_shell_with_separator, &err));
+  LONGS_EQUAL(1, handled);
+  LONGS_EQUAL(0, without_shell_with_separator.count);
+  LONGS_EQUAL(0, err.code);
+
+  handled = -1;
+  LONGS_EQUAL(0, ap_try_handle_completion(
+                     p, 2, argv_without_shell_without_separator, "bash",
+                     &handled, &without_shell_without_separator, &err));
+  LONGS_EQUAL(1, handled);
+  LONGS_EQUAL(0, without_shell_without_separator.count);
+  LONGS_EQUAL(0, err.code);
+
+  ap_completion_result_free(&with_shell_and_separator);
+  ap_completion_result_free(&with_shell_without_separator);
+  ap_completion_result_free(&without_shell_with_separator);
+  ap_completion_result_free(&without_shell_without_separator);
+  ap_parser_free(p);
+}
+
 TEST(ParserCompletionCanBeDisabledAndHelperIgnoresHiddenEntrypoint) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
