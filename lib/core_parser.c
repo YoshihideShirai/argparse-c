@@ -15,6 +15,9 @@ static bool action_allows_multiple_occurrences(ap_action action) {
 
 static int push_value(ap_parsed_arg *parsed, int def_index, const char *token,
                       ap_error *err);
+static int push_token(ap_parsed_arg *parsed, int def_index, const char *token,
+                      ap_error *err);
+static void free_parsed_storage(const ap_parser *parser, ap_parsed_arg *parsed);
 
 static int find_flag_index(const ap_parser *parser, const char *token) {
   int i;
@@ -128,6 +131,9 @@ static int parse_short_cluster(const ap_parser *parser, const char *token,
       return -1;
     }
     parsed[def_index].seen = true;
+    if (push_token(parsed, def_index, token, err) != 0) {
+      return -1;
+    }
     if (parser->defs[def_index].opts.action == AP_ACTION_COUNT &&
         push_value(parsed, def_index, "1", err) != 0) {
       return -1;
@@ -273,6 +279,33 @@ static int push_value(ap_parsed_arg *parsed, int def_index, const char *token,
     return -1;
   }
   return 0;
+}
+
+static int push_token(ap_parsed_arg *parsed, int def_index, const char *token,
+                      ap_error *err) {
+  char *copy = ap_strdup(token);
+  if (!copy) {
+    ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+    return -1;
+  }
+  if (ap_strvec_push(&parsed[def_index].tokens, copy) != 0) {
+    free(copy);
+    ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+    return -1;
+  }
+  return 0;
+}
+
+static void free_parsed_storage(const ap_parser *parser,
+                                ap_parsed_arg *parsed) {
+  int i;
+  if (!parser || !parsed) {
+    return;
+  }
+  for (i = 0; i < parser->defs_count; i++) {
+    ap_strvec_free(&parsed[i].tokens);
+    ap_strvec_free(&parsed[i].values);
+  }
 }
 
 static int consume_optional_values(const ap_parser *parser, int argc,
@@ -453,10 +486,7 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
         continue;
       }
       if (cluster_rc < 0) {
-        int k;
-        for (k = 0; k < parser->defs_count; k++) {
-          ap_strvec_free(&parsed[k].values);
-        }
+        free_parsed_storage(parser, parsed);
         free(positional_defs);
         free(parsed);
         return -1;
@@ -513,12 +543,12 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
                      "duplicate option '%s'", token);
         goto fail;
       }
+      if (push_token(parsed, def_index, token, err) != 0) {
+        goto fail;
+      }
       if (consume_optional_values(parser, argc, argv, &token_index, def_index,
                                   inline_value, parsed, err) != 0) {
-        int k;
-        for (k = 0; k < parser->defs_count; k++) {
-          ap_strvec_free(&parsed[k].values);
-        }
+        free_parsed_storage(parser, parsed);
         free(positional_defs);
         free(parsed);
         return -1;
@@ -529,10 +559,7 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
     }
 
     if (ap_strvec_push(positionals, ap_strdup(token)) != 0) {
-      int k;
-      for (k = 0; k < parser->defs_count; k++) {
-        ap_strvec_free(&parsed[k].values);
-      }
+      free_parsed_storage(parser, parsed);
       free(positional_defs);
       free(parsed);
       ap_error_set(err, AP_ERR_NO_MEMORY, token, "out of memory");
@@ -585,6 +612,10 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
     }
 
     while (take-- > 0 && positional_cursor < positionals->count) {
+      if (push_token(parsed, positional_defs[i],
+                     positionals->items[positional_cursor], err) != 0) {
+        goto fail;
+      }
       if (push_value(parsed, positional_defs[i],
                      positionals->items[positional_cursor], err) != 0) {
         goto fail;
@@ -620,10 +651,7 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
   return 0;
 
 fail: {
-  int k;
-  for (k = 0; k < parser->defs_count; k++) {
-    ap_strvec_free(&parsed[k].values);
-  }
+  free_parsed_storage(parser, parsed);
   free(positional_defs);
   free(parsed);
   return -1;

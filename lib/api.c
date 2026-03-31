@@ -932,6 +932,7 @@ static void free_parsed_args(const ap_parser *parser, ap_parsed_arg *parsed) {
     return;
   }
   for (i = 0; i < parser->defs_count; i++) {
+    ap_strvec_free(&parsed[i].tokens);
     ap_strvec_free(&parsed[i].values);
   }
   free(parsed);
@@ -1778,6 +1779,7 @@ int ap_parser_get_argument(const ap_parser *parser, int index,
   out_info->completion_kind = def->opts.completion_kind;
   out_info->completion_hint = def->opts.completion_hint;
   out_info->has_completion_callback = def->opts.completion_callback != NULL;
+  out_info->has_action_callback = def->opts.action_callback != NULL;
   out_info->required = def->opts.required;
   out_info->nargs = def->opts.nargs;
   out_info->nargs_count = def->opts.nargs_count;

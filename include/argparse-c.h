@@ -72,6 +72,7 @@ typedef enum {
 
 typedef struct ap_completion_request ap_completion_request;
 typedef struct ap_completion_result ap_completion_result;
+typedef struct ap_action_request ap_action_request;
 typedef struct ap_parser ap_parser;
 typedef struct ap_argument_group ap_argument_group;
 typedef struct ap_mutually_exclusive_group ap_mutually_exclusive_group;
@@ -91,6 +92,9 @@ struct ap_completion_result {
 typedef int (*ap_completion_callback)(const ap_completion_request *request,
                                       ap_completion_result *result,
                                       void *user_data, ap_error *err);
+typedef int (*ap_action_callback)(const ap_action_request *request,
+                                  ap_namespace *ns, void *user_data,
+                                  ap_error *err);
 
 struct ap_completion_request {
   const ap_parser *parser;
@@ -101,6 +105,13 @@ struct ap_completion_request {
   const char *active_option;
   const char *subcommand_path;
   /* Destination for the active option value or active positional argument. */
+  const char *dest;
+  int argc;
+  char **argv;
+};
+
+struct ap_action_request {
+  const ap_parser *parser;
   const char *dest;
   int argc;
   char **argv;
@@ -121,6 +132,8 @@ typedef struct {
   const char *completion_hint;
   ap_completion_callback completion_callback;
   void *completion_user_data;
+  ap_action_callback action_callback;
+  void *action_user_data;
   const char *dest;
 } ap_arg_options;
 
@@ -147,6 +160,7 @@ typedef struct {
   ap_completion_kind completion_kind;
   const char *completion_hint;
   bool has_completion_callback;
+  bool has_action_callback;
   bool required;
   ap_nargs nargs;
   int nargs_count;

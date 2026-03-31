@@ -241,6 +241,33 @@ static int validate_choices_merged(const ap_arg_def *def,
   return 0;
 }
 
+static int run_action_callback(const ap_parser *parser, const ap_arg_def *def,
+                               const ap_parsed_arg *parsed, ap_namespace *ns,
+                               ap_error *err) {
+  ap_action_request request;
+
+  if (!def->opts.action_callback) {
+    return 0;
+  }
+
+  memset(&request, 0, sizeof(request));
+  request.parser = parser;
+  request.dest = def->dest;
+  request.argc = parsed->tokens.count;
+  request.argv = parsed->tokens.items;
+
+  if (def->opts.action_callback(&request, ns, def->opts.action_user_data,
+                                err) == 0) {
+    return 0;
+  }
+  if (!err || err->code == AP_ERR_NONE) {
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, ap_error_argument_name(def),
+                 "action callback failed for '%s'",
+                 ap_error_argument_name(def));
+  }
+  return -1;
+}
+
 int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
                        ap_namespace **out_ns, ap_error *err) {
   ap_namespace *ns;
@@ -287,13 +314,13 @@ int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
       entry->type = AP_NS_VALUE_BOOL;
       entry->count = 1;
       entry->as.boolean = p->seen ? true : false;
-      continue;
+      goto run_callback;
     }
     if (def->opts.action == AP_ACTION_STORE_FALSE) {
       entry->type = AP_NS_VALUE_BOOL;
       entry->count = 1;
       entry->as.boolean = p->seen ? false : true;
-      continue;
+      goto run_callback;
     }
     if (def->opts.action == AP_ACTION_COUNT) {
       entry->type = AP_NS_VALUE_INT32;
@@ -305,7 +332,7 @@ int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
         return -1;
       }
       entry->as.ints[0] = p->values.count;
-      continue;
+      goto run_callback;
     }
 
     if (p->values.count > 0) {
@@ -384,7 +411,20 @@ int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
       entry->as.boolean = merged.count > 0;
     }
 
+    if (run_action_callback(parser, def, p, ns, err) != 0) {
+      ap_strvec_free(&merged);
+      ap_namespace_free(ns);
+      return -1;
+    }
+
     ap_strvec_free(&merged);
+    continue;
+
+  run_callback:
+    if (run_action_callback(parser, def, p, ns, err) != 0) {
+      ap_namespace_free(ns);
+      return -1;
+    }
   }
 
   *out_ns = ns;

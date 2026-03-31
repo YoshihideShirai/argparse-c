@@ -29,6 +29,57 @@ int dynamic_exec_completion(const ap_completion_request *request,
   return 0;
 }
 
+struct action_probe {
+  int call_count;
+  int argc;
+  std::string first_token;
+  bool verbose_value;
+};
+
+int inspect_action_callback(const ap_action_request *request, ap_namespace *ns,
+                            void *user_data, ap_error *err) {
+  action_probe *probe = static_cast<action_probe *>(user_data);
+  bool verbose = false;
+  (void)err;
+  if (!probe || !request || !ns) {
+    return -1;
+  }
+  probe->call_count++;
+  probe->argc = request->argc;
+  probe->first_token =
+      request->argc > 0 && request->argv ? request->argv[0] : "";
+  if (ap_ns_get_bool(ns, request->dest, &verbose)) {
+    probe->verbose_value = verbose;
+  }
+  return 0;
+}
+
+int failing_action_without_error(const ap_action_request *request,
+                                 ap_namespace *ns, void *user_data,
+                                 ap_error *err) {
+  (void)request;
+  (void)ns;
+  (void)user_data;
+  (void)err;
+  return -1;
+}
+
+int failing_action_with_error(const ap_action_request *request,
+                              ap_namespace *ns, void *user_data,
+                              ap_error *err) {
+  (void)request;
+  (void)ns;
+  (void)user_data;
+  if (err) {
+    std::memset(err, 0, sizeof(*err));
+    err->code = AP_ERR_INVALID_CHOICE;
+    std::snprintf(err->argument, sizeof(err->argument), "%s", "mode");
+    std::snprintf(err->message, sizeof(err->message), "%s",
+                  "mode rejected by callback");
+  }
+  return -1;
+}
+
 } // namespace
 
 extern "C" {
@@ -143,6 +194,65 @@ TEST(FormattersReturnNullForNullOrEmptyProgram) {
   free(help);
   free(manpage);
   ap_parser_free(empty_prog);
+}
+
+TEST(ActionCallbackRunsAfterBuiltInActionAndReceivesTokens) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+  action_probe probe = {};
+  bool value = false;
+  char *argv[] = {(char *)"prog", (char *)"--verbose", NULL};
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  verbose.action_callback = inspect_action_callback;
+  verbose.action_user_data = &probe;
+  LONGS_EQUAL(0, ap_add_argument(p, "--verbose", verbose, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 2, argv, &ns, &err));
+  CHECK(ap_ns_get_bool(ns, "verbose", &value));
+  CHECK(value);
+  LONGS_EQUAL(1, probe.call_count);
+  LONGS_EQUAL(1, probe.argc);
+  STRCMP_EQUAL("--verbose", probe.first_token.c_str());
+  CHECK(probe.verbose_value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ActionCallbackFailurePropagatesErrorConsistently) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *p2 = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--mode", (char *)"fast", NULL};
+
+  CHECK(p != NULL);
+  mode.action_callback = failing_action_without_error;
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("--mode", err.argument);
+  STRCMP_EQUAL("action callback failed for '--mode'", err.message);
+
+  CHECK(p2 != NULL);
+  mode = ap_arg_options_default();
+  mode.action_callback = failing_action_with_error;
+  LONGS_EQUAL(0, ap_add_argument(p2, "--mode2", mode, &err));
+  argv[1] = (char *)"--mode2";
+  LONGS_EQUAL(-1, ap_parse_args(p2, 3, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_CHOICE, err.code);
+  STRCMP_EQUAL("mode", err.argument);
+  STRCMP_EQUAL("mode rejected by callback", err.message);
+
+  ap_parser_free(p);
+  ap_parser_free(p2);
 }
 
 TEST(ParseKnownArgsFailureClearsUnknownOutputs) {
