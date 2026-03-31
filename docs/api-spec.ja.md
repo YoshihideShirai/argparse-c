@@ -260,3 +260,15 @@
 - 成功/失敗: 成功: `n/a` / 失敗: `n/a`。戻り値型ごとの意味に従います。
 - 所有権 / 解放責務: free 関数指定なし。戻り値で新規所有権の移譲はありません。
 
+## その他の API
+
+### `ap_parse_intermixed_args`
+- シグネチャ: `int ap_parse_intermixed_args(ap_parser * parser, int argc, char ** argv, ap_namespace ** out_ns, ap_error * err)`
+- 成功/失敗: 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。
+- 所有権 / 解放責務: free 関数指定なし。戻り値で新規所有権の移譲はありません。
+
+### `ap_parse_known_intermixed_args`
+- シグネチャ: `int ap_parse_known_intermixed_args(ap_parser * parser, int argc, char ** argv, ap_namespace ** out_ns, char *** out_unknown_args, int * out_unknown_count, ap_error * err)`
+- 成功/失敗: 成功: `0` / 失敗: `-1`。int 戻り値 API は成功 0 / 失敗 -1 を返します。
+- 所有権 / 解放責務: free 関数指定なし。戻り値で新規所有権の移譲はありません。
+

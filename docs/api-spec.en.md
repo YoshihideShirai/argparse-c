@@ -260,3 +260,15 @@ This document is generated from `include/argparse-c.h` via `scripts/sync_api_spe
 - Success/Failure: success: `n/a` / failure: `n/a`. See return type specific semantics.
 - Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
 
+## Other APIs
+
+### `ap_parse_intermixed_args`
+- Signature: `int ap_parse_intermixed_args(ap_parser * parser, int argc, char ** argv, ap_namespace ** out_ns, ap_error * err)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
+### `ap_parse_known_intermixed_args`
+- Signature: `int ap_parse_known_intermixed_args(ap_parser * parser, int argc, char ** argv, ap_namespace ** out_ns, char *** out_unknown_args, int * out_unknown_count, ap_error * err)`
+- Success/Failure: success: `0` / failure: `-1`. Integer APIs follow 0 on success / -1 on failure.
+- Ownership / free responsibility: no dedicated free function in return value. No new ownership transfer in return value.
+
