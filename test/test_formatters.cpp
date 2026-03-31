@@ -99,6 +99,34 @@ int successful_bash_completion_append_count(ap_parser *parser) {
   return append_count;
 }
 
+int successful_fish_completion_append_count(ap_parser *parser) {
+  char *script = NULL;
+  int append_count = 0;
+
+  reset_sb_hooks();
+  script = ap_format_fish_completion(parser);
+  CHECK(script != NULL);
+  append_count = g_sb_hook_state.appendf_call_count;
+  free(script);
+  reset_sb_hooks();
+
+  return append_count;
+}
+
+int successful_zsh_completion_append_count(ap_parser *parser) {
+  char *script = NULL;
+  int append_count = 0;
+
+  reset_sb_hooks();
+  script = ap_format_zsh_completion(parser);
+  CHECK(script != NULL);
+  append_count = g_sb_hook_state.appendf_call_count;
+  free(script);
+  reset_sb_hooks();
+
+  return append_count;
+}
+
 void assert_manpage_append_failures_return_null(ap_parser *parser) {
   int append_count = successful_manpage_append_count(parser);
 
@@ -146,6 +174,32 @@ void assert_bash_completion_append_failures_return_null(ap_parser *parser) {
     reset_sb_hooks();
     fail_appendf_on_call(i);
     CHECK(ap_format_bash_completion(parser) == NULL);
+    CHECK(g_sb_hook_state.free_call_count > 0);
+  }
+  reset_sb_hooks();
+}
+
+void assert_fish_completion_append_failures_return_null(ap_parser *parser) {
+  int append_count = successful_fish_completion_append_count(parser);
+
+  CHECK(append_count > 0);
+  for (int i = 1; i <= append_count; i++) {
+    reset_sb_hooks();
+    fail_appendf_on_call(i);
+    CHECK(ap_format_fish_completion(parser) == NULL);
+    CHECK(g_sb_hook_state.free_call_count > 0);
+  }
+  reset_sb_hooks();
+}
+
+void assert_zsh_completion_append_failures_return_null(ap_parser *parser) {
+  int append_count = successful_zsh_completion_append_count(parser);
+
+  CHECK(append_count > 0);
+  for (int i = 1; i <= append_count; i++) {
+    reset_sb_hooks();
+    fail_appendf_on_call(i);
+    CHECK(ap_format_zsh_completion(parser) == NULL);
     CHECK(g_sb_hook_state.free_call_count > 0);
   }
   reset_sb_hooks();
@@ -1681,6 +1735,64 @@ TEST(FormatBashCompletionFailureInjectionCoversStructuredBuilderPaths) {
   LONGS_EQUAL(0, ap_add_argument(config, "--mode", mode, &err));
 
   assert_bash_completion_append_failures_return_null(root);
+
+  ap_parser_free(root);
+}
+
+TEST(FormatFishCompletionFailureInjectionCoversStructuredBuilderPaths) {
+  ap_error err = {};
+  ap_parser *root = ap_parser_new("tool", "top level parser");
+  ap_parser *config = NULL;
+  ap_arg_options mode = ap_arg_options_default();
+  ap_arg_options input = ap_arg_options_default();
+  ap_arg_options exec = ap_arg_options_default();
+  const char *choices[] = {"fast", "slow"};
+  static const char *const commands[] = {"git", nullptr};
+
+  CHECK(root != NULL);
+  mode.choices.items = choices;
+  mode.choices.count = 2;
+  input.completion_kind = AP_COMPLETION_KIND_FILE;
+  exec.completion_callback = dynamic_exec_completion;
+  exec.completion_user_data = (void *)commands;
+
+  LONGS_EQUAL(0, ap_add_argument(root, "--mode", mode, &err));
+  LONGS_EQUAL(0, ap_add_argument(root, "--input", input, &err));
+  LONGS_EQUAL(0, ap_add_argument(root, "--exec", exec, &err));
+  config = ap_add_subcommand(root, "config", "config commands", &err);
+  CHECK(config != NULL);
+  LONGS_EQUAL(0, ap_add_argument(config, "--mode", mode, &err));
+
+  assert_fish_completion_append_failures_return_null(root);
+
+  ap_parser_free(root);
+}
+
+TEST(FormatZshCompletionFailureInjectionCoversStructuredBuilderPaths) {
+  ap_error err = {};
+  ap_parser *root = ap_parser_new("tool", "top level parser");
+  ap_parser *config = NULL;
+  ap_arg_options mode = ap_arg_options_default();
+  ap_arg_options input = ap_arg_options_default();
+  ap_arg_options exec = ap_arg_options_default();
+  const char *choices[] = {"fast", "slow"};
+  static const char *const commands[] = {"git", nullptr};
+
+  CHECK(root != NULL);
+  mode.choices.items = choices;
+  mode.choices.count = 2;
+  input.completion_kind = AP_COMPLETION_KIND_FILE;
+  exec.completion_callback = dynamic_exec_completion;
+  exec.completion_user_data = (void *)commands;
+
+  LONGS_EQUAL(0, ap_add_argument(root, "--mode", mode, &err));
+  LONGS_EQUAL(0, ap_add_argument(root, "--input", input, &err));
+  LONGS_EQUAL(0, ap_add_argument(root, "--exec", exec, &err));
+  config = ap_add_subcommand(root, "config", "config commands", &err);
+  CHECK(config != NULL);
+  LONGS_EQUAL(0, ap_add_argument(config, "--mode", mode, &err));
+
+  assert_zsh_completion_append_failures_return_null(root);
 
   ap_parser_free(root);
 }
