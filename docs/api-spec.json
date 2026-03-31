@@ -2,7 +2,7 @@
   "$schema": "./api-spec.schema.json",
   "spec_version": "1.0.0",
   "source_header": "include/argparse-c.h",
-  "function_count": 47,
+  "function_count": 49,
   "functions": [
     {
       "name": "ap_parser_new",
@@ -379,6 +379,92 @@
         "caller_must_free_with": null,
         "notes_en": "On success, out_ns must be released with ap_namespace_free. parse_known_args also requires ap_free_tokens for unknown args.",
         "notes_ja": "成功時は out_ns を ap_namespace_free で解放します。parse_known_args では unknown 配列を ap_free_tokens で解放します。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_parse_intermixed_args",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "ap_parser *"
+        },
+        {
+          "name": "argc",
+          "type": "int"
+        },
+        {
+          "name": "argv",
+          "type": "char **"
+        },
+        {
+          "name": "out_ns",
+          "type": "ap_namespace **"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
+      },
+      "error_contract": {
+        "has_error_out": true,
+        "success_return": "0",
+        "failure_return": "-1",
+        "notes_en": "Integer APIs follow 0 on success / -1 on failure.",
+        "notes_ja": "int 戻り値 API は成功 0 / 失敗 -1 を返します。"
+      }
+    },
+    {
+      "name": "ap_parse_known_intermixed_args",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "parser",
+          "type": "ap_parser *"
+        },
+        {
+          "name": "argc",
+          "type": "int"
+        },
+        {
+          "name": "argv",
+          "type": "char **"
+        },
+        {
+          "name": "out_ns",
+          "type": "ap_namespace **"
+        },
+        {
+          "name": "out_unknown_args",
+          "type": "char ***"
+        },
+        {
+          "name": "out_unknown_count",
+          "type": "int *"
+        },
+        {
+          "name": "err",
+          "type": "ap_error *"
+        }
+      ],
+      "ownership": {
+        "returns_owned_memory": false,
+        "caller_must_free_with": null,
+        "notes_en": "No new ownership transfer in return value.",
+        "notes_ja": "戻り値で新規所有権の移譲はありません。"
       },
       "error_contract": {
         "has_error_out": true,

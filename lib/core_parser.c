@@ -19,6 +19,10 @@ static int push_value(ap_parsed_arg *parsed, int def_index, const char *token,
 static int find_flag_index(const ap_parser *parser, const char *token) {
   int i;
   int j;
+  int abbrev_match = -1;
+  bool consider_abbrev = parser && parser->allow_abbrev && token &&
+                         token[0] != '\0' && token[1] != '\0' &&
+                         token[0] == token[1];
   for (i = 0; i < parser->defs_count; i++) {
     const ap_arg_def *def = &parser->defs[i];
     if (!def->is_optional) {
@@ -28,15 +32,26 @@ static int find_flag_index(const ap_parser *parser, const char *token) {
       if (strcmp(def->flags[j], token) == 0) {
         return i;
       }
+      if (consider_abbrev && def->flags[j][0] == token[0] &&
+          def->flags[j][1] == token[0] &&
+          strncmp(def->flags[j], token, strlen(token)) == 0) {
+        if (abbrev_match >= 0 && abbrev_match != i) {
+          return -2;
+        }
+        abbrev_match = i;
+      }
     }
   }
-  return -1;
+  return abbrev_match >= 0 ? abbrev_match : -1;
 }
 
 static int find_flag_index_n(const ap_parser *parser, const char *token,
                              size_t token_len) {
   int i;
   int j;
+  int abbrev_match = -1;
+  bool consider_abbrev = parser && parser->allow_abbrev && token &&
+                         token_len >= 2 && token[0] == token[1];
   for (i = 0; i < parser->defs_count; i++) {
     const ap_arg_def *def = &parser->defs[i];
     if (!def->is_optional) {
@@ -47,9 +62,16 @@ static int find_flag_index_n(const ap_parser *parser, const char *token,
       if (strlen(flag) == token_len && strncmp(flag, token, token_len) == 0) {
         return i;
       }
+      if (consider_abbrev && strlen(flag) >= token_len && flag[0] == token[0] &&
+          flag[1] == token[0] && strncmp(flag, token, token_len) == 0) {
+        if (abbrev_match >= 0 && abbrev_match != i) {
+          return -2;
+        }
+        abbrev_match = i;
+      }
     }
   }
-  return -1;
+  return abbrev_match >= 0 ? abbrev_match : -1;
 }
 
 static int parse_short_cluster(const ap_parser *parser, const char *token,
@@ -57,20 +79,30 @@ static int parse_short_cluster(const ap_parser *parser, const char *token,
                                ap_error *err) {
   size_t i;
   char short_flag[3];
+  char prefix;
 
-  if (!token || token[0] != '-' || token[1] == '-' || token[2] == '\0') {
+  if (!token || !ap_token_has_prefix(parser, token) || token[2] == '\0') {
+    return 1;
+  }
+  prefix = token[0];
+  if (token[1] == prefix) {
     return 1;
   }
   if (strchr(token, '=') != NULL) {
     return 1;
   }
 
-  short_flag[0] = '-';
+  short_flag[0] = prefix;
   short_flag[2] = '\0';
   for (i = 1; token[i] != '\0'; i++) {
     int def_index;
     short_flag[1] = token[i];
     def_index = find_flag_index(parser, short_flag);
+    if (def_index == -2) {
+      ap_error_set(err, AP_ERR_DUPLICATE_OPTION, short_flag,
+                   "ambiguous option '%s'", short_flag);
+      return -1;
+    }
     if (def_index < 0) {
       if (!allow_unknown) {
         ap_error_set(err, AP_ERR_UNKNOWN_OPTION, short_flag,
@@ -413,7 +445,7 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
       continue;
     }
 
-    if (!positional_only && ap_starts_with_dash(token)) {
+    if (!positional_only && ap_token_has_prefix(parser, token)) {
       int cluster_rc =
           parse_short_cluster(parser, token, allow_unknown, parsed, err);
       if (cluster_rc == 0) {
@@ -441,6 +473,11 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
       } else {
         def_index = find_flag_index(parser, token);
       }
+      if (def_index == -2) {
+        ap_error_set(err, AP_ERR_DUPLICATE_OPTION, token,
+                     "ambiguous option '%s'", token);
+        goto fail;
+      }
       if (def_index < 0) {
         if (allow_unknown) {
           char *copy = ap_strdup(token);
@@ -453,7 +490,7 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
           if (token_index + 1 < argc &&
               strcmp(argv[token_index + 1], "--") != 0 &&
               find_flag_index(parser, argv[token_index + 1]) < 0 &&
-              !ap_starts_with_dash(argv[token_index + 1])) {
+              !ap_token_has_prefix(parser, argv[token_index + 1])) {
             char *next_copy = ap_strdup(argv[token_index + 1]);
             if (!next_copy || ap_strvec_push(unknown_args, next_copy) != 0) {
               free(next_copy);

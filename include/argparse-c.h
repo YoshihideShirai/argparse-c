@@ -162,6 +162,9 @@ typedef struct {
 typedef struct ap_parser_options {
   bool completion_enabled;
   const char *completion_entrypoint;
+  const char *prefix_chars;
+  bool allow_abbrev;
+  const char *fromfile_prefix_chars;
 } ap_parser_options;
 
 ap_parser *ap_parser_new(const char *prog, const char *description);
@@ -189,6 +192,12 @@ int ap_parse_args(ap_parser *parser, int argc, char **argv,
 int ap_parse_known_args(ap_parser *parser, int argc, char **argv,
                         ap_namespace **out_ns, char ***out_unknown_args,
                         int *out_unknown_count, ap_error *err);
+int ap_parse_intermixed_args(ap_parser *parser, int argc, char **argv,
+                             ap_namespace **out_ns, ap_error *err);
+int ap_parse_known_intermixed_args(ap_parser *parser, int argc, char **argv,
+                                   ap_namespace **out_ns,
+                                   char ***out_unknown_args,
+                                   int *out_unknown_count, ap_error *err);
 void ap_namespace_free(ap_namespace *ns);
 void ap_free_tokens(char **tokens, int count);
 

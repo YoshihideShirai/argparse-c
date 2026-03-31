@@ -52,6 +52,9 @@ struct ap_parser {
   char *description;
   char *command_name;
   char *completion_entrypoint;
+  char *prefix_chars;
+  bool allow_abbrev;
+  char *fromfile_prefix_chars;
   bool completion_enabled;
   struct ap_parser *parent;
   ap_arg_def *defs;
@@ -107,6 +110,7 @@ char *ap_strdup(const char *s);
 char *ap_strndup(const char *s, size_t n);
 void ap_trim_inplace(char *s);
 bool ap_starts_with_dash(const char *s);
+bool ap_token_has_prefix(const ap_parser *parser, const char *s);
 
 int ap_strvec_push(ap_strvec *vec, char *item);
 void ap_strvec_free(ap_strvec *vec);
