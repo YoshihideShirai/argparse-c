@@ -462,6 +462,56 @@ TEST(FormatHelpIncludesPositionalMetadataAndFallbackMetavarTransform) {
   ap_parser_free(p);
 }
 
+TEST(FormatHelpFormatterModeSwitchAndDefaultsSnapshot) {
+  ap_error err = {};
+  ap_parser_options options = ap_parser_options_default();
+  ap_parser *standard = NULL;
+  ap_parser *show_defaults = NULL;
+  ap_parser *raw = NULL;
+  ap_arg_options mode = ap_arg_options_default();
+  char *standard_help = NULL;
+  char *show_defaults_help = NULL;
+  char *raw_help = NULL;
+  const char *expected_raw = "usage: tool [-h] [--mode MODE]\n"
+                             "\ndesc\n"
+                             "\noptional arguments:\n"
+                             "  -h, --help - show this help message and exit\n"
+                             "  --mode MODE - mode value | default: fast\n";
+
+  mode.help = "mode value";
+  mode.default_value = "fast";
+
+  standard = ap_parser_new("tool", "desc");
+  CHECK(standard != NULL);
+  LONGS_EQUAL(0, ap_add_argument(standard, "--mode", mode, &err));
+  standard_help = ap_format_help(standard);
+  CHECK(standard_help != NULL);
+  CHECK(strstr(standard_help, "\n    default: fast\n") != NULL);
+
+  options.help_formatter_mode = AP_HELP_FORMATTER_SHOW_DEFAULTS;
+  show_defaults = ap_parser_new_with_options("tool", "desc", options);
+  CHECK(show_defaults != NULL);
+  LONGS_EQUAL(0, ap_add_argument(show_defaults, "--mode", mode, &err));
+  show_defaults_help = ap_format_help(show_defaults);
+  CHECK(show_defaults_help != NULL);
+  STRCMP_EQUAL(standard_help, show_defaults_help);
+
+  options.help_formatter_mode = AP_HELP_FORMATTER_RAW_TEXT;
+  raw = ap_parser_new_with_options("tool", "desc", options);
+  CHECK(raw != NULL);
+  LONGS_EQUAL(0, ap_add_argument(raw, "--mode", mode, &err));
+  raw_help = ap_format_help(raw);
+  CHECK(raw_help != NULL);
+  STRCMP_EQUAL(expected_raw, raw_help);
+
+  free(raw_help);
+  free(show_defaults_help);
+  free(standard_help);
+  ap_parser_free(raw);
+  ap_parser_free(show_defaults);
+  ap_parser_free(standard);
+}
+
 TEST(FormatUsageShowsRequiredBoolAndConstActions) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");

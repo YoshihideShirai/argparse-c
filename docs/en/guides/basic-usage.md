@@ -103,6 +103,19 @@ printf("%s", help);
 free(help);
 ```
 
+You can switch help formatter mode via `ap_parser_options`.
+
+```c
+ap_parser_options options = ap_parser_options_default();
+options.help_formatter_mode = AP_HELP_FORMATTER_RAW_TEXT;
+ap_parser *raw_parser =
+    ap_parser_new_with_options("demo", "raw help style", options);
+
+options.help_formatter_mode = AP_HELP_FORMATTER_SHOW_DEFAULTS;
+ap_parser *defaults_parser =
+    ap_parser_new_with_options("demo", "explicit defaults style", options);
+```
+
 ## Sample: `example_test_runner`
 
 `sample/example_test_runner.c` is a minimal sample that verifies argument

@@ -222,6 +222,7 @@ man ./example_manpage.1
 - [`sample/example_completion.c`](../repository/sample/example_completion.c.md): formatter APIs plus runtime completion callbacks
 - [`sample/example_manpage.c`](../repository/sample/example_manpage.c.md): formatter APIs on a subcommand tree that is suitable for docs output
 - [`sample/example_introspection.c`](../repository/sample/example_introspection.c.md): parser metadata introspection via `ap_parser_get_info`, `ap_parser_get_argument`, and `ap_parser_get_subcommand`
+- [`sample/example_help_formatter.c`](../repository/sample/example_help_formatter.c.md): switches `ap_parser_options.help_formatter_mode` across `STANDARD`, `SHOW_DEFAULTS`, and `RAW_TEXT`
 
 ### Guides
 

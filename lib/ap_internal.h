@@ -73,6 +73,7 @@ struct ap_parser {
   char *fromfile_prefix_chars;
   bool completion_enabled;
   ap_parser_conflict_policy conflict_policy;
+  ap_help_formatter_mode help_formatter_mode;
   struct ap_parser *parent;
   ap_arg_def *defs;
   int defs_count;
