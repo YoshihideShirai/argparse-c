@@ -1019,8 +1019,7 @@ int ap_add_argument(ap_parser *parser, const char *name_or_flags,
     if (conflict_index < 0) {
       break;
     }
-    if (parser->conflict_policy == AP_PARSER_CONFLICT_REPLACE &&
-        parser->defs[conflict_index].inherited) {
+    if (parser->conflict_policy == AP_PARSER_CONFLICT_REPLACE) {
       parser_remove_def(parser, conflict_index);
       continue;
     }
@@ -1036,8 +1035,7 @@ int ap_add_argument(ap_parser *parser, const char *name_or_flags,
       if (conflict_index < 0) {
         break;
       }
-      if (parser->conflict_policy == AP_PARSER_CONFLICT_REPLACE &&
-          parser->defs[conflict_index].inherited) {
+      if (parser->conflict_policy == AP_PARSER_CONFLICT_REPLACE) {
         parser_remove_def(parser, conflict_index);
         continue;
       }
