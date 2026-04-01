@@ -124,6 +124,87 @@ static void arg_def_free(ap_arg_def *def) {
   free(def->flags);
 }
 
+static int parser_find_def_by_dest(const ap_parser *parser, const char *dest) {
+  int i;
+  if (!parser || !dest) {
+    return -1;
+  }
+  for (i = 0; i < parser->defs_count; i++) {
+    if (strcmp(parser->defs[i].dest, dest) == 0) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+static int parser_find_def_by_flag(const ap_parser *parser, const char *flag) {
+  int i;
+  int j;
+  if (!parser || !flag) {
+    return -1;
+  }
+  for (i = 0; i < parser->defs_count; i++) {
+    const ap_arg_def *def = &parser->defs[i];
+    for (j = 0; j < def->flags_count; j++) {
+      if (strcmp(def->flags[j], flag) == 0) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
+
+static void remove_arg_index(int **indexes, int *count, int pos) {
+  int i;
+  if (!indexes || !*indexes || !count || pos < 0 || pos >= *count) {
+    return;
+  }
+  for (i = pos; i < *count - 1; i++) {
+    (*indexes)[i] = (*indexes)[i + 1];
+  }
+  (*count)--;
+}
+
+static void parser_remove_def(ap_parser *parser, int def_index) {
+  int i;
+  int j;
+
+  if (!parser || def_index < 0 || def_index >= parser->defs_count) {
+    return;
+  }
+
+  arg_def_free(&parser->defs[def_index]);
+
+  for (i = 0; i < parser->mutex_groups_count; i++) {
+    ap_mutex_group_def *group = &parser->mutex_groups[i];
+    for (j = 0; j < group->arg_count; j++) {
+      if (group->arg_indexes[j] == def_index) {
+        remove_arg_index(&group->arg_indexes, &group->arg_count, j);
+        j--;
+      } else if (group->arg_indexes[j] > def_index) {
+        group->arg_indexes[j]--;
+      }
+    }
+  }
+
+  for (i = 0; i < parser->arg_groups_count; i++) {
+    ap_arg_group_def *group = &parser->arg_groups[i];
+    for (j = 0; j < group->arg_count; j++) {
+      if (group->arg_indexes[j] == def_index) {
+        remove_arg_index(&group->arg_indexes, &group->arg_count, j);
+        j--;
+      } else if (group->arg_indexes[j] > def_index) {
+        group->arg_indexes[j]--;
+      }
+    }
+  }
+
+  for (i = def_index; i < parser->defs_count - 1; i++) {
+    parser->defs[i] = parser->defs[i + 1];
+  }
+  parser->defs_count--;
+}
+
 void ap_error_set(ap_error *err, ap_error_code code, const char *argument,
                   const char *fmt, ...) {
   va_list ap;
@@ -405,6 +486,8 @@ ap_parser_options ap_parser_options_default(void) {
   options.prefix_chars = "-";
   options.allow_abbrev = false;
   options.fromfile_prefix_chars = NULL;
+  options.inherit_from = NULL;
+  options.conflict_policy = AP_PARSER_CONFLICT_ERROR;
   return options;
 }
 
@@ -496,6 +579,205 @@ static int add_builtin_help(ap_parser *parser) {
   return ap_add_argument(parser, flags_buf, opts, &ignored_err);
 }
 
+static int clone_arg_def(const ap_arg_def *src, ap_arg_def *dst) {
+  int i;
+
+  memset(dst, 0, sizeof(*dst));
+  dst->is_optional = src->is_optional;
+  dst->inherited = true;
+  dst->mutex_group_index = src->mutex_group_index;
+  dst->arg_group_index = src->arg_group_index;
+  dst->opts = src->opts;
+  dst->flags_count = src->flags_count;
+
+  dst->dest = ap_strdup(src->dest);
+  if (!dst->dest) {
+    arg_def_free(dst);
+    return -1;
+  }
+
+  if (dst->flags_count > 0) {
+    dst->flags = calloc((size_t)dst->flags_count, sizeof(char *));
+    if (!dst->flags) {
+      arg_def_free(dst);
+      return -1;
+    }
+    for (i = 0; i < dst->flags_count; i++) {
+      dst->flags[i] = ap_strdup(src->flags[i]);
+      if (!dst->flags[i]) {
+        arg_def_free(dst);
+        return -1;
+      }
+    }
+  }
+  return 0;
+}
+
+static int import_parser_defs(ap_parser *dst, const ap_parser *src,
+                              ap_parser_conflict_policy policy, ap_error *err) {
+  int i;
+  int *imported_mutex_map = NULL;
+  int *imported_arg_map = NULL;
+
+  if (src->mutex_groups_count > 0) {
+    imported_mutex_map = malloc(sizeof(int) * (size_t)src->mutex_groups_count);
+    if (!imported_mutex_map) {
+      ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+      return -1;
+    }
+    for (i = 0; i < src->mutex_groups_count; i++) {
+      imported_mutex_map[i] = -1;
+    }
+  }
+  if (src->arg_groups_count > 0) {
+    imported_arg_map = malloc(sizeof(int) * (size_t)src->arg_groups_count);
+    if (!imported_arg_map) {
+      free(imported_mutex_map);
+      ap_error_set(err, AP_ERR_NO_MEMORY, "", "out of memory");
+      return -1;
+    }
+    for (i = 0; i < src->arg_groups_count; i++) {
+      imported_arg_map[i] = -1;
+    }
+  }
+
+  for (i = 0; i < src->defs_count; i++) {
+    ap_arg_def cloned;
+    const ap_arg_def *src_def = &src->defs[i];
+    int dest_conflict;
+    int j;
+    int flag_conflict = -1;
+
+    if (strcmp(src_def->dest, "help") == 0) {
+      continue;
+    }
+
+    dest_conflict = parser_find_def_by_dest(dst, src_def->dest);
+    for (j = 0; j < src_def->flags_count && flag_conflict < 0; j++) {
+      flag_conflict = parser_find_def_by_flag(dst, src_def->flags[j]);
+    }
+
+    if (dest_conflict >= 0 || flag_conflict >= 0) {
+      if (policy == AP_PARSER_CONFLICT_KEEP_EXISTING) {
+        continue;
+      }
+      if (policy == AP_PARSER_CONFLICT_REPLACE) {
+        while ((dest_conflict = parser_find_def_by_dest(dst, src_def->dest)) >=
+               0) {
+          parser_remove_def(dst, dest_conflict);
+        }
+        for (j = 0; j < src_def->flags_count; j++) {
+          while ((flag_conflict =
+                      parser_find_def_by_flag(dst, src_def->flags[j])) >= 0) {
+            parser_remove_def(dst, flag_conflict);
+          }
+        }
+      } else {
+        ap_error_set(err, AP_ERR_INVALID_DEFINITION, src_def->dest,
+                     "dest '%s' already exists", src_def->dest);
+        free(imported_mutex_map);
+        free(imported_arg_map);
+        return -1;
+      }
+    }
+
+    if (clone_arg_def(src_def, &cloned) != 0) {
+      ap_error_set(err, AP_ERR_NO_MEMORY, src_def->dest, "out of memory");
+      free(imported_mutex_map);
+      free(imported_arg_map);
+      return -1;
+    }
+
+    if (src_def->mutex_group_index >= 0) {
+      int src_group_index = src_def->mutex_group_index;
+      if (imported_mutex_map[src_group_index] < 0) {
+        ap_mutex_group_def *src_group = &src->mutex_groups[src_group_index];
+        ap_mutex_group_def *new_group;
+        if (ensure_mutex_groups_capacity(dst) != 0) {
+          arg_def_free(&cloned);
+          ap_error_set(err, AP_ERR_NO_MEMORY, src_def->dest, "out of memory");
+          free(imported_mutex_map);
+          free(imported_arg_map);
+          return -1;
+        }
+        new_group = &dst->mutex_groups[dst->mutex_groups_count];
+        memset(new_group, 0, sizeof(*new_group));
+        new_group->required = src_group->required;
+        new_group->handle.parser = dst;
+        new_group->handle.index = dst->mutex_groups_count;
+        imported_mutex_map[src_group_index] = dst->mutex_groups_count;
+        dst->mutex_groups_count++;
+      }
+      cloned.mutex_group_index = imported_mutex_map[src_group_index];
+    }
+
+    if (src_def->arg_group_index >= 0) {
+      int src_group_index = src_def->arg_group_index;
+      if (imported_arg_map[src_group_index] < 0) {
+        ap_arg_group_def *src_group = &src->arg_groups[src_group_index];
+        ap_arg_group_def *new_group;
+        if (ensure_arg_groups_capacity(dst) != 0) {
+          arg_def_free(&cloned);
+          ap_error_set(err, AP_ERR_NO_MEMORY, src_def->dest, "out of memory");
+          free(imported_mutex_map);
+          free(imported_arg_map);
+          return -1;
+        }
+        new_group = &dst->arg_groups[dst->arg_groups_count];
+        memset(new_group, 0, sizeof(*new_group));
+        new_group->title = ap_strdup(src_group->title ? src_group->title : "");
+        new_group->description =
+            src_group->description ? ap_strdup(src_group->description) : NULL;
+        if (!new_group->title ||
+            (src_group->description && !new_group->description)) {
+          free(new_group->title);
+          free(new_group->description);
+          arg_def_free(&cloned);
+          ap_error_set(err, AP_ERR_NO_MEMORY, src_def->dest, "out of memory");
+          free(imported_mutex_map);
+          free(imported_arg_map);
+          return -1;
+        }
+        new_group->handle.parser = dst;
+        new_group->handle.index = dst->arg_groups_count;
+        imported_arg_map[src_group_index] = dst->arg_groups_count;
+        dst->arg_groups_count++;
+      }
+      cloned.arg_group_index = imported_arg_map[src_group_index];
+    }
+
+    if (ensure_defs_capacity(dst) != 0) {
+      arg_def_free(&cloned);
+      ap_error_set(err, AP_ERR_NO_MEMORY, src_def->dest, "out of memory");
+      free(imported_mutex_map);
+      free(imported_arg_map);
+      return -1;
+    }
+    dst->defs[dst->defs_count++] = cloned;
+    if (cloned.mutex_group_index >= 0 &&
+        mutex_group_push_arg(&dst->mutex_groups[cloned.mutex_group_index],
+                             dst->defs_count - 1) != 0) {
+      parser_remove_def(dst, dst->defs_count - 1);
+      ap_error_set(err, AP_ERR_NO_MEMORY, src_def->dest, "out of memory");
+      free(imported_mutex_map);
+      free(imported_arg_map);
+      return -1;
+    }
+    if (cloned.arg_group_index >= 0 &&
+        argument_group_push_arg(&dst->arg_groups[cloned.arg_group_index],
+                                dst->defs_count - 1) != 0) {
+      parser_remove_def(dst, dst->defs_count - 1);
+      ap_error_set(err, AP_ERR_NO_MEMORY, src_def->dest, "out of memory");
+      free(imported_mutex_map);
+      free(imported_arg_map);
+      return -1;
+    }
+  }
+  free(imported_mutex_map);
+  free(imported_arg_map);
+  return 0;
+}
+
 static ap_parser *parser_alloc(const char *prog, const char *description,
                                const char *command_name, ap_parser *parent,
                                ap_parser_options options) {
@@ -517,6 +799,7 @@ static ap_parser *parser_alloc(const char *prog, const char *description,
   parser->fromfile_prefix_chars = options.fromfile_prefix_chars
                                       ? ap_strdup(options.fromfile_prefix_chars)
                                       : NULL;
+  parser->conflict_policy = options.conflict_policy;
   parser->parent = parent;
   if (!parser->prog || !parser->description || !parser->command_name ||
       !parser->completion_entrypoint || !parser->prefix_chars ||
@@ -526,6 +809,12 @@ static ap_parser *parser_alloc(const char *prog, const char *description,
   }
 
   if (add_builtin_help(parser) != 0) {
+    ap_parser_free(parser);
+    return NULL;
+  }
+  if (options.inherit_from &&
+      import_parser_defs(parser, options.inherit_from, options.conflict_policy,
+                         NULL) != 0) {
     ap_parser_free(parser);
     return NULL;
   }
@@ -723,10 +1012,35 @@ int ap_add_argument(ap_parser *parser, const char *name_or_flags,
 
   def.opts = options;
 
-  for (i = 0; i < parser->defs_count; i++) {
-    if (strcmp(parser->defs[i].dest, def.dest) == 0) {
-      ap_error_set(err, AP_ERR_INVALID_DEFINITION, def.dest,
-                   "dest '%s' already exists", def.dest);
+  while (true) {
+    int conflict_index = parser_find_def_by_dest(parser, def.dest);
+    if (conflict_index < 0) {
+      break;
+    }
+    if (parser->conflict_policy == AP_PARSER_CONFLICT_REPLACE &&
+        parser->defs[conflict_index].inherited) {
+      parser_remove_def(parser, conflict_index);
+      continue;
+    }
+    ap_error_set(err, AP_ERR_INVALID_DEFINITION, def.dest,
+                 "dest '%s' already exists", def.dest);
+    arg_def_free(&def);
+    return -1;
+  }
+
+  for (i = 0; i < def.flags_count; i++) {
+    while (true) {
+      int conflict_index = parser_find_def_by_flag(parser, def.flags[i]);
+      if (conflict_index < 0) {
+        break;
+      }
+      if (parser->conflict_policy == AP_PARSER_CONFLICT_REPLACE &&
+          parser->defs[conflict_index].inherited) {
+        parser_remove_def(parser, conflict_index);
+        continue;
+      }
+      ap_error_set(err, AP_ERR_INVALID_DEFINITION, def.flags[i],
+                   "flag '%s' already exists", def.flags[i]);
       arg_def_free(&def);
       return -1;
     }

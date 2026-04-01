@@ -1763,6 +1763,118 @@ TEST(ParserNewWithOptionsNoMemoryCanRetryAndRemainUsable) {
   ap_parser_free(p);
 }
 
+TEST(ParserOptionsCanInheritArgumentsGroupsAndMutexRules) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *base = ap_parser_new("base", "base parser");
+  ap_parser *child = NULL;
+  ap_parser_options options = ap_parser_options_default();
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options json = ap_arg_options_default();
+  ap_arg_options yaml = ap_arg_options_default();
+  ap_mutually_exclusive_group *format = NULL;
+  ap_argument_group *shared = NULL;
+  bool verbose_value = false;
+  bool json_value = false;
+  char *argv_ok[] = {(char *)"child", (char *)"--verbose", (char *)"--json",
+                     NULL};
+  char *argv_conflict[] = {(char *)"child", (char *)"--json", (char *)"--yaml",
+                           NULL};
+
+  CHECK(base != NULL);
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  verbose.help = "enable verbose mode";
+  LONGS_EQUAL(0, ap_add_argument(base, "--verbose", verbose, &err));
+
+  shared = ap_add_argument_group(base, "shared", "common options", &err);
+  CHECK(shared != NULL);
+
+  format = ap_add_mutually_exclusive_group(base, false, &err);
+  CHECK(format != NULL);
+
+  json.type = AP_TYPE_BOOL;
+  json.action = AP_ACTION_STORE_TRUE;
+  json.dest = "json";
+  LONGS_EQUAL(0, ap_group_add_argument(format, "--json", json, &err));
+  yaml.type = AP_TYPE_BOOL;
+  yaml.action = AP_ACTION_STORE_TRUE;
+  yaml.dest = "yaml";
+  LONGS_EQUAL(0, ap_group_add_argument(format, "--yaml", yaml, &err));
+
+  options.inherit_from = base;
+  child = ap_parser_new_with_options("child", "child parser", options);
+  CHECK(child != NULL);
+
+  LONGS_EQUAL(0, ap_parse_args(child, 3, argv_ok, &ns, &err));
+  CHECK(ap_ns_get_bool(ns, "verbose", &verbose_value));
+  CHECK_TRUE(verbose_value);
+  CHECK(ap_ns_get_bool(ns, "json", &json_value));
+  CHECK_TRUE(json_value);
+  ap_namespace_free(ns);
+  ns = NULL;
+
+  LONGS_EQUAL(-1, ap_parse_args(child, 3, argv_conflict, &ns, &err));
+
+  ap_parser_free(child);
+  ap_parser_free(base);
+}
+
+TEST(ParserInheritanceDefaultPolicyDisallowsOverride) {
+  ap_error err = {};
+  ap_parser_options options = ap_parser_options_default();
+  ap_parser *base = ap_parser_new("base", "base parser");
+  ap_parser *child = NULL;
+  ap_arg_options mode = ap_arg_options_default();
+
+  CHECK(base != NULL);
+  LONGS_EQUAL(0, ap_add_argument(base, "--mode", mode, &err));
+
+  options.inherit_from = base;
+  child = ap_parser_new_with_options("child", "child parser", options);
+  CHECK(child != NULL);
+
+  mode.help = "child override";
+  LONGS_EQUAL(-1, ap_add_argument(child, "--mode", mode, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("mode", err.argument);
+
+  ap_parser_free(child);
+  ap_parser_free(base);
+}
+
+TEST(ParserInheritanceReplacePolicyAllowsOverride) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser_options options = ap_parser_options_default();
+  ap_parser *base = ap_parser_new("base", "base parser");
+  ap_parser *child = NULL;
+  ap_arg_options base_mode = ap_arg_options_default();
+  ap_arg_options child_mode = ap_arg_options_default();
+  const char *value = NULL;
+  char *argv[] = {(char *)"child", (char *)"--mode", (char *)"fast", NULL};
+
+  CHECK(base != NULL);
+  base_mode.help = "base mode";
+  LONGS_EQUAL(0, ap_add_argument(base, "--mode", base_mode, &err));
+
+  options.inherit_from = base;
+  options.conflict_policy = AP_PARSER_CONFLICT_REPLACE;
+  child = ap_parser_new_with_options("child", "child parser", options);
+  CHECK(child != NULL);
+
+  child_mode.help = "child mode";
+  child_mode.required = true;
+  LONGS_EQUAL(0, ap_add_argument(child, "--mode", child_mode, &err));
+  LONGS_EQUAL(0, ap_parse_args(child, 3, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "mode", &value));
+  STRCMP_EQUAL("fast", value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(child);
+  ap_parser_free(base);
+}
+
 TEST(AddSubcommandNoMemoryLeavesParentStateAndCanRetry) {
   AllocFailGuard guard;
   if (!test_alloc_injection_available()) {
