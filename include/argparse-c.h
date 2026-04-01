@@ -149,6 +149,12 @@ typedef enum {
   AP_ARG_KIND_OPTIONAL,
 } ap_arg_kind;
 
+typedef enum {
+  AP_HELP_FORMATTER_STANDARD = 0,
+  AP_HELP_FORMATTER_SHOW_DEFAULTS,
+  AP_HELP_FORMATTER_RAW_TEXT,
+} ap_help_formatter_mode;
+
 typedef struct {
   const char *prog;
   const char *description;
@@ -189,6 +195,7 @@ typedef struct ap_parser_options {
   const char *fromfile_prefix_chars;
   const ap_parser *inherit_from;
   ap_parser_conflict_policy conflict_policy;
+  ap_help_formatter_mode help_formatter_mode;
 } ap_parser_options;
 
 ap_parser *ap_parser_new(const char *prog, const char *description);

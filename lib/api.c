@@ -490,6 +490,7 @@ ap_parser_options ap_parser_options_default(void) {
   options.fromfile_prefix_chars = NULL;
   options.inherit_from = NULL;
   options.conflict_policy = AP_PARSER_CONFLICT_ERROR;
+  options.help_formatter_mode = AP_HELP_FORMATTER_STANDARD;
   return options;
 }
 
@@ -802,6 +803,7 @@ static ap_parser *parser_alloc(const char *prog, const char *description,
                                       ? ap_strdup(options.fromfile_prefix_chars)
                                       : NULL;
   parser->conflict_policy = options.conflict_policy;
+  parser->help_formatter_mode = options.help_formatter_mode;
   parser->parent = parent;
   if (!parser->prog || !parser->description || !parser->command_name ||
       !parser->completion_entrypoint || !parser->prefix_chars ||
@@ -1203,6 +1205,7 @@ ap_parser *ap_add_subcommand(ap_parser *parser, const char *name,
     child_options.prefix_chars = parser->prefix_chars;
     child_options.allow_abbrev = parser->allow_abbrev;
     child_options.fromfile_prefix_chars = parser->fromfile_prefix_chars;
+    child_options.help_formatter_mode = parser->help_formatter_mode;
     def.parser = parser_alloc(prog, description ? description : "", name,
                               parser, child_options);
   }

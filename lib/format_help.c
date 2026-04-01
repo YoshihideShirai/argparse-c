@@ -157,25 +157,48 @@ static int append_positional_usage(ap_string_builder *sb,
   return 0;
 }
 
-static int append_help_line(ap_string_builder *sb, const ap_arg_def *def) {
-  const char *mv = metavar_for(def);
-  bool has_meta = false;
+typedef struct {
+  bool raw_text;
+  bool show_defaults;
+} ap_help_render_options;
+
+static bool help_line_has_meta(const ap_arg_def *def) {
+  return (def->opts.action == AP_ACTION_STORE ||
+          def->opts.action == AP_ACTION_APPEND) &&
+         (def->opts.nargs == AP_NARGS_ONE ||
+          def->opts.nargs == AP_NARGS_OPTIONAL ||
+          def->opts.nargs == AP_NARGS_ZERO_OR_MORE ||
+          def->opts.nargs == AP_NARGS_ONE_OR_MORE ||
+          def->opts.nargs == AP_NARGS_FIXED);
+}
+
+static int append_choices_line(ap_string_builder *sb, const ap_arg_def *def,
+                               const char *prefix) {
   int i;
 
-  if (def->opts.action == AP_ACTION_STORE ||
-      def->opts.action == AP_ACTION_APPEND) {
-    if (def->opts.nargs == AP_NARGS_ONE) {
-      has_meta = true;
-    } else if (def->opts.nargs == AP_NARGS_OPTIONAL) {
-      has_meta = true;
-    } else if (def->opts.nargs == AP_NARGS_ZERO_OR_MORE) {
-      has_meta = true;
-    } else if (def->opts.nargs == AP_NARGS_ONE_OR_MORE) {
-      has_meta = true;
-    } else if (def->opts.nargs == AP_NARGS_FIXED) {
-      has_meta = true;
+  if (!def->opts.choices.items || def->opts.choices.count <= 0) {
+    return 0;
+  }
+  if (ap_sb_appendf(sb, "%schoices: ", prefix) != 0) {
+    return -1;
+  }
+  for (i = 0; i < def->opts.choices.count; i++) {
+    if (i > 0 && ap_sb_appendf(sb, ", ") != 0) {
+      return -1;
+    }
+    if (ap_sb_appendf(sb, "%s", def->opts.choices.items[i]) != 0) {
+      return -1;
     }
   }
+  return 0;
+}
+
+static int append_help_line_standard(ap_string_builder *sb,
+                                     const ap_arg_def *def,
+                                     bool show_defaults) {
+  const char *mv = metavar_for(def);
+  bool has_meta = help_line_has_meta(def);
+  int i;
 
   if (def->is_optional) {
     if (ap_sb_appendf(sb, "  ") != 0) {
@@ -225,20 +248,10 @@ static int append_help_line(ap_string_builder *sb, const ap_arg_def *def) {
     if (def->opts.help && ap_sb_appendf(sb, "\n    %s", def->opts.help) != 0) {
       return -1;
     }
-    if (def->opts.choices.items && def->opts.choices.count > 0) {
-      if (ap_sb_appendf(sb, "\n    choices: ") != 0) {
-        return -1;
-      }
-      for (i = 0; i < def->opts.choices.count; i++) {
-        if (i > 0 && ap_sb_appendf(sb, ", ") != 0) {
-          return -1;
-        }
-        if (ap_sb_appendf(sb, "%s", def->opts.choices.items[i]) != 0) {
-          return -1;
-        }
-      }
+    if (append_choices_line(sb, def, "\n    ") != 0) {
+      return -1;
     }
-    if (def->opts.default_value &&
+    if (show_defaults && def->opts.default_value &&
         ap_sb_appendf(sb, "\n    default: %s", def->opts.default_value) != 0) {
       return -1;
     }
@@ -284,20 +297,10 @@ static int append_help_line(ap_string_builder *sb, const ap_arg_def *def) {
   if (def->opts.help && ap_sb_appendf(sb, "\n    %s", def->opts.help) != 0) {
     return -1;
   }
-  if (def->opts.choices.items && def->opts.choices.count > 0) {
-    if (ap_sb_appendf(sb, "\n    choices: ") != 0) {
-      return -1;
-    }
-    for (i = 0; i < def->opts.choices.count; i++) {
-      if (i > 0 && ap_sb_appendf(sb, ", ") != 0) {
-        return -1;
-      }
-      if (ap_sb_appendf(sb, "%s", def->opts.choices.items[i]) != 0) {
-        return -1;
-      }
-    }
+  if (append_choices_line(sb, def, "\n    ") != 0) {
+    return -1;
   }
-  if (def->opts.default_value &&
+  if (show_defaults && def->opts.default_value &&
       ap_sb_appendf(sb, "\n    default: %s", def->opts.default_value) != 0) {
     return -1;
   }
@@ -305,6 +308,77 @@ static int append_help_line(ap_string_builder *sb, const ap_arg_def *def) {
     return -1;
   }
   return ap_sb_appendf(sb, "\n");
+}
+
+static int append_help_line_raw(ap_string_builder *sb, const ap_arg_def *def,
+                                bool show_defaults) {
+  const char *mv = metavar_for(def);
+  bool has_meta = help_line_has_meta(def);
+  int i;
+
+  if (ap_sb_appendf(sb, "  ") != 0) {
+    return -1;
+  }
+  if (def->is_optional) {
+    for (i = 0; i < def->flags_count; i++) {
+      if (i > 0 && ap_sb_appendf(sb, ", ") != 0) {
+        return -1;
+      }
+      if (ap_sb_appendf(sb, "%s", def->flags[i]) != 0) {
+        return -1;
+      }
+    }
+  } else if (ap_sb_appendf(sb, "%s", mv) != 0) {
+    return -1;
+  }
+
+  if (has_meta) {
+    if (def->opts.nargs == AP_NARGS_ONE && ap_sb_appendf(sb, " %s", mv) != 0) {
+      return -1;
+    }
+    if (def->opts.nargs == AP_NARGS_OPTIONAL &&
+        ap_sb_appendf(sb, " [%s]", mv) != 0) {
+      return -1;
+    }
+    if (def->opts.nargs == AP_NARGS_ZERO_OR_MORE &&
+        ap_sb_appendf(sb, " [%s ...]", mv) != 0) {
+      return -1;
+    }
+    if (def->opts.nargs == AP_NARGS_ONE_OR_MORE &&
+        ap_sb_appendf(sb, " %s [%s ...]", mv, mv) != 0) {
+      return -1;
+    }
+    if (def->opts.nargs == AP_NARGS_FIXED) {
+      int start = def->is_optional ? 0 : 1;
+      for (i = start; i < def->opts.nargs_count; i++) {
+        if (ap_sb_appendf(sb, " %s", mv) != 0) {
+          return -1;
+        }
+      }
+    }
+  }
+  if (def->opts.help && ap_sb_appendf(sb, " - %s", def->opts.help) != 0) {
+    return -1;
+  }
+  if (append_choices_line(sb, def, " | ") != 0) {
+    return -1;
+  }
+  if (show_defaults && def->opts.default_value &&
+      ap_sb_appendf(sb, " | default: %s", def->opts.default_value) != 0) {
+    return -1;
+  }
+  if (def->opts.required && ap_sb_appendf(sb, " | required: true") != 0) {
+    return -1;
+  }
+  return ap_sb_appendf(sb, "\n");
+}
+
+static int append_help_line(ap_string_builder *sb, const ap_arg_def *def,
+                            ap_help_render_options opts) {
+  if (opts.raw_text) {
+    return append_help_line_raw(sb, def, opts.show_defaults);
+  }
+  return append_help_line_standard(sb, def, opts.show_defaults);
 }
 
 char *ap_usage_build(const ap_parser *parser) {
@@ -348,6 +422,7 @@ char *ap_help_build(const ap_parser *parser) {
   ap_string_builder sb;
   int i;
   int j;
+  ap_help_render_options render_opts = {0};
   bool has_positionals = false;
   bool has_optionals = false;
   bool has_argument_groups = false;
@@ -358,6 +433,13 @@ char *ap_help_build(const ap_parser *parser) {
   }
 
   ap_sb_init(&sb);
+  render_opts.show_defaults = true;
+  if (parser->help_formatter_mode == AP_HELP_FORMATTER_RAW_TEXT) {
+    render_opts.raw_text = true;
+  } else if (parser->help_formatter_mode == AP_HELP_FORMATTER_STANDARD ||
+             parser->help_formatter_mode == AP_HELP_FORMATTER_SHOW_DEFAULTS) {
+    render_opts.raw_text = false;
+  }
 
   {
     char *usage = ap_usage_build(parser);
@@ -399,7 +481,7 @@ char *ap_help_build(const ap_parser *parser) {
     }
     for (i = 0; i < parser->defs_count; i++) {
       if (parser->defs[i].arg_group_index < 0 && !parser->defs[i].is_optional &&
-          append_help_line(&sb, &parser->defs[i]) != 0) {
+          append_help_line(&sb, &parser->defs[i], render_opts) != 0) {
         ap_sb_free(&sb);
         return NULL;
       }
@@ -413,7 +495,7 @@ char *ap_help_build(const ap_parser *parser) {
     }
     for (i = 0; i < parser->defs_count; i++) {
       if (parser->defs[i].arg_group_index < 0 && parser->defs[i].is_optional &&
-          append_help_line(&sb, &parser->defs[i]) != 0) {
+          append_help_line(&sb, &parser->defs[i], render_opts) != 0) {
         ap_sb_free(&sb);
         return NULL;
       }
@@ -435,7 +517,7 @@ char *ap_help_build(const ap_parser *parser) {
       }
       for (j = 0; j < parser->defs_count; j++) {
         if (parser->defs[j].arg_group_index == i &&
-            append_help_line(&sb, &parser->defs[j]) != 0) {
+            append_help_line(&sb, &parser->defs[j], render_opts) != 0) {
           ap_sb_free(&sb);
           return NULL;
         }
