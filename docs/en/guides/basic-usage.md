@@ -54,6 +54,33 @@ Notes:
 - grouped arguments are parsed the same way as regular arguments
 - grouped arguments are shown in their custom section in `ap_format_help(...)`
 
+## Reusing common parser options
+
+Use `ap_parser_new_with_options(...)` with `inherit_from` when multiple
+commands should share a common option set (including argument groups and
+mutually exclusive groups).
+
+```c
+ap_parser *common = ap_parser_new("common", "shared options");
+ap_arg_options verbose = ap_arg_options_default();
+verbose.type = AP_TYPE_BOOL;
+verbose.action = AP_ACTION_STORE_TRUE;
+ap_add_argument(common, "--verbose", verbose, &err);
+
+ap_parser_options child_opts = ap_parser_options_default();
+child_opts.inherit_from = common;
+/* default: AP_PARSER_CONFLICT_ERROR */
+ap_parser *child = ap_parser_new_with_options("child", "subcommand", child_opts);
+```
+
+Conflict behavior for inherited definitions:
+
+- `AP_PARSER_CONFLICT_ERROR` (default): adding an argument that reuses an
+  inherited `dest` or flag fails.
+- `AP_PARSER_CONFLICT_KEEP_EXISTING`: inherited definitions win during import.
+- `AP_PARSER_CONFLICT_REPLACE`: inherited definitions can be replaced by the
+  new parser (for overrides/customization).
+
 ## Error handling
 
 `argparse-c` does not call `exit()` inside the library. On failure, inspect `ap_error` and optionally render a user-facing message with `ap_format_error(...)`.

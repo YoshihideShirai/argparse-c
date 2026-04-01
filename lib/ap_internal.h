@@ -21,6 +21,7 @@ typedef struct {
 
 typedef struct {
   bool is_optional;
+  bool inherited;
   char *dest;
   char **flags;
   int flags_count;
@@ -71,6 +72,7 @@ struct ap_parser {
   bool allow_abbrev;
   char *fromfile_prefix_chars;
   bool completion_enabled;
+  ap_parser_conflict_policy conflict_policy;
   struct ap_parser *parent;
   ap_arg_def *defs;
   int defs_count;

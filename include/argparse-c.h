@@ -138,6 +138,12 @@ typedef struct {
 } ap_arg_options;
 
 typedef enum {
+  AP_PARSER_CONFLICT_ERROR = 0,
+  AP_PARSER_CONFLICT_KEEP_EXISTING,
+  AP_PARSER_CONFLICT_REPLACE,
+} ap_parser_conflict_policy;
+
+typedef enum {
   AP_ARG_KIND_POSITIONAL = 0,
   AP_ARG_KIND_OPTIONAL,
 } ap_arg_kind;
@@ -180,6 +186,8 @@ typedef struct ap_parser_options {
   const char *prefix_chars;
   bool allow_abbrev;
   const char *fromfile_prefix_chars;
+  const ap_parser *inherit_from;
+  ap_parser_conflict_policy conflict_policy;
 } ap_parser_options;
 
 ap_parser *ap_parser_new(const char *prog, const char *description);
