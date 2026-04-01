@@ -1875,6 +1875,52 @@ TEST(ParserInheritanceReplacePolicyAllowsOverride) {
   ap_parser_free(base);
 }
 
+TEST(ParserResolvePolicyReplacesPriorDefinitionAcrossApiViews) {
+  ap_error err = {};
+  ap_parser_options parser_options = ap_parser_options_default();
+  ap_arg_options old_mode = ap_arg_options_default();
+  ap_arg_options final_mode = ap_arg_options_default();
+  ap_parser_info parser_info = {};
+  ap_arg_info arg_info = {};
+  ap_parser *parser = NULL;
+  char *usage = NULL;
+  char *help = NULL;
+
+  parser_options.conflict_policy = AP_PARSER_CONFLICT_RESOLVE;
+  parser = ap_parser_new_with_options("prog", "desc", parser_options);
+  CHECK(parser != NULL);
+
+  old_mode.help = "legacy mode";
+  LONGS_EQUAL(0, ap_add_argument(parser, "--mode", old_mode, &err));
+
+  final_mode.help = "final mode";
+  final_mode.metavar = "STYLE";
+  final_mode.required = true;
+  final_mode.dest = "mode_final";
+  LONGS_EQUAL(0, ap_add_argument(parser, "--mode", final_mode, &err));
+
+  usage = ap_format_usage(parser);
+  help = ap_format_help(parser);
+  CHECK(usage != NULL);
+  CHECK(help != NULL);
+  CHECK(strstr(usage, " [--mode MODE]") == NULL);
+  CHECK(strstr(usage, " --mode STYLE") != NULL);
+  CHECK(strstr(help, "legacy mode") == NULL);
+  CHECK(strstr(help, "final mode") != NULL);
+
+  LONGS_EQUAL(0, ap_parser_get_info(parser, &parser_info));
+  LONGS_EQUAL(2, parser_info.argument_count);
+  LONGS_EQUAL(0, ap_parser_get_argument(parser, 1, &arg_info));
+  STRCMP_EQUAL("mode_final", arg_info.dest);
+  STRCMP_EQUAL("final mode", arg_info.help);
+  STRCMP_EQUAL("STYLE", arg_info.metavar);
+  CHECK_TRUE(arg_info.required);
+
+  free(usage);
+  free(help);
+  ap_parser_free(parser);
+}
+
 TEST(AddSubcommandNoMemoryLeavesParentStateAndCanRetry) {
   AllocFailGuard guard;
   if (!test_alloc_injection_available()) {
