@@ -265,15 +265,17 @@ char *ap_strdup(const char *s) {
 
 char *ap_strndup(const char *s, size_t n) {
   char *buf;
+  size_t len;
   if (!s) {
     return NULL;
   }
-  buf = malloc(n + 1);
+  len = strnlen(s, n);
+  buf = malloc(len + 1);
   if (!buf) {
     return NULL;
   }
-  memcpy(buf, s, n);
-  buf[n] = '\0';
+  memcpy(buf, s, len);
+  buf[len] = '\0';
   return buf;
 }
 
