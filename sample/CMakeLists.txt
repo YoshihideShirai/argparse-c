@@ -19,6 +19,9 @@ target_link_libraries(example_help_formatter PRIVATE argparse-c ap_warnings)
 add_executable(example_test_runner example_test_runner.c)
 target_link_libraries(example_test_runner PRIVATE argparse-c ap_warnings)
 
+add_executable(example_fromfile example_fromfile.c)
+target_link_libraries(example_fromfile PRIVATE argparse-c ap_warnings)
+
 add_custom_target(sample
   DEPENDS
     example1
@@ -28,4 +31,5 @@ add_custom_target(sample
     example_introspection
     example_help_formatter
     example_test_runner
+    example_fromfile
 )

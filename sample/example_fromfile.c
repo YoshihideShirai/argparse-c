@@ -1,0 +1,90 @@
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "argparse-c.h"
+
+int main(int argc, char **argv) {
+  ap_error err = {0};
+  ap_namespace *ns = NULL;
+  ap_parser_options parser_options = ap_parser_options_default();
+  parser_options.fromfile_prefix_chars = "@";
+
+  ap_parser *parser = ap_parser_new_with_options(
+      "example_fromfile", "fromfile_prefix_chars demo.", parser_options);
+  if (!parser) {
+    fprintf(stderr, "failed to initialize parser\n");
+    return 1;
+  }
+
+  ap_arg_options mode_opts = ap_arg_options_default();
+  mode_opts.help = "run mode.";
+  if (ap_add_argument(parser, "--mode", mode_opts, &err) != 0) {
+    fprintf(stderr, "%s\n", err.message);
+    ap_parser_free(parser);
+    return 1;
+  }
+
+  ap_arg_options count_opts = ap_arg_options_default();
+  count_opts.type = AP_TYPE_INT32;
+  count_opts.help = "repeat count.";
+  if (ap_add_argument(parser, "--count", count_opts, &err) != 0) {
+    fprintf(stderr, "%s\n", err.message);
+    ap_parser_free(parser);
+    return 1;
+  }
+
+  ap_arg_options input_opts = ap_arg_options_default();
+  input_opts.nargs = AP_NARGS_OPTIONAL;
+  input_opts.help = "input path.";
+  if (ap_add_argument(parser, "input", input_opts, &err) != 0) {
+    fprintf(stderr, "%s\n", err.message);
+    ap_parser_free(parser);
+    return 1;
+  }
+
+  if (ap_parse_args(parser, argc, argv, &ns, &err) != 0) {
+    char *error_text = ap_format_error(parser, &err);
+    if (error_text) {
+      fprintf(stderr, "%s", error_text);
+      free(error_text);
+    } else {
+      fprintf(stderr, "error: %s\n", err.message);
+    }
+    ap_parser_free(parser);
+    return 1;
+  }
+
+  {
+    bool is_help = false;
+    if (ap_ns_get_bool(ns, "help", &is_help) && is_help) {
+      char *help = ap_format_help(parser);
+      if (help) {
+        printf("%s", help);
+        free(help);
+      }
+      ap_namespace_free(ns);
+      ap_parser_free(parser);
+      return 0;
+    }
+  }
+
+  {
+    const char *mode = NULL;
+    const char *input = NULL;
+    int32_t count = 0;
+
+    ap_ns_get_string(ns, "mode", &mode);
+    ap_ns_get_int32(ns, "count", &count);
+    ap_ns_get_string(ns, "input", &input);
+
+    printf("mode=%s\n", mode ? mode : "(null)");
+    printf("count=%d\n", count);
+    printf("input=%s\n", input ? input : "(null)");
+  }
+
+  ap_namespace_free(ns);
+  ap_parser_free(parser);
+  return 0;
+}
