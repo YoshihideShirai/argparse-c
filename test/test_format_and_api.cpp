@@ -80,6 +80,24 @@ int failing_action_with_error(const ap_action_request *request,
   return -1;
 }
 
+int failing_completion_after_partial_result(
+    const ap_completion_request *request, ap_completion_result *result,
+    void *user_data, ap_error *err) {
+  (void)request;
+  (void)user_data;
+  if (result) {
+    ap_completion_result_add(result, "partial", "before failure", err);
+  }
+  if (err) {
+    std::memset(err, 0, sizeof(*err));
+    err->code = AP_ERR_INVALID_DEFINITION;
+    std::snprintf(err->argument, sizeof(err->argument), "%s", "exec");
+    std::snprintf(err->message, sizeof(err->message), "%s",
+                  "completion callback failed");
+  }
+  return -1;
+}
+
 } // namespace
 
 extern "C" {
@@ -1600,6 +1618,48 @@ TEST(CompleteRejectsNullArgvWhenArgcIsPositive) {
   LONGS_EQUAL(-1, ap_complete(p, 1, NULL, "bash", &result, &err));
   LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
 
+  ap_parser_free(p);
+}
+
+TEST(CompleteFreesPartialCandidatesWhenCompletionCallbackFails) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options exec = ap_arg_options_default();
+  ap_completion_result result = {};
+  char *argv[] = {(char *)"--exec", (char *)"r", NULL};
+
+  CHECK(p != NULL);
+  exec.completion_callback = failing_completion_after_partial_result;
+  LONGS_EQUAL(0, ap_add_argument(p, "--exec", exec, &err));
+
+  LONGS_EQUAL(-1, ap_complete(p, 2, argv, "bash", &result, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("exec", err.argument);
+  CHECK(result.items == NULL);
+  LONGS_EQUAL(0, result.count);
+
+  ap_parser_free(p);
+}
+
+TEST(CompleteHandlesNullScannedTokenAndVeryLongInlineOptionName) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options value = ap_arg_options_default();
+  ap_completion_result result = {};
+  std::string long_flag = "--" + std::string(150, 'a');
+  std::string long_inline = long_flag + "=value";
+  char *argv[] = {NULL, const_cast<char *>(long_inline.c_str()), (char *)"",
+                  NULL};
+
+  CHECK(p != NULL);
+  LONGS_EQUAL(0, ap_add_argument(p, const_cast<char *>(long_flag.c_str()),
+                                 value, &err));
+
+  LONGS_EQUAL(0, ap_complete(p, 3, argv, "bash", &result, &err));
+  LONGS_EQUAL(0, result.count);
+  CHECK(result.items == NULL);
+
+  ap_completion_result_free(&result);
   ap_parser_free(p);
 }
 
