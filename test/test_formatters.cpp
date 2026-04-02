@@ -1260,6 +1260,80 @@ TEST(FormatCompletionUsesStaticCompletionMetadata) {
   ap_parser_free(p);
 }
 
+TEST(FormatCompletionEscapesSpecialCharactersAndDerivesFallbackDescriptions) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("my-tool", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  ap_arg_options dry_run = ap_arg_options_default();
+  ap_arg_options flag = ap_arg_options_default();
+  const char *modes[] = {"o'reilly", "plain"};
+  char *bash = NULL;
+  char *fish = NULL;
+  char *zsh = NULL;
+
+  CHECK(p != NULL);
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+  dry_run.help = NULL;
+  dry_run.metavar = NULL;
+  flag.type = AP_TYPE_BOOL;
+  flag.action = AP_ACTION_STORE_TRUE;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--dry-run", dry_run, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--flag", flag, &err));
+  CHECK(ap_add_subcommand(p, "alpha", "", &err) != NULL);
+  CHECK(ap_add_subcommand(p, "beta", "", &err) != NULL);
+
+  bash = ap_format_bash_completion(p);
+  fish = ap_format_fish_completion(p);
+  zsh = ap_format_zsh_completion(p);
+  CHECK(bash != NULL);
+  CHECK(fish != NULL);
+  CHECK(zsh != NULL);
+
+  CHECK(strstr(bash, "root:--mode) printf '%s\\n' 'o'\\''reilly' 'plain';;") !=
+        NULL);
+  CHECK(strstr(zsh, "root:--mode) reply=( 'o'\\''reilly' 'plain' )") != NULL);
+  CHECK(strstr(bash, "parser_subcommands='alpha beta'") != NULL);
+  CHECK(strstr(zsh, "parser_subcommands=( 'alpha' 'beta' )") != NULL);
+  CHECK(strstr(fish, "complete -c \"my-tool\" -n '") != NULL);
+  CHECK(strstr(fish, "-l dry-run -d \"DRY-RUN\" -r") != NULL);
+
+  free(bash);
+  free(fish);
+  free(zsh);
+  ap_parser_free(p);
+}
+
+TEST(FormatCompletionFailureInjectionCoversEscapingBranches) {
+  ap_error err = {};
+  ap_parser *root = ap_parser_new("my-tool", "line with \\ and $ and\nnewline");
+  ap_arg_options mode = ap_arg_options_default();
+  ap_arg_options weird = ap_arg_options_default();
+  ap_arg_options path = ap_arg_options_default();
+  const char *modes[] = {"o'reilly", "plain"};
+
+  CHECK(root != NULL);
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+  weird.help = "contains \\ and $ and\nnewline";
+  weird.completion_hint = "contains \\ and $ and\nnewline";
+  path.completion_kind = AP_COMPLETION_KIND_DIRECTORY;
+
+  LONGS_EQUAL(0, ap_add_argument(root, "--mode", mode, &err));
+  LONGS_EQUAL(0, ap_add_argument(root, "--dry-run", weird, &err));
+  LONGS_EQUAL(0, ap_add_argument(root, "--path", path, &err));
+  CHECK(ap_add_subcommand(root, "alpha", "", &err) != NULL);
+  CHECK(ap_add_subcommand(root, "beta", "", &err) != NULL);
+
+  assert_bash_completion_append_failures_return_null(root);
+  assert_fish_completion_append_failures_return_null(root);
+  assert_zsh_completion_append_failures_return_null(root);
+
+  ap_parser_free(root);
+}
+
 TEST(FormatZshCompletionIncludesSubcommandsAndCompletionKinds) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
