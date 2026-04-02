@@ -1952,6 +1952,58 @@ TEST(CustomPrefixCharsAndAbbrevResolveLongOption) {
   ap_parser_free(p);
 }
 
+TEST(AllowAbbrevRejectsAmbiguousLongOption) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser_options options = ap_parser_options_default();
+  ap_parser *p = NULL;
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options version = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--ver", NULL};
+
+  options.allow_abbrev = true;
+  p = ap_parser_new_with_options("prog", "desc", options);
+  CHECK(p != NULL);
+
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  version.type = AP_TYPE_BOOL;
+  version.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--verbose", verbose, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--version", version, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_DUPLICATE_OPTION, err.code);
+  STRCMP_EQUAL("--ver", err.argument);
+  CHECK(ns == NULL);
+
+  ap_parser_free(p);
+}
+
+TEST(AllowAbbrevRejectsAmbiguousLongOptionWithInlineValue) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser_options options = ap_parser_options_default();
+  ap_parser *p = NULL;
+  ap_arg_options verbose = ap_arg_options_default();
+  ap_arg_options version = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--ver=1", NULL};
+
+  options.allow_abbrev = true;
+  p = ap_parser_new_with_options("prog", "desc", options);
+  CHECK(p != NULL);
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--verbose", verbose, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--version", version, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_DUPLICATE_OPTION, err.code);
+  STRCMP_EQUAL("--ver=1", err.argument);
+  CHECK(ns == NULL);
+
+  ap_parser_free(p);
+}
+
 TEST(FromfilePrefixExpandsArguments) {
   ap_error err = {};
   ap_namespace *ns = NULL;
