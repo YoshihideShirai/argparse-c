@@ -1788,3 +1788,97 @@ TEST(FromfilePrefixExpandsArguments) {
   ap_parser_free(p);
   remove(path);
 }
+
+TEST(FromfilePrefixSkipsCommentsAndPreservesInlineArgs) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser_options options = ap_parser_options_default();
+  ap_parser *p = NULL;
+  ap_arg_options num = ap_arg_options_default();
+  ap_arg_options mode = ap_arg_options_default();
+  const char *mode_choices[] = {"fast", "slow"};
+  const char *path = "/tmp/argparse_c_fromfile_comments.txt";
+  FILE *fp = fopen(path, "w");
+  char *argv[] = {(char *)"prog", (char *)"--mode", (char *)"slow",
+                  (char *)"@/tmp/argparse_c_fromfile_comments.txt", NULL};
+  int32_t parsed = 0;
+  const char *mode_value = NULL;
+
+  CHECK(fp != NULL);
+  fputs("  # whole-line comment\n\n--num\n7\ntrailing  # trailing comment\n",
+        fp);
+  fclose(fp);
+
+  options.fromfile_prefix_chars = "@";
+  p = ap_parser_new_with_options("prog", "desc", options);
+  CHECK(p != NULL);
+  num.type = AP_TYPE_INT32;
+  mode.choices.items = mode_choices;
+  mode.choices.count = 2;
+
+  LONGS_EQUAL(0, ap_add_argument(p, "--num", num, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+  LONGS_EQUAL(0,
+              ap_add_argument(p, "trailing", ap_arg_options_default(), &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 4, argv, &ns, &err));
+  CHECK(ap_ns_get_int32(ns, "num", &parsed));
+  CHECK(ap_ns_get_string(ns, "mode", &mode_value));
+  LONGS_EQUAL(7, parsed);
+  STRCMP_EQUAL("slow", mode_value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+  remove(path);
+}
+
+TEST(FromfilePrefixMissingFileReturnsDefinitionError) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser_options options = ap_parser_options_default();
+  ap_parser *p = NULL;
+  ap_arg_options num = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"@/tmp/argparse_c_missing_args.txt",
+                  NULL};
+
+  options.fromfile_prefix_chars = "@";
+  p = ap_parser_new_with_options("prog", "desc", options);
+  CHECK(p != NULL);
+  num.type = AP_TYPE_INT32;
+  LONGS_EQUAL(0, ap_add_argument(p, "--num", num, &err));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 2, argv, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("/tmp/argparse_c_missing_args.txt", err.argument);
+  CHECK(strstr(err.message, "failed to open args file") != NULL);
+
+  ap_parser_free(p);
+}
+
+TEST(ParseKnownIntermixedArgsDelegatesToKnownArgsBehavior) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options count = ap_arg_options_default();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  int32_t parsed_count = 0;
+  char *argv[] = {(char *)"prog",      (char *)"--count", (char *)"3",
+                  (char *)"--mystery", (char *)"value",   NULL};
+
+  CHECK(p != NULL);
+  count.type = AP_TYPE_INT32;
+  LONGS_EQUAL(0, ap_add_argument(p, "--count", count, &err));
+
+  LONGS_EQUAL(0, ap_parse_known_intermixed_args(p, 5, argv, &ns, &unknown,
+                                                &unknown_count, &err));
+  CHECK(ap_ns_get_int32(ns, "count", &parsed_count));
+  LONGS_EQUAL(3, parsed_count);
+  LONGS_EQUAL(2, unknown_count);
+  STRCMP_EQUAL("--mystery", unknown[0]);
+  STRCMP_EQUAL("value", unknown[1]);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
