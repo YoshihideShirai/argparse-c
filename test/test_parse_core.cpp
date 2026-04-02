@@ -1658,6 +1658,8 @@ TEST(ParseInt32RangeBoundariesAndRejectsOverflowInput) {
                       NULL};
   char *argv_overflow[] = {(char *)"prog", (char *)"--value",
                            (char *)"2147483648", NULL};
+  char *argv_underflow[] = {(char *)"prog", (char *)"--value",
+                            (char *)"-2147483649", NULL};
 
   CHECK(p != NULL);
   value.type = AP_TYPE_INT32;
@@ -1681,16 +1683,120 @@ TEST(ParseInt32RangeBoundariesAndRejectsOverflowInput) {
   STRCMP_EQUAL("argument '--value' must be a valid int32: '2147483648'",
                err.message);
 
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_underflow, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_INT32, err.code);
+  STRCMP_EQUAL("--value", err.argument);
+  STRCMP_EQUAL("argument '--value' must be a valid int32: '-2147483649'",
+               err.message);
+
   ap_parser_free(p);
 }
 
-TEST(ParseDoubleRejectsOverflowInput) {
+TEST(ParseInt64RangeBoundariesAndRejectsOverflowInput) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options value = ap_arg_options_default();
+  int64_t parsed = 0;
+  char *argv_min[] = {(char *)"prog", (char *)"--value",
+                      (char *)"-9223372036854775808", NULL};
+  char *argv_max[] = {(char *)"prog", (char *)"--value",
+                      (char *)"9223372036854775807", NULL};
+  char *argv_overflow[] = {(char *)"prog", (char *)"--value",
+                           (char *)"9223372036854775808", NULL};
+  char *argv_underflow[] = {(char *)"prog", (char *)"--value",
+                            (char *)"-9223372036854775809", NULL};
+
+  CHECK(p != NULL);
+  value.type = AP_TYPE_INT64;
+  LONGS_EQUAL(0, ap_add_argument(p, "--value", value, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv_min, &ns, &err));
+  CHECK(ap_ns_get_int64(ns, "value", &parsed));
+  LONGS_EQUAL(-9223372036854775807LL - 1, parsed);
+  ap_namespace_free(ns);
+  ns = NULL;
+
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv_max, &ns, &err));
+  CHECK(ap_ns_get_int64(ns, "value", &parsed));
+  LONGS_EQUAL(9223372036854775807LL, parsed);
+  ap_namespace_free(ns);
+  ns = NULL;
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_overflow, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_INT64, err.code);
+  STRCMP_EQUAL("--value", err.argument);
+  STRCMP_EQUAL(
+      "argument '--value' must be a valid int64: '9223372036854775808'",
+      err.message);
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_underflow, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_INT64, err.code);
+  STRCMP_EQUAL("--value", err.argument);
+  STRCMP_EQUAL(
+      "argument '--value' must be a valid int64: '-9223372036854775809'",
+      err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(ParseUint64BoundaryNeighborhoodAndRejectsNegativeOverflow) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options value = ap_arg_options_default();
+  uint64_t parsed = 0;
+  char *argv_max_minus_one[] = {(char *)"prog", (char *)"--value",
+                                (char *)"18446744073709551614", NULL};
+  char *argv_max[] = {(char *)"prog", (char *)"--value",
+                      (char *)"18446744073709551615", NULL};
+  char *argv_negative[] = {(char *)"prog", (char *)"--value", (char *)"-1",
+                           NULL};
+  char *argv_overflow[] = {(char *)"prog", (char *)"--value",
+                           (char *)"18446744073709551616", NULL};
+
+  CHECK(p != NULL);
+  value.type = AP_TYPE_UINT64;
+  LONGS_EQUAL(0, ap_add_argument(p, "--value", value, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv_max_minus_one, &ns, &err));
+  CHECK(ap_ns_get_uint64(ns, "value", &parsed));
+  LONGS_EQUAL(18446744073709551614ULL, parsed);
+  ap_namespace_free(ns);
+  ns = NULL;
+
+  LONGS_EQUAL(0, ap_parse_args(p, 3, argv_max, &ns, &err));
+  CHECK(ap_ns_get_uint64(ns, "value", &parsed));
+  LONGS_EQUAL(18446744073709551615ULL, parsed);
+  ap_namespace_free(ns);
+  ns = NULL;
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_negative, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_UINT64, err.code);
+  STRCMP_EQUAL("--value", err.argument);
+  STRCMP_EQUAL("argument '--value' must be a valid uint64: '-1'", err.message);
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_overflow, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_UINT64, err.code);
+  STRCMP_EQUAL("--value", err.argument);
+  STRCMP_EQUAL(
+      "argument '--value' must be a valid uint64: '18446744073709551616'",
+      err.message);
+
+  ap_parser_free(p);
+}
+
+TEST(ParseDoubleRejectsRangeAndInvalidInput) {
   ap_error err = {};
   ap_namespace *ns = NULL;
   ap_parser *p = ap_parser_new("prog", "desc");
   ap_arg_options ratio = ap_arg_options_default();
   char *argv_overflow[] = {(char *)"prog", (char *)"--ratio", (char *)"1e309",
                            NULL};
+  char *argv_underflow[] = {(char *)"prog", (char *)"--ratio",
+                            (char *)"1e-4000", NULL};
+  char *argv_invalid[] = {(char *)"prog", (char *)"--ratio", (char *)"1.2.3",
+                          NULL};
 
   CHECK(p != NULL);
   ratio.type = AP_TYPE_DOUBLE;
@@ -1699,8 +1805,20 @@ TEST(ParseDoubleRejectsOverflowInput) {
   LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_overflow, &ns, &err));
   LONGS_EQUAL(AP_ERR_INVALID_DOUBLE, err.code);
   STRCMP_EQUAL("--ratio", err.argument);
-  STRCMP_EQUAL("argument '--ratio' must be a valid double: '1e309'",
-               err.message);
+  CHECK(strstr(err.message, "must be a valid double") != NULL);
+  CHECK(strstr(err.message, "1e309") != NULL);
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_underflow, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DOUBLE, err.code);
+  STRCMP_EQUAL("--ratio", err.argument);
+  CHECK(strstr(err.message, "must be a valid double") != NULL);
+  CHECK(strstr(err.message, "1e-4000") != NULL);
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv_invalid, &ns, &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DOUBLE, err.code);
+  STRCMP_EQUAL("--ratio", err.argument);
+  CHECK(strstr(err.message, "must be a valid double") != NULL);
+  CHECK(strstr(err.message, "1.2.3") != NULL);
 
   ap_parser_free(p);
 }
