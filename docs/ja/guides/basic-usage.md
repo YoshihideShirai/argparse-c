@@ -54,6 +54,83 @@ ap_argument_group_add_argument(output, "target", target, &err);
 - grouped argument でも parse の挙動は通常の引数と同じです
 - `ap_format_help(...)` ではカスタムセクションとして表示されます
 
+## `ap_parser_options` 詳細（`prefix_chars` / `allow_abbrev`）
+
+既存 CLI の流儀に合わせたい場合は、
+`ap_parser_options_default()` を基点に必要な項目だけ上書きします。
+
+```c
+ap_parser_options options = ap_parser_options_default();
+options.prefix_chars = "+";
+options.allow_abbrev = true;
+ap_parser *parser =
+    ap_parser_new_with_options("example1", "custom prefixes", options);
+```
+
+### `prefix_chars` を `-` から `+` へ変える例
+
+`sample/example1.c` 相当の短い差分は次のとおりです。
+
+```diff
+- ap_parser *parser = ap_parser_new("example1", "example1 command.");
++ ap_parser_options options = ap_parser_options_default();
++ options.prefix_chars = "+";
++ ap_parser *parser =
++     ap_parser_new_with_options("example1", "example1 command.", options);
+
+- ap_add_argument(parser, "-t, --text", text_opts, &err);
++ ap_add_argument(parser, "+t, ++text", text_opts, &err);
+
+- ap_add_argument(parser, "-i, --integer", integer_opts, &err);
++ ap_add_argument(parser, "+i, ++integer", integer_opts, &err);
+```
+
+help/usage も `+`/`++` 形式に変わります。
+
+```text
+usage: example1 [+h] +t TEXT [+i INTEGER] arg1 [arg2]
+
+optional 引数:
+  +h, ++help              show this help message and exit
+  +t TEXT, ++text TEXT    text field.
+  +i INTEGER, ++integer INTEGER
+                          integer field.
+```
+
+### `allow_abbrev=true/false` の差分（衝突時動作を含む）
+
+`++verbose` と `++version` の 2 つがあるとします。
+
+- `allow_abbrev = false`（既定）
+  - `++ver` は部分一致しないため unknown option になります。
+- `allow_abbrev = true`
+  - `++ver` は複数候補に一致するため ambiguous option で失敗します。
+  - `++verb` のように一意な接頭辞なら `++verbose` として解決されます。
+
+```text
+# allow_abbrev=false
+$ prog ++ver
+error: unknown option '++ver'
+
+# allow_abbrev=true, 衝突ケース
+$ prog ++ver
+error: ambiguous option '++ver'
+```
+
+### 既存 CLI との互換性リスク
+
+`ap_parser_options` の変更は、既存ユーザーに予期しない破壊的影響を与えます。
+
+- **シェルスクリプト / CI**: `-x` / `--long` 前提の既存呼び出しが `prefix_chars` 変更後に失敗する。
+- **ドキュメント不整合**: README や運用手順の引数例が古いままになる。
+- **省略解決の不安定化**: `allow_abbrev=true` だと、新しい long option 追加時に過去は通っていた短縮形が衝突で失敗し得る。
+
+移行時の実務的な指針:
+
+1. 互換要件がない限り `allow_abbrev=false` を維持する。
+2. `prefix_chars` を変える場合は、ラッパー移行期間やメジャーバージョン更新を検討する。
+3. 正常系だけでなく「曖昧 prefix で失敗するケース」も parse テストに含める。
+
 ## エラー処理
 
 `argparse-c` はライブラリ内部で `exit()` しません。失敗時は `ap_error` を確認し、必要なら `ap_format_error(...)` で表示用文字列を生成します。

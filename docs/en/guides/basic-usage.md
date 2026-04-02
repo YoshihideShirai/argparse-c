@@ -81,6 +81,82 @@ Conflict behavior for inherited definitions:
 - `AP_PARSER_CONFLICT_REPLACE`: inherited definitions can be replaced by the
   new parser (for overrides/customization).
 
+## `ap_parser_options` deep dive (`prefix_chars` / `allow_abbrev`)
+
+When you need to match an existing CLI style, start from
+`ap_parser_options_default()` and override only the behavior you need.
+
+```c
+ap_parser_options options = ap_parser_options_default();
+options.prefix_chars = "+";
+options.allow_abbrev = true;
+ap_parser *parser = ap_parser_new_with_options("example1", "custom prefixes", options);
+```
+
+### Example: changing `prefix_chars` from `-` to `+`
+
+Below is a short diff equivalent to `sample/example1.c` style.
+
+```diff
+- ap_parser *parser = ap_parser_new("example1", "example1 command.");
++ ap_parser_options options = ap_parser_options_default();
++ options.prefix_chars = "+";
++ ap_parser *parser =
++     ap_parser_new_with_options("example1", "example1 command.", options);
+
+- ap_add_argument(parser, "-t, --text", text_opts, &err);
++ ap_add_argument(parser, "+t, ++text", text_opts, &err);
+
+- ap_add_argument(parser, "-i, --integer", integer_opts, &err);
++ ap_add_argument(parser, "+i, ++integer", integer_opts, &err);
+```
+
+Usage/help output also changes to `+`/`++` style:
+
+```text
+usage: example1 [+h] +t TEXT [+i INTEGER] arg1 [arg2]
+
+optional arguments:
+  +h, ++help              show this help message and exit
+  +t TEXT, ++text TEXT    text field.
+  +i INTEGER, ++integer INTEGER
+                          integer field.
+```
+
+### Example: `allow_abbrev=true` vs `false` (including collisions)
+
+Assume both `++verbose` and `++version` exist.
+
+- `allow_abbrev = false` (default)
+  - `++ver` is treated as an unknown option, because only exact matches are accepted.
+- `allow_abbrev = true`
+  - `++ver` becomes ambiguous and parsing fails because it can match multiple long options.
+  - `++verb` resolves to `++verbose` (unique prefix).
+
+```text
+# allow_abbrev=false
+$ prog ++ver
+error: unknown option '++ver'
+
+# allow_abbrev=true, collision case
+$ prog ++ver
+error: ambiguous option '++ver'
+```
+
+### Compatibility risks with existing CLIs
+
+Changing `ap_parser_options` can break callers and scripts unexpectedly:
+
+- **Shell scripts / CI jobs**: existing invocations using `-x` / `--long` fail after switching `prefix_chars`.
+- **Documentation drift**: README/help snippets become stale unless updated together.
+- **Abbreviation policy surprises**: enabling `allow_abbrev` may introduce future breakage when new long options create a prefix collision.
+
+Practical rollout tips:
+
+1. Keep `allow_abbrev=false` unless you need compatibility with an abbreviation-friendly CLI.
+2. If you change `prefix_chars`, consider a transition period with wrapper commands or a major-version bump.
+3. Add parse tests for both expected success patterns and ambiguous-prefix failures.
+
 ## Error handling
 
 `argparse-c` does not call `exit()` inside the library. On failure, inspect `ap_error` and optionally render a user-facing message with `ap_format_error(...)`.
