@@ -785,6 +785,86 @@ TEST(FormatHelpAndManpageCoverRequiredOptionalNargsVariants) {
   ap_parser_free(p);
 }
 
+TEST(FormatHelpAndManpageRenderExpandedMetadataMatrix) {
+  ap_error err = {};
+  ap_parser_options raw_opts = ap_parser_options_default();
+  ap_parser *standard = ap_parser_new("tool", "desc");
+  ap_parser *raw = NULL;
+  ap_arg_options maybe = ap_arg_options_default();
+  ap_arg_options many = ap_arg_options_default();
+  ap_arg_options fixed = ap_arg_options_default();
+  ap_arg_options pos = ap_arg_options_default();
+  const char *choices[] = {"red", "blue"};
+  char *std_help = NULL;
+  char *raw_help = NULL;
+  char *man = NULL;
+
+  CHECK(standard != NULL);
+  raw_opts.help_formatter_mode = AP_HELP_FORMATTER_RAW_TEXT;
+  raw = ap_parser_new_with_options("tool", "desc", raw_opts);
+  CHECK(raw != NULL);
+
+  maybe.nargs = AP_NARGS_OPTIONAL;
+  maybe.help = "optional maybe";
+  maybe.default_value = "auto";
+  maybe.choices.items = choices;
+  maybe.choices.count = 2;
+
+  many.nargs = AP_NARGS_ZERO_OR_MORE;
+  many.help = "accept many";
+
+  fixed.nargs = AP_NARGS_FIXED;
+  fixed.nargs_count = 3;
+  fixed.required = true;
+  fixed.help = "fixed triple";
+
+  pos.nargs = AP_NARGS_FIXED;
+  pos.nargs_count = 2;
+  pos.help = "destination";
+
+  LONGS_EQUAL(0, ap_add_argument(standard, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(standard, "--many", many, &err));
+  LONGS_EQUAL(0, ap_add_argument(standard, "--fixed", fixed, &err));
+  LONGS_EQUAL(0, ap_add_argument(standard, "target_path", pos, &err));
+
+  LONGS_EQUAL(0, ap_add_argument(raw, "--maybe", maybe, &err));
+  LONGS_EQUAL(0, ap_add_argument(raw, "--many", many, &err));
+  LONGS_EQUAL(0, ap_add_argument(raw, "--fixed", fixed, &err));
+  LONGS_EQUAL(0, ap_add_argument(raw, "target_path", pos, &err));
+
+  std_help = ap_format_help(standard);
+  raw_help = ap_format_help(raw);
+  man = ap_format_manpage(standard);
+  CHECK(std_help != NULL);
+  CHECK(raw_help != NULL);
+  CHECK(man != NULL);
+
+  CHECK(strstr(std_help, "  --maybe [MAYBE]") != NULL);
+  CHECK(strstr(std_help, "choices: red, blue") != NULL);
+  CHECK(strstr(std_help, "default: auto") != NULL);
+  CHECK(strstr(std_help, "  --many [MANY ...]") != NULL);
+  CHECK(strstr(std_help, "  --fixed FIXED FIXED FIXED") != NULL);
+  CHECK(strstr(std_help, "required: true") != NULL);
+  CHECK(strstr(std_help, "  TARGET-PATH TARGET-PATH") != NULL);
+
+  CHECK(strstr(raw_help, "--maybe [MAYBE] - optional maybe") != NULL);
+  CHECK(strstr(raw_help, "| choices: red, blue") != NULL);
+  CHECK(strstr(raw_help, "--many [MANY ...]") != NULL);
+  CHECK(strstr(raw_help, "--fixed FIXED FIXED FIXED - fixed triple") != NULL);
+  CHECK(strstr(raw_help, "TARGET-PATH TARGET-PATH - destination") != NULL);
+
+  CHECK(strstr(man, ".B \\-\\-maybe [MAYBE]") != NULL);
+  CHECK(strstr(man, "choices: red, blue") != NULL);
+  CHECK(strstr(man, "default: auto") != NULL);
+  CHECK(strstr(man, ".B \\-\\-fixed FIXED FIXED FIXED") != NULL);
+
+  free(std_help);
+  free(raw_help);
+  free(man);
+  ap_parser_free(raw);
+  ap_parser_free(standard);
+}
+
 TEST(FormatManpageNestedSubcommandsBalanceRsReIndentation) {
   ap_error err = {};
   ap_parser *root = ap_parser_new("tool", "desc");
