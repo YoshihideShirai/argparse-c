@@ -353,7 +353,7 @@ int ap_build_namespace(const ap_parser *parser, const ap_parsed_arg *parsed,
       return -1;
     }
 
-    if (validate_choices_merged(def, &merged, err) != 0) {
+    if (!help_requested && validate_choices_merged(def, &merged, err) != 0) {
       ap_strvec_free(&merged);
       ap_namespace_free(ns);
       return -1;
