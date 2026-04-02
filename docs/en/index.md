@@ -24,6 +24,7 @@ Use this site when you want to:
    - [Subcommands](guides/subcommands.md)
    - [Completion callbacks](guides/completion-callbacks.md)
    - [known args / unknown args](guides/known-args.md)
+   - [fromfile_prefix_chars](guides/fromfile-prefix-chars.md)
 4. **Reference**
    - [API Reference (English)](../api-spec.en.md)
    - [FAQ](faq.md)

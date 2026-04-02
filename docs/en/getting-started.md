@@ -223,6 +223,7 @@ man ./example_manpage.1
 - [`sample/example_manpage.c`](../repository/sample/example_manpage.c.md): formatter APIs on a subcommand tree that is suitable for docs output
 - [`sample/example_introspection.c`](../repository/sample/example_introspection.c.md): parser metadata introspection via `ap_parser_get_info`, `ap_parser_get_argument`, and `ap_parser_get_subcommand`
 - [`sample/example_help_formatter.c`](../repository/sample/example_help_formatter.c.md): switches `ap_parser_options.help_formatter_mode` across `STANDARD`, `SHOW_DEFAULTS`, and `RAW_TEXT`
+- [`sample/example_fromfile.c`](../repository/sample/example_fromfile.c.md): enables `ap_parser_options.fromfile_prefix_chars` and loads args from `@file`
 
 ### Guides
 
@@ -231,6 +232,7 @@ man ./example_manpage.1
 - [nargs](guides/nargs.md)
 - [Subcommands](guides/subcommands.md)
 - [Completion callbacks](guides/completion-callbacks.md)
+- [fromfile_prefix_chars](guides/fromfile-prefix-chars.md)
 - [API Specification](../api-spec.en.md)
 - [日本語 Getting Started](../ja/getting-started.md)
 

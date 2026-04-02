@@ -222,6 +222,7 @@ man ./example_manpage.1
 - [`sample/example_completion.c`](../repository/sample/example_completion.c.md): formatter API と実行時 completion callback の実装例
 - [`sample/example_manpage.c`](../repository/sample/example_manpage.c.md): subcommand を含む parser から manpage / completion を生成する例
 - [`sample/example_introspection.c`](../repository/sample/example_introspection.c.md): `ap_parser_get_info`、`ap_parser_get_argument`、`ap_parser_get_subcommand` を使った introspection 例
+- [`sample/example_fromfile.c`](../repository/sample/example_fromfile.c.md): `ap_parser_options.fromfile_prefix_chars` を有効化して `@file` から引数を読み込む例
 
 ### ガイド
 
@@ -230,6 +231,7 @@ man ./example_manpage.1
 - [nargs](guides/nargs.md)
 - [Subcommands](guides/subcommands.md)
 - [Completion callback](guides/completion-callbacks.md)
+- [fromfile_prefix_chars](guides/fromfile-prefix-chars.md)
 - [API仕様](../api-spec.ja.md)
 - [English Getting Started](../en/getting-started.md)
 
