@@ -8,6 +8,10 @@ No. Parse APIs return `0` on success and `-1` on failure, and the details are wr
 
 `-h/--help` is added automatically. If you want the formatted help text, call `ap_format_help(...)`.
 
+## How can I check at runtime whether completion is enabled?
+
+Call `ap_parser_completion_enabled(parser)` after `ap_parser_set_completion(...)` to verify the current parser state.
+
 ## How is `dest` chosen?
 
 - optional arguments prefer the first long flag

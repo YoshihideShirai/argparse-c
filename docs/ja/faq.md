@@ -8,6 +8,10 @@
 
 `-h/--help` は自動追加されます。文字列として取得したい場合は `ap_format_help(...)` を使います。
 
+## completion が有効かを実行時に確認するには？
+
+`ap_parser_set_completion(...)` の後に `ap_parser_completion_enabled(parser)` を呼ぶと、現在の parser 状態を確認できます。
+
 ## `dest` はどう決まりますか？
 
 - optional は long flag を優先
