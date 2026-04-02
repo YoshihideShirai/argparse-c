@@ -62,6 +62,11 @@ Or update an existing parser:
 ```c
 ap_parser_set_completion(parser, false, NULL, &err);
 ap_parser_set_completion(parser, true, "__ap_complete", &err);
+
+if (!ap_parser_completion_enabled(parser)) {
+  fprintf(stderr, "completion must stay enabled\n");
+  return 1;
+}
 ```
 
 When completion is enabled, the entrypoint name is reserved for hidden completion transport. Trying to add a subcommand with that exact name fails explicitly. If your CLI really needs that visible subcommand, disable completion first or move the hidden entrypoint to another reserved name.

@@ -62,6 +62,11 @@ ap_parser *parser = ap_parser_new_with_options("demo", "desc", parser_options);
 ```c
 ap_parser_set_completion(parser, false, NULL, &err);
 ap_parser_set_completion(parser, true, "__ap_complete", &err);
+
+if (!ap_parser_completion_enabled(parser)) {
+  fprintf(stderr, "completion は有効のままにしてください\n");
+  return 1;
+}
 ```
 
 completion が有効なときは、その hidden entrypoint 名は予約済みです。同名の visible subcommand が必要なら、先に completion を無効化するか hidden 名を別名へ変更してください。
