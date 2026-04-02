@@ -291,11 +291,60 @@ TEST(FormatErrorReturnsNullWithoutParser) {
   CHECK(ap_format_error(NULL, NULL) == NULL);
 }
 
+TEST(FormatErrorReturnsNullWhenAllocationFails) {
+  AllocFailGuard guard;
+  if (!test_alloc_injection_available()) {
+    CHECK_TRUE(true);
+    return;
+  }
+
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_error err = {};
+  char *text = NULL;
+  bool saw_no_memory = false;
+
+  CHECK(p != NULL);
+  std::snprintf(err.message, sizeof(err.message), "%s", "explicit error");
+
+  for (int nth = 1; nth <= 64; nth++) {
+    test_alloc_fail_on_nth(nth);
+    text = ap_format_error(p, &err);
+    if (text != NULL) {
+      free(text);
+      continue;
+    }
+    saw_no_memory = true;
+    break;
+  }
+
+  CHECK(saw_no_memory);
+
+  test_alloc_fail_disable();
+  text = ap_format_error(p, &err);
+  CHECK(text != NULL);
+  CHECK(strstr(text, "error: explicit error") != NULL);
+  free(text);
+  ap_parser_free(p);
+}
+
 TEST(NullFreeHelpersAreNoOps) {
   ap_parser_free(NULL);
   ap_namespace_free(NULL);
   ap_free_tokens(NULL, 0);
   CHECK_TRUE(true);
+}
+
+TEST(StringBuilderAppendfRejectsInvalidArgumentsAndMalformedFormat) {
+  ap_string_builder sb = {};
+
+  ap_sb_init(&sb);
+  LONGS_EQUAL(-1, ap_sb_appendf(NULL, "%s", "x"));
+  LONGS_EQUAL(-1, ap_sb_appendf(&sb, NULL));
+  LONGS_EQUAL(-1, ap_sb_appendf(&sb, "%"));
+  CHECK(sb.data == NULL);
+  CHECK(sb.len == 0U);
+  CHECK(sb.cap == 0U);
+  ap_sb_free(&sb);
 }
 
 TEST(NamespaceGetterFailurePathsReturnFalseOrNull) {
@@ -518,6 +567,8 @@ TEST(ParserIntrospectionEnumeratesArgumentsAndFlags) {
   LONGS_EQUAL(1, ap_arg_long_flag_count(&output_info));
   STRCMP_EQUAL("-o", ap_arg_short_flag_at(&output_info, 0));
   STRCMP_EQUAL("--output", ap_arg_long_flag_at(&output_info, 0));
+  CHECK(ap_arg_short_flag_at(&output_info, 1) == NULL);
+  CHECK(ap_arg_long_flag_at(&output_info, 1) == NULL);
 
   LONGS_EQUAL(0, ap_parser_get_argument(p, 2, &input_info));
   LONGS_EQUAL(AP_ARG_KIND_POSITIONAL, input_info.kind);
@@ -555,6 +606,8 @@ TEST(ParserIntrospectionRejectsInvalidInputs) {
   LONGS_EQUAL(0, ap_arg_long_flag_count(NULL));
   CHECK(ap_arg_short_flag_at(NULL, 0) == NULL);
   CHECK(ap_arg_long_flag_at(NULL, 0) == NULL);
+  CHECK(ap_arg_short_flag_at(&arg_info, -1) == NULL);
+  CHECK(ap_arg_long_flag_at(&arg_info, -1) == NULL);
 
   ap_parser_free(p);
 }
@@ -1956,6 +2009,56 @@ TEST(ParserResolvePolicyReplacesPriorDefinitionAcrossApiViews) {
   free(usage);
   free(help);
   ap_parser_free(parser);
+}
+
+TEST(ParserResolveReplacementKeepsGroupsConsistentAfterDefinitionRemoval) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser_options parser_options = ap_parser_options_default();
+  ap_parser *parser = NULL;
+  ap_mutually_exclusive_group *mutex = NULL;
+  ap_argument_group *arg_group = NULL;
+  ap_arg_options old_mode = ap_arg_options_default();
+  ap_arg_options new_mode = ap_arg_options_default();
+  ap_arg_options level = ap_arg_options_default();
+  const char *mode_value = NULL;
+  char *argv[] = {(char *)"prog",    (char *)"--mode", (char *)"fast",
+                  (char *)"--level", (char *)"2",      NULL};
+
+  parser_options.conflict_policy = AP_PARSER_CONFLICT_RESOLVE;
+  parser = ap_parser_new_with_options("prog", "desc", parser_options);
+  CHECK(parser != NULL);
+
+  mutex = ap_add_mutually_exclusive_group(parser, false, &err);
+  CHECK(mutex != NULL);
+  arg_group = ap_add_argument_group(parser, "runtime", "runtime options", &err);
+  CHECK(arg_group != NULL);
+
+  old_mode.help = "legacy mode";
+  LONGS_EQUAL(0, ap_group_add_argument(mutex, "--mode", old_mode, &err));
+
+  level.type = AP_TYPE_INT32;
+  LONGS_EQUAL(
+      0, ap_argument_group_add_argument(arg_group, "--level", level, &err));
+
+  new_mode.help = "final mode";
+  LONGS_EQUAL(0, ap_add_argument(parser, "--mode", new_mode, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(parser, 5, argv, &ns, &err));
+  CHECK(ap_ns_get_string(ns, "mode", &mode_value));
+  STRCMP_EQUAL("fast", mode_value);
+
+  ap_namespace_free(ns);
+  ap_parser_free(parser);
+}
+
+TEST(StartsWithDashRecognizesOnlyNonEmptyDashPrefixedTokens) {
+  CHECK(!ap_starts_with_dash(NULL));
+  CHECK(!ap_starts_with_dash(""));
+  CHECK(!ap_starts_with_dash("-"));
+  CHECK(ap_starts_with_dash("-x"));
+  CHECK(ap_starts_with_dash("--long"));
+  CHECK(!ap_starts_with_dash("value"));
 }
 
 TEST(AddSubcommandNoMemoryLeavesParentStateAndCanRetry) {
