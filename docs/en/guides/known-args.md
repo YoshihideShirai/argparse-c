@@ -47,10 +47,10 @@ ap_parse_known_intermixed_args(parser, argc, argv, &ns, &unknown, &unknown_count
 Reference tests:
 
 - Mixed-order parse (`a.txt --count 2 b.txt`) succeeds with the intermixed API:
-  [`ParseIntermixedAliasParsesMixedOrder`](../../../test/test_parse_core.cpp)
+  [`ParseIntermixedAliasParsesMixedOrder`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_parse_core.cpp)
 - Known-args collection rules remain identical:
-  [`ParseKnownArgsCollectsUnknownOptionValueToken`](../../../test/test_known_args.cpp),
-  [`ParseKnownArgsCollectsAfterDoubleDash`](../../../test/test_known_args.cpp)
+  [`ParseKnownArgsCollectsUnknownOptionValueToken`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp),
+  [`ParseKnownArgsCollectsAfterDoubleDash`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp)
 
 ## Typical use case (alternating options and positionals)
 
@@ -74,16 +74,16 @@ With `ap_parse_known_intermixed_args(...)`, unknown token collection follows the
 
 See:
 
-- [`ParseKnownArgsCollectsUnknownOptionValueToken`](../../../test/test_known_args.cpp)
-- [`ParseKnownArgsCollectsExtraPositionals`](../../../test/test_known_args.cpp)
-- [`ParseKnownArgsCollectsAfterDoubleDash`](../../../test/test_known_args.cpp)
+- [`ParseKnownArgsCollectsUnknownOptionValueToken`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp)
+- [`ParseKnownArgsCollectsExtraPositionals`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp)
+- [`ParseKnownArgsCollectsAfterDoubleDash`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp)
 
 ## Notes with subcommands and `nargs`
 
 - Subcommand handling is unchanged from base parse APIs.  
   Known-args variants can merge unknowns from nested subcommands while preserving subcommand path metadata.
-  See [`ParseKnownArgsMergesNestedSubcommandUnknownsAndPreservesPath`](../../../test/test_known_args.cpp).
+  See [`ParseKnownArgsMergesNestedSubcommandUnknownsAndPreservesPath`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp).
 - `nargs` interactions are also unchanged.  
   For example, optional nargs should not consume a following known option token, and greedy positional forms still follow the normal binding rules.
-  See [`OptionalNargsDoesNotConsumeFollowingKnownOption`](../../../test/test_known_args.cpp) and
-  [`PositionalZeroOrMoreLeavesTokensForRequiredPositional`](../../../test/test_known_args.cpp).
+  See [`OptionalNargsDoesNotConsumeFollowingKnownOption`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp) and
+  [`PositionalZeroOrMoreLeavesTokensForRequiredPositional`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp).

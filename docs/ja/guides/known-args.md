@@ -47,10 +47,10 @@ ap_parse_known_intermixed_args(parser, argc, argv, &ns, &unknown, &unknown_count
 根拠テスト:
 
 - intermixed API で混在順序 (`a.txt --count 2 b.txt`) が通る:
-  [`ParseIntermixedAliasParsesMixedOrder`](../../../test/test_parse_core.cpp)
+  [`ParseIntermixedAliasParsesMixedOrder`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_parse_core.cpp)
 - known 側の unknown 回収規則は同一:
-  [`ParseKnownArgsCollectsUnknownOptionValueToken`](../../../test/test_known_args.cpp),
-  [`ParseKnownArgsCollectsAfterDoubleDash`](../../../test/test_known_args.cpp)
+  [`ParseKnownArgsCollectsUnknownOptionValueToken`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp),
+  [`ParseKnownArgsCollectsAfterDoubleDash`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp)
 
 ## 典型ユースケース（オプションと位置引数の交互入力）
 
@@ -74,16 +74,16 @@ prog input1 --count 2 input2 --mode fast input3
 
 参照:
 
-- [`ParseKnownArgsCollectsUnknownOptionValueToken`](../../../test/test_known_args.cpp)
-- [`ParseKnownArgsCollectsExtraPositionals`](../../../test/test_known_args.cpp)
-- [`ParseKnownArgsCollectsAfterDoubleDash`](../../../test/test_known_args.cpp)
+- [`ParseKnownArgsCollectsUnknownOptionValueToken`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp)
+- [`ParseKnownArgsCollectsExtraPositionals`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp)
+- [`ParseKnownArgsCollectsAfterDoubleDash`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp)
 
 ## サブコマンド・`nargs` と組み合わせる際の注意点
 
 - サブコマンド処理は通常 API と同一です。  
   known 系では、入れ子サブコマンドの unknown を統合しつつ、`subcommand_path` などのメタ情報を保持します。  
-  参照: [`ParseKnownArgsMergesNestedSubcommandUnknownsAndPreservesPath`](../../../test/test_known_args.cpp)
+  参照: [`ParseKnownArgsMergesNestedSubcommandUnknownsAndPreservesPath`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp)
 - `nargs` の挙動も通常 API と同一です。  
   たとえば optional nargs は既知オプションを飲み込まず、可変長 positional も既存の束縛ルールに従います。  
-  参照: [`OptionalNargsDoesNotConsumeFollowingKnownOption`](../../../test/test_known_args.cpp),
-  [`PositionalZeroOrMoreLeavesTokensForRequiredPositional`](../../../test/test_known_args.cpp)
+  参照: [`OptionalNargsDoesNotConsumeFollowingKnownOption`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp),
+  [`PositionalZeroOrMoreLeavesTokensForRequiredPositional`](https://github.com/YoshihideShirai/argparse-c/blob/main/test/test_known_args.cpp)
