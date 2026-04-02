@@ -250,6 +250,55 @@ TEST(RequiredOptionIgnoresDefaultWhenMissing) {
   ap_parser_free(p);
 }
 
+TEST(HelpBypassesValidationRequiredArgumentAndParsesSuccessfully) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options required_name = ap_arg_options_default();
+  bool help = false;
+  char *argv[] = {(char *)"prog", (char *)"--help", NULL};
+
+  CHECK(p != NULL);
+  required_name.required = true;
+  LONGS_EQUAL(0, ap_add_argument(p, "--name", required_name, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 2, argv, &ns, &err));
+  CHECK(ap_ns_get_bool(ns, "help", &help));
+  CHECK_TRUE(help);
+  LONGS_EQUAL(0, ap_ns_get_count(ns, "name"));
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(HelpBypassesValidationChoiceAndNargsErrors) {
+  static const char *choices[] = {"fast", "slow"};
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  ap_arg_options files = ap_arg_options_default();
+  bool help = false;
+  char *argv[] = {(char *)"prog", (char *)"--help", NULL};
+
+  CHECK(p != NULL);
+  mode.choices.items = choices;
+  mode.choices.count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+
+  files.nargs = AP_NARGS_ONE_OR_MORE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--files", files, &err));
+
+  LONGS_EQUAL(0, ap_parse_args(p, 2, argv, &ns, &err));
+  CHECK(ap_ns_get_bool(ns, "help", &help));
+  CHECK_TRUE(help);
+  LONGS_EQUAL(0, ap_ns_get_count(ns, "mode"));
+  LONGS_EQUAL(0, ap_ns_get_count(ns, "files"));
+
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
 TEST(DefaultValueMustMatchChoices) {
   static const char *choices[] = {"fast", "slow"};
   ap_error err = {};
@@ -462,6 +511,33 @@ TEST(InternalNamespaceBuildCoversRequiredMissingDoubleEmptyAndBoolFallback) {
   ap_parser_free(required);
   ap_parser_free(optional_double);
   ap_parser_free(fallback_bool);
+}
+
+TEST(HelpBypassesValidationInBuildNamespaceAndKeepsNamespaceState) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parsed_arg *parsed = NULL;
+  ap_arg_options required_name = ap_arg_options_default();
+  bool help = false;
+
+  CHECK(p != NULL);
+  required_name.required = true;
+  LONGS_EQUAL(0, ap_add_argument(p, "--name", required_name, &err));
+
+  parsed = (ap_parsed_arg *)calloc((size_t)p->defs_count, sizeof(*parsed));
+  CHECK(parsed != NULL);
+
+  parsed[0].seen = true; /* builtin --help */
+  LONGS_EQUAL(0, ap_build_namespace(p, parsed, &ns, &err));
+  CHECK(ns != NULL);
+  CHECK(ap_ns_get_bool(ns, "help", &help));
+  CHECK_TRUE(help);
+  LONGS_EQUAL(0, ap_ns_get_count(ns, "name"));
+
+  ap_namespace_free(ns);
+  free(parsed);
+  ap_parser_free(p);
 }
 
 TEST(StoreTrueAndStoreFalse) {
