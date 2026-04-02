@@ -1913,6 +1913,46 @@ TEST(ParserNewWithOptionsNoMemoryCanRetryAndRemainUsable) {
   ap_parser_free(p);
 }
 
+TEST(ParserSetCompletionNoMemoryAndConflictBranchesAreRecoverable) {
+  AllocFailGuard guard;
+  if (!test_alloc_injection_available()) {
+    CHECK_TRUE(true);
+    return;
+  }
+
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  bool saw_no_memory = false;
+
+  CHECK(p != NULL);
+  CHECK(ap_add_subcommand(p, "__reserved", "reserved command", &err) != NULL);
+
+  for (int nth = 1; nth <= 16; nth++) {
+    test_alloc_fail_on_nth(nth);
+    if (ap_parser_set_completion(p, true, "__complete_retry", &err) == 0) {
+      continue;
+    }
+    if (err.code == AP_ERR_NO_MEMORY) {
+      saw_no_memory = true;
+      break;
+    }
+  }
+  CHECK(saw_no_memory);
+
+  test_alloc_fail_disable();
+  LONGS_EQUAL(-1, ap_parser_set_completion(p, true, "__reserved", &err));
+  LONGS_EQUAL(AP_ERR_INVALID_DEFINITION, err.code);
+  STRCMP_EQUAL("__reserved", err.argument);
+  CHECK(strstr(err.message, "conflicts with reserved completion entrypoint") !=
+        NULL);
+
+  LONGS_EQUAL(0, ap_parser_set_completion(p, true, "__complete_retry", &err));
+  STRCMP_EQUAL("__complete_retry", ap_parser_completion_entrypoint(p));
+  CHECK(ap_parser_completion_enabled(p));
+
+  ap_parser_free(p);
+}
+
 TEST(ParserOptionsCanInheritArgumentsGroupsAndMutexRules) {
   ap_error err = {};
   ap_namespace *ns = NULL;
