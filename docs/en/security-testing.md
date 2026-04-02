@@ -34,9 +34,15 @@ This page summarizes the reproducible security-focused checks used for `argparse
 4. Run coverage configuration (as used in CI):
 
    ```bash
-   cmake -S . -B build-coverage -DCMAKE_BUILD_TYPE=Debug -DAP_ENABLE_COVERAGE=ON
-   cmake --build build-coverage --parallel
-   ctest --test-dir build-coverage --output-on-failure
+   ./scripts/coverage_ci_gcovr.sh
+   ```
+
+   This script intentionally matches CI coverage settings (build dir `build-coverage`, `-DAP_ENABLE_COVERAGE=ON`, and gcovr root/filter/object-directory/exclude arguments).
+
+5. Optional: include the same coverage measurement in daily quick checks:
+
+   ```bash
+   ./scripts/dev_quick_check.sh --with-coverage
    ```
 
 ## Statement maintenance rule
