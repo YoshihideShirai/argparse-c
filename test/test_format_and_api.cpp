@@ -1412,6 +1412,43 @@ TEST(CompleteHandlesInlineOptionValueAndDoubleDashPositionalMode) {
   ap_parser_free(p);
 }
 
+TEST(CompleteHandlesVeryLongInlineOptionNameWithoutOverflow) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  ap_completion_result result = {};
+  const char *modes[] = {"fast", "slow"};
+  std::string long_flag = "--";
+  std::string inline_with_value;
+  std::string inline_with_empty_value;
+  char trailing_empty[] = "";
+  char *argv_scan[] = {NULL, NULL, trailing_empty};
+  char *argv_last[] = {NULL, NULL};
+
+  CHECK(p != NULL);
+  long_flag.append(160, 'x');
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, long_flag.c_str(), mode, &err));
+
+  inline_with_value = long_flag + "=f";
+  inline_with_empty_value = long_flag + "=";
+  argv_scan[0] = inline_with_value.data();
+  argv_scan[1] = trailing_empty;
+  argv_last[0] = trailing_empty;
+  argv_last[1] = inline_with_empty_value.data();
+
+  LONGS_EQUAL(0, ap_complete(p, 3, argv_scan, "bash", &result, &err));
+  LONGS_EQUAL(0, result.count);
+  ap_completion_result_free(&result);
+
+  LONGS_EQUAL(0, ap_complete(p, 2, argv_last, "bash", &result, &err));
+  LONGS_EQUAL(0, result.count);
+  ap_completion_result_free(&result);
+
+  ap_parser_free(p);
+}
+
 TEST(CompleteAppliesCallbackScopeAcrossThreeToFiveSubcommandLevels) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");
