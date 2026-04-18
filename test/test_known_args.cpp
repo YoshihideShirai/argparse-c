@@ -146,6 +146,67 @@ TEST(ParseKnownArgsCollectsAfterDoubleDash) {
   ap_parser_free(p);
 }
 
+TEST(ParseKnownArgsWithoutDoubleDashStillParsesKnownFlags) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  bool is_verbose = false;
+  char *argv[] = {(char *)"prog",
+                  (char *)"--plugin-flag",
+                  (char *)"p1",
+                  (char *)"--verbose",
+                  (char *)"--",
+                  (char *)"tail",
+                  NULL};
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--verbose", verbose, &err));
+
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 6, argv, &ns, &unknown, &unknown_count, &err));
+  CHECK(ap_ns_get_bool(ns, "verbose", &is_verbose));
+  CHECK_TRUE(is_verbose);
+  assert_unknown_tokens_equal({"--plugin-flag", "p1", "tail"}, unknown,
+                              unknown_count);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseKnownArgsDoubleDashProtectsKnownFlagsFromAccidentalInjection) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options verbose = ap_arg_options_default();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  bool is_verbose = false;
+  char *argv[] = {(char *)"prog", (char *)"--",        (char *)"--plugin-flag",
+                  (char *)"p1",   (char *)"--verbose", NULL};
+
+  CHECK(p != NULL);
+  verbose.type = AP_TYPE_BOOL;
+  verbose.action = AP_ACTION_STORE_TRUE;
+  LONGS_EQUAL(0, ap_add_argument(p, "--verbose", verbose, &err));
+
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 5, argv, &ns, &unknown, &unknown_count, &err));
+  CHECK(ap_ns_get_bool(ns, "verbose", &is_verbose));
+  CHECK_TRUE(!is_verbose);
+  assert_unknown_tokens_equal({"--plugin-flag", "p1", "--verbose"}, unknown,
+                              unknown_count);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
 TEST(ParseKnownArgsCollectsConsecutiveUnknownOptionsInOrder) {
   ap_error err = {};
   ap_namespace *ns = NULL;
@@ -289,6 +350,43 @@ TEST(ParseKnownArgsMergesNestedSubcommandUnknownsAndPreservesPath) {
   STRCMP_EQUAL("--unknown", unknown[0]);
   STRCMP_EQUAL("u1", unknown[1]);
   STRCMP_EQUAL("tail", unknown[2]);
+
+  ap_free_tokens(unknown, unknown_count);
+  ap_namespace_free(ns);
+  ap_parser_free(p);
+}
+
+TEST(ParseKnownArgsNestedSubcommandUnknownOrderIsStable) {
+  ap_error err = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *config = NULL;
+  ap_parser *set = NULL;
+  ap_arg_options level = ap_arg_options_default();
+  char **unknown = NULL;
+  int unknown_count = 0;
+  const char *subcommand_path = NULL;
+  const char *level_value = NULL;
+  char *argv[] = {(char *)"prog",  (char *)"config", (char *)"set",
+                  (char *)"--u1",  (char *)"v1",     (char *)"--level",
+                  (char *)"debug", (char *)"--",     (char *)"--u2",
+                  (char *)"v2",    (char *)"tail",   NULL};
+
+  CHECK(p != NULL);
+  config = ap_add_subcommand(p, "config", "config commands", &err);
+  CHECK(config != NULL);
+  set = ap_add_subcommand(config, "set", "set values", &err);
+  CHECK(set != NULL);
+  LONGS_EQUAL(0, ap_add_argument(set, "--level", level, &err));
+
+  LONGS_EQUAL(
+      0, ap_parse_known_args(p, 11, argv, &ns, &unknown, &unknown_count, &err));
+  CHECK(ap_ns_get_string(ns, "subcommand_path", &subcommand_path));
+  CHECK(ap_ns_get_string(ns, "level", &level_value));
+  STRCMP_EQUAL("config set", subcommand_path);
+  STRCMP_EQUAL("debug", level_value);
+  assert_unknown_tokens_equal({"--u1", "v1", "--u2", "v2", "tail"}, unknown,
+                              unknown_count);
 
   ap_free_tokens(unknown, unknown_count);
   ap_namespace_free(ns);
