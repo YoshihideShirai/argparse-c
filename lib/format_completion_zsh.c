@@ -499,7 +499,9 @@ char *ap_zsh_completion_build(const ap_parser *parser) {
           "        return 0\n"
           "        ;;\n"
           "    esac\n"
-          "  fi\n\n"
+          "  fi\n\n") != 0 ||
+      ap_sb_appendf(
+          &sb,
           "  if [[ -n \"$pending_option\" ]]; then\n"
           "    completion_kind=$(__ap_zsh_option_completion_kind "
           "\"$parser_key:$pending_option\" 2>/dev/null || printf '%%s' none)\n"
