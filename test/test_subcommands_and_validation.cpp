@@ -181,6 +181,24 @@ TEST(MissingSubcommandFails) {
   ap_parser_free(p);
 }
 
+TEST(ErrorCodeIsStableForSameMissingSubcommandInput) {
+  ap_error first = {};
+  ap_error second = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  char *argv[] = {(char *)"prog", NULL};
+
+  CHECK(p != NULL);
+  CHECK(ap_add_subcommand(p, "run", "run the job", &first) != NULL);
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &first));
+  LONGS_EQUAL(-1, ap_parse_args(p, 1, argv, &ns, &second));
+  LONGS_EQUAL(AP_ERR_MISSING_REQUIRED, first.code);
+  LONGS_EQUAL(first.code, second.code);
+
+  ap_parser_free(p);
+}
+
 TEST(CountRequiresInt32TypeDefinition) {
   ap_error err = {};
   ap_parser *p = ap_parser_new("prog", "desc");

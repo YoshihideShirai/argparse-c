@@ -3,6 +3,30 @@
 
 This document is generated from `include/argparse-c.h` via `scripts/sync_api_spec.py`.
 
+## Error model
+- Error struct: `ap_error`
+- Public code enum: `ap_error_code`
+- Fields:
+  - `code`: `ap_error_code`
+  - `argument`: `char[64]`
+  - `message`: `char[256]`
+- Public error codes:
+  - `AP_ERR_NONE`
+  - `AP_ERR_NO_MEMORY`
+  - `AP_ERR_INVALID_DEFINITION`
+  - `AP_ERR_UNKNOWN_OPTION`
+  - `AP_ERR_DUPLICATE_OPTION`
+  - `AP_ERR_MISSING_VALUE`
+  - `AP_ERR_INVALID_NARGS`
+  - `AP_ERR_MISSING_REQUIRED`
+  - `AP_ERR_INVALID_CHOICE`
+  - `AP_ERR_INVALID_INT32`
+  - `AP_ERR_INVALID_INT64`
+  - `AP_ERR_INVALID_UINT64`
+  - `AP_ERR_INVALID_DOUBLE`
+  - `AP_ERR_UNEXPECTED_POSITIONAL`
+- Backward compatibility policy: Clients should key logic on `ap_error.code`; `message` remains human-readable and not a stable machine contract.
+
 ## Reading guide
 - **Signature**: C declaration-level function signature.
 - **Success/Failure**: Normal return contract by return type (`0/-1`, `true/false`, `non-NULL/NULL`).

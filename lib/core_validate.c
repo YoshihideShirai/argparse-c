@@ -134,7 +134,7 @@ int ap_validate_args(const ap_parser *parser, const ap_parsed_arg *parsed,
       }
     }
     if (seen_count > 1) {
-      ap_error_set(err, AP_ERR_INVALID_DEFINITION, first_name ? first_name : "",
+      ap_error_set(err, AP_ERR_INVALID_NARGS, first_name ? first_name : "",
                    "mutually exclusive arguments cannot be used together");
       return -1;
     }

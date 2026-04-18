@@ -3,6 +3,30 @@
 
 このドキュメントは `scripts/sync_api_spec.py` が `include/argparse-c.h` から生成します。
 
+## エラーモデル
+- エラー構造体: `ap_error`
+- 公開コード enum: `ap_error_code`
+- フィールド:
+  - `code`: `ap_error_code`
+  - `argument`: `char[64]`
+  - `message`: `char[256]`
+- 公開エラーコード:
+  - `AP_ERR_NONE`
+  - `AP_ERR_NO_MEMORY`
+  - `AP_ERR_INVALID_DEFINITION`
+  - `AP_ERR_UNKNOWN_OPTION`
+  - `AP_ERR_DUPLICATE_OPTION`
+  - `AP_ERR_MISSING_VALUE`
+  - `AP_ERR_INVALID_NARGS`
+  - `AP_ERR_MISSING_REQUIRED`
+  - `AP_ERR_INVALID_CHOICE`
+  - `AP_ERR_INVALID_INT32`
+  - `AP_ERR_INVALID_INT64`
+  - `AP_ERR_INVALID_UINT64`
+  - `AP_ERR_INVALID_DOUBLE`
+  - `AP_ERR_UNEXPECTED_POSITIONAL`
+- 後方互換方針: クライアントは `ap_error.code` を判定に使い、`message` は人間向け表示（機械判定の安定契約ではない）として扱ってください。
+
 ## 読み方ガイド
 - **シグネチャ**: C 宣言レベルの関数シグネチャ。
 - **成功/失敗**: 戻り値型ごとの標準契約（`0/-1`、`true/false`、`non-NULL/NULL`）。
