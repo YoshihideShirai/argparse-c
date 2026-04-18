@@ -21,16 +21,16 @@
 - **README / 日本語**: [README.ja.md](./README.ja.md)
 - **GitHub Pages / English**: <https://yoshihideshirai.github.io/argparse-c/en/>
 - **GitHub Pages / 日本語**: [https://yoshihideshirai.github.io/argparse-c/ja/](https://yoshihideshirai.github.io/argparse-c/ja/)
-- **GitHub Pages / 简体中文**: <https://yoshihideshirai.github.io/argparse-c/zh-CN/>（_Partial support_）
-- **GitHub Pages / Español**: <https://yoshihideshirai.github.io/argparse-c/es/>（_Partial support_）
-- **GitHub Pages / Português (Brasil)**: <https://yoshihideshirai.github.io/argparse-c/pt-BR/>（_Partial support_）
+- **GitHub Pages / 简体中文**: <https://yoshihideshirai.github.io/argparse-c/zh-CN/>（_Staged support: Getting Started + Basic/Options/Subcommands/Completion + FAQ_）
+- **GitHub Pages / Español**: <https://yoshihideshirai.github.io/argparse-c/es/>（_Staged support: Getting Started + Basic/Options/Subcommands/Completion + FAQ_）
+- **GitHub Pages / Português (Brasil)**: <https://yoshihideshirai.github.io/argparse-c/pt-BR/>（_Staged support: Getting Started + Basic/Options/Subcommands/Completion + FAQ_）
 - **Getting Started / English**: <https://yoshihideshirai.github.io/argparse-c/en/getting-started/>
 - **Getting Started / 日本語**: [docs/ja/getting-started.md](https://yoshihideshirai.github.io/argparse-c/ja/getting-started/)
 
 凡例:
 
 - **Full support**: English / 日本語（README と GitHub Pages を並行して保守）。
-- **Partial support**: 简体中文 / Español / Português (Brasil)（GitHub Pages を段階公開中）。
+- **Staged support**: 简体中文 / Español / Português (Brasil)（Getting Started + Basic usage + Options and types + Subcommands + Completion callbacks + FAQ を公開済み。その他のページは段階公開）。
 
 インストール手順、completion の設定、パッケージング、API の詳細は GitHub Pages または `docs/ja/` 配下にまとめています。この README では **ライブラリの概要**、**主な利点**、**最初に読むサンプル**、**日本語ドキュメントへの導線** に絞って説明します。
 

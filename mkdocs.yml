@@ -79,10 +79,10 @@ nav:
       - Getting Started: zh-CN/getting-started.md
       - Guides:
           - Basic usage: zh-CN/guides/basic-usage.md
-          - Options and types (Coming soon): zh-CN/coming-soon.md
+          - Options and types: zh-CN/guides/options-and-types.md
           - nargs (Coming soon): zh-CN/coming-soon.md
-          - Subcommands (Coming soon): zh-CN/coming-soon.md
-          - Completion callbacks (Coming soon): zh-CN/coming-soon.md
+          - Subcommands: zh-CN/guides/subcommands.md
+          - Completion callbacks: zh-CN/guides/completion-callbacks.md
           - known args / unknown args (Coming soon): zh-CN/coming-soon.md
       - API Reference (Coming soon): zh-CN/coming-soon.md
       - FAQ: zh-CN/faq.md
@@ -91,10 +91,10 @@ nav:
       - Getting Started: es/getting-started.md
       - Guides:
           - Basic usage: es/guides/basic-usage.md
-          - Options and types (Coming soon): es/coming-soon.md
+          - Options and types: es/guides/options-and-types.md
           - nargs (Coming soon): es/coming-soon.md
-          - Subcommands (Coming soon): es/coming-soon.md
-          - Completion callbacks (Coming soon): es/coming-soon.md
+          - Subcommands: es/guides/subcommands.md
+          - Completion callbacks: es/guides/completion-callbacks.md
           - known args / unknown args (Coming soon): es/coming-soon.md
       - API Reference (Coming soon): es/coming-soon.md
       - FAQ: es/faq.md
@@ -103,10 +103,10 @@ nav:
       - Getting Started: pt-BR/getting-started.md
       - Guides:
           - Basic usage: pt-BR/guides/basic-usage.md
-          - Options and types (Coming soon): pt-BR/coming-soon.md
+          - Options and types: pt-BR/guides/options-and-types.md
           - nargs (Coming soon): pt-BR/coming-soon.md
-          - Subcommands (Coming soon): pt-BR/coming-soon.md
-          - Completion callbacks (Coming soon): pt-BR/coming-soon.md
+          - Subcommands: pt-BR/guides/subcommands.md
+          - Completion callbacks: pt-BR/guides/completion-callbacks.md
           - known args / unknown args (Coming soon): pt-BR/coming-soon.md
       - API Reference (Coming soon): pt-BR/coming-soon.md
       - FAQ: pt-BR/faq.md

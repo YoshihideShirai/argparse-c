@@ -16,6 +16,9 @@
 - [Getting Started](getting-started.md)
 - [Basic Guide](guides/basic-usage.md)
 - [FAQ](faq.md)
+- [Options and types](guides/options-and-types.md)
+- [Subcommands](guides/subcommands.md)
+- [Completion callbacks](guides/completion-callbacks.md)
 - [即将推出（Coming soon）](coming-soon.md)
 
 ## 最小文档集完成条件

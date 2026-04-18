@@ -16,6 +16,9 @@ A referência completa de API está disponível, por enquanto, em inglês e japo
 - [Getting Started](getting-started.md)
 - [Guia básico](guides/basic-usage.md)
 - [FAQ](faq.md)
+- [Options and types](guides/options-and-types.md)
+- [Subcommands](guides/subcommands.md)
+- [Completion callbacks](guides/completion-callbacks.md)
 - [Em breve (Coming soon)](coming-soon.md)
 
 ## Critérios de conclusão do conjunto mínimo
