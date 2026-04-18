@@ -229,10 +229,10 @@ man ./example_manpage.1
 
 - [Basic usage](guides/basic-usage.md)
 - [Options and types](guides/options-and-types.md)
-- [nargs](guides/nargs.md)
+- [nargs](../en/guides/nargs.md)
 - [Subcommands](guides/subcommands.md)
 - [Completion callbacks](guides/completion-callbacks.md)
-- [fromfile_prefix_chars](guides/fromfile-prefix-chars.md)
+- [fromfile_prefix_chars](../en/guides/fromfile-prefix-chars.md)
 - [API Specification](../api-spec.en.md)
 - [日本語 Getting Started](../ja/getting-started.md)
 
