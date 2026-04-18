@@ -164,9 +164,19 @@ static int append_choice_cases(ap_string_builder *sb, const ap_parser *parser) {
         return -1;
       }
       for (k = 0; k < def->opts.choices.count; k++) {
-        if (ap_sb_appendf(sb, " ") != 0 ||
-            append_fish_double_quoted(sb, def->opts.choices.items[k]) != 0) {
+        if (ap_sb_appendf(sb, " ") != 0) {
           return -1;
+        }
+        if (append_fish_double_quoted(sb, def->opts.choices.items[k]) != 0) {
+          return -1;
+        }
+        if (def->opts.help && def->opts.help[0] != '\0') {
+          if (ap_sb_appendf(sb, " ") != 0 ||
+              append_fish_double_quoted(sb, def->opts.choices.items[k]) != 0 ||
+              ap_sb_appendf(sb, "\t") != 0 ||
+              append_fish_double_quoted(sb, def->opts.help) != 0) {
+            return -1;
+          }
         }
       }
       if (ap_sb_appendf(sb, "\n") != 0) {
@@ -227,7 +237,12 @@ static int append_option_complete(ap_string_builder *sb, const char *prog,
           ap_sb_appendf(sb, "_dynamic_complete)'") != 0) {
         return -1;
       }
-      return ap_sb_appendf(sb, "\n");
+      if (ap_sb_appendf(sb, " -n 'not __ap_") != 0 ||
+          append_identifier(sb, prog) != 0 ||
+          ap_sb_appendf(sb, "_in_positional_phase'\n") != 0) {
+        return -1;
+      }
+      return 0;
     }
     switch (completion_kind) {
     case AP_COMPLETION_KIND_CHOICES:
@@ -262,7 +277,12 @@ static int append_option_complete(ap_string_builder *sb, const char *prog,
     }
   }
 
-  return ap_sb_appendf(sb, "\n");
+  if (ap_sb_appendf(sb, " -n 'not __ap_") != 0 ||
+      append_identifier(sb, prog) != 0 ||
+      ap_sb_appendf(sb, "_in_positional_phase'\n") != 0) {
+    return -1;
+  }
+  return 0;
 }
 
 static int append_subcommand_complete(ap_string_builder *sb, const char *prog,
@@ -286,7 +306,12 @@ static int append_subcommand_complete(ap_string_builder *sb, const char *prog,
       return -1;
     }
   }
-  return ap_sb_appendf(sb, "\n");
+  if (ap_sb_appendf(sb, " -n 'not __ap_") != 0 ||
+      append_identifier(sb, prog) != 0 ||
+      ap_sb_appendf(sb, "_in_positional_phase'\n") != 0) {
+    return -1;
+  }
+  return 0;
 }
 
 static int append_complete_commands(ap_string_builder *sb, const char *prog,
@@ -356,6 +381,28 @@ char *ap_fish_completion_build(const ap_parser *parser) {
                          "  test (__ap_") != 0 ||
       append_identifier(&sb, prog) != 0 ||
       ap_sb_appendf(&sb, "_parser_key) = \"$argv[1]\"\n"
+                         "end\n\n"
+                         "function __ap_") != 0 ||
+      append_identifier(&sb, prog) != 0 ||
+      ap_sb_appendf(&sb, "_in_positional_phase\n"
+                         "  set -l tokens (commandline -opc)\n"
+                         "  set -e tokens[1]\n"
+                         "  set -l key root\n"
+                         "  for token in $tokens\n"
+                         "    if string match -qr '^-' -- \"$token\"\n"
+                         "      continue\n"
+                         "    end\n"
+                         "    switch \"$key:$token\"\n") != 0) {
+    ap_sb_free(&sb);
+    return NULL;
+  }
+
+  if (append_transition_cases(&sb, parser) != 0 ||
+      ap_sb_appendf(&sb, "      case '*'\n"
+                         "        return 0\n"
+                         "    end\n"
+                         "  end\n"
+                         "  return 1\n"
                          "end\n\n"
                          "function __ap_") != 0 ||
       append_identifier(&sb, prog) != 0 ||

@@ -155,6 +155,20 @@ autoload -Uz compinit && compinit
 
 生成された script が configured hidden entrypoint を内部的に呼び出すため、エンドユーザーは `__complete` やカスタム名を意識する必要はありません。
 
+## formatter 挙動の更新（bash / fish / zsh）
+
+生成される completion script は parser 文脈に応じて次を行います。
+
+- 現在の subcommand 階層に応じて候補を絞り込む。
+- option の候補説明に `help` 文字列を反映する（説明表示を持つ fish / zsh）。
+- `choices` ベースの値候補に、引数 metadata 由来の説明情報を反映する。
+- positional 入力フェーズに入った後は、無関係な option 候補を抑制する。
+
+既知の制約:
+
+- bash の補完仕様では fish / zsh のような候補ごとの説明表示を同等に表現できないため、説明反映は shell 機能の範囲内になります。
+- positional フェーズ判定は生成 script 内の token 走査に基づくヒューリスティックです。option 風トークンを positional として扱う CLI では shell ごとの差が出る場合があります。
+
 ## fallback 方針
 
 「候補が 0 件」は正常系として扱います。

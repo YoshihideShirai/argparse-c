@@ -154,6 +154,20 @@ autoload -Uz compinit && compinit
 
 These scripts call the configured hidden entrypoint automatically, so end users do not need to know about `__complete` or a custom replacement name.
 
+## Formatter behavior updates (bash / fish / zsh)
+
+Generated completion scripts now apply parser context more strictly:
+
+- Candidate sets are narrowed to the active subcommand depth.
+- Option `help` text is used as the option description (fish / zsh where the shell UI supports descriptions).
+- Choice-based value completion includes human-readable context from argument metadata.
+- Once parsing has entered a positional-input phase, scripts suppress unrelated option suggestions until context changes.
+
+Current limitations:
+
+- Bash completion cannot reliably render per-candidate inline descriptions in the same way fish/zsh can; descriptions are reflected where shell primitives allow it.
+- Positional phase detection is heuristic and based on parsed token flow in generated scripts. If a CLI intentionally accepts option-like positional tokens, behavior may vary by shell.
+
 ## Fallback policy
 
 Treat “no candidates” as a normal result.

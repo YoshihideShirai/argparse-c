@@ -1081,9 +1081,11 @@ TEST(FormatFishCompletionIncludesSubcommandsOptionsAndChoices) {
                "complete -c \"prog\" -n '__ap_prog_parser_is "
                "root/config/set' -l target -d \"set target\" -r") != NULL);
   CHECK(strstr(script, "case \"root:--output\"") != NULL);
-  CHECK(strstr(script, "\"json\" \"yaml\"") != NULL);
+  CHECK(strstr(script, "\"json\"") != NULL);
+  CHECK(strstr(script, "\"yaml\"") != NULL);
   CHECK(strstr(script, "case \"root/config:--mode\"") != NULL);
-  CHECK(strstr(script, "\"fast\" \"slow\"") != NULL);
+  CHECK(strstr(script, "\"fast\"") != NULL);
+  CHECK(strstr(script, "\"slow\"") != NULL);
 
   free(script);
   ap_parser_free(p);
@@ -1189,9 +1191,10 @@ TEST(FormatFishCompletionEscapesHelpAndChoiceBoundaryCharacters) {
   CHECK(strstr(script, "function __ap_my_prog_v1_parser_key") != NULL);
   CHECK(strstr(script, help_fragment) != NULL);
   CHECK(strstr(script, "case \"root:--fish-opt\"") != NULL);
-  CHECK(strstr(script,
-               "\"quote\\\"\" \"path\\\\dir\" \"\\$HOME\" \"line1 line2\"") !=
-        NULL);
+  CHECK(strstr(script, "\"quote\\\"\"") != NULL);
+  CHECK(strstr(script, "\"path\\\\dir\"") != NULL);
+  CHECK(strstr(script, "\"\\$HOME\"") != NULL);
+  CHECK(strstr(script, "\"line1 line2\"") != NULL);
 
   free(script);
   ap_parser_free(p);
