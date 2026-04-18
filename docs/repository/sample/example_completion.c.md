@@ -114,6 +114,8 @@ int main(int argc, char **argv) {
   ap_parser *parser = ap_parser_new(
       "example_completion",
       "demo app that can generate bash/fish/zsh completions and a man page.");
+  ap_parser *config = NULL;
+  ap_parser *set = NULL;
   const char *mode_choices[] = {"fast", "slow"};
   const char *format_choices[] = {"json", "yaml", "toml"};
   static const char *const exec_candidates[] = {"git", "grep", "ls", "sed",
@@ -136,6 +138,9 @@ int main(int argc, char **argv) {
     ap_arg_options format = ap_arg_options_default();
     ap_arg_options task = ap_arg_options_default();
     ap_arg_options exec = ap_arg_options_default();
+    ap_arg_options profile = ap_arg_options_default();
+    ap_arg_options target = ap_arg_options_default();
+    const char *profile_choices[] = {"local", "staging", "prod"};
 
     bash.type = AP_TYPE_BOOL;
     bash.action = AP_ACTION_STORE_TRUE;
@@ -177,6 +182,12 @@ int main(int argc, char **argv) {
     exec.completion_callback = exec_completion_callback;
     exec.completion_user_data = (void *)exec_candidates;
 
+    profile.help = "deployment profile";
+    profile.choices.items = profile_choices;
+    profile.choices.count = 3;
+
+    target.help = "target id";
+
     if (ap_add_argument(parser, "--generate-bash-completion", bash, &err) != 0 ||
         ap_add_argument(parser, "--generate-fish-completion", fish, &err) != 0 ||
         ap_add_argument(parser, "--generate-zsh-completion", zsh, &err) != 0 ||
@@ -186,6 +197,23 @@ int main(int argc, char **argv) {
         ap_add_argument(parser, "input", input, &err) != 0 ||
         ap_add_argument(parser, "format", format, &err) != 0 ||
         ap_add_argument(parser, "task", task, &err) != 0) {
+      fprintf(stderr, "%s\n", err.message);
+      ap_parser_free(parser);
+      return 1;
+    }
+
+    config = ap_add_subcommand(parser, "config", "configuration commands",
+                               &err);
+    if (!config ||
+        ap_add_argument(config, "--profile", profile, &err) != 0 ||
+        ap_add_argument(config, "target", target, &err) != 0) {
+      fprintf(stderr, "%s\n", err.message);
+      ap_parser_free(parser);
+      return 1;
+    }
+
+    set = ap_add_subcommand(config, "set", "set configuration values", &err);
+    if (!set || ap_add_argument(set, "--mode", mode, &err) != 0) {
       fprintf(stderr, "%s\n", err.message);
       ap_parser_free(parser);
       return 1;

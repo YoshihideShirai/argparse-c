@@ -1016,9 +1016,11 @@ TEST(FormatFishCompletionIncludesSubcommandsOptionsAndChoices) {
                "complete -c \"prog\" -n '__ap_prog_parser_is "
                "root/config/set' -l target -d \"set target\" -r") != NULL);
   CHECK(strstr(script, "case \"root:--output\"") != NULL);
-  CHECK(strstr(script, "\"json\" \"yaml\"") != NULL);
+  CHECK(strstr(script, "\"json\"") != NULL);
+  CHECK(strstr(script, "\"yaml\"") != NULL);
   CHECK(strstr(script, "case \"root/config:--mode\"") != NULL);
-  CHECK(strstr(script, "\"fast\" \"slow\"") != NULL);
+  CHECK(strstr(script, "\"fast\"") != NULL);
+  CHECK(strstr(script, "\"slow\"") != NULL);
 
   free(script);
   ap_parser_free(p);
@@ -1124,9 +1126,10 @@ TEST(FormatFishCompletionEscapesHelpAndChoiceBoundaryCharacters) {
   CHECK(strstr(script, "function __ap_my_prog_v1_parser_key") != NULL);
   CHECK(strstr(script, help_fragment) != NULL);
   CHECK(strstr(script, "case \"root:--fish-opt\"") != NULL);
-  CHECK(strstr(script,
-               "\"quote\\\"\" \"path\\\\dir\" \"\\$HOME\" \"line1 line2\"") !=
-        NULL);
+  CHECK(strstr(script, "\"quote\\\"\"") != NULL);
+  CHECK(strstr(script, "\"path\\\\dir\"") != NULL);
+  CHECK(strstr(script, "\"\\$HOME\"") != NULL);
+  CHECK(strstr(script, "\"line1 line2\"") != NULL);
 
   free(script);
   ap_parser_free(p);
@@ -1649,6 +1652,53 @@ TEST(FormatFishCompletionUsesFallbackMetavarForUnderscoredDestinations) {
   CHECK(strstr(script, "-l named -d \"META.FILE\" -r") != NULL);
 
   free(script);
+  ap_parser_free(p);
+}
+
+TEST(FormatCompletionTracksPositionalPhaseAndChoiceDescriptions) {
+  ap_error err = {};
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_parser *config = NULL;
+  ap_arg_options mode = ap_arg_options_default();
+  ap_arg_options target = ap_arg_options_default();
+  const char *modes[] = {"fast", "slow"};
+  char *bash = NULL;
+  char *fish = NULL;
+  char *zsh = NULL;
+
+  CHECK(p != NULL);
+  mode.help = "execution mode";
+  mode.choices.items = modes;
+  mode.choices.count = 2;
+  target.help = "target id";
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &err));
+  LONGS_EQUAL(0, ap_add_argument(p, "target", target, &err));
+  config = ap_add_subcommand(p, "config", "config commands", &err);
+  CHECK(config != NULL);
+  LONGS_EQUAL(0, ap_add_argument(config, "--mode", mode, &err));
+
+  bash = ap_format_bash_completion(p);
+  fish = ap_format_fish_completion(p);
+  zsh = ap_format_zsh_completion(p);
+  CHECK(bash != NULL);
+  CHECK(fish != NULL);
+  CHECK(zsh != NULL);
+
+  CHECK(strstr(bash, "local positional_phase") != NULL);
+  CHECK(strstr(bash,
+               "if [[ \"$cur\" == -* && $positional_phase -eq 0 ]]; then") !=
+        NULL);
+  CHECK(strstr(fish, "function __ap_prog_in_positional_phase") != NULL);
+  CHECK(strstr(fish, "execution mode") != NULL);
+  CHECK(strstr(fish, "not __ap_prog_in_positional_phase") != NULL);
+  CHECK(strstr(zsh, "local positional_phase") != NULL);
+  CHECK(
+      strstr(zsh, "if [[ \"$cur\" == -* && $positional_phase -eq 0 ]]; then") !=
+      NULL);
+
+  free(bash);
+  free(fish);
+  free(zsh);
   ap_parser_free(p);
 }
 

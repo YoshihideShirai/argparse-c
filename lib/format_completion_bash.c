@@ -351,12 +351,14 @@ char *ap_bash_completion_build(const ap_parser *parser) {
                "parser_value_options parser_flag_only_options\n"
                "  local pending_option pending_mode pending_fixed_remaining "
                "option_name value_prefix token choices completion_kind\n"
+               "  local positional_phase\n"
                "  local -a filtered candidates\n"
                "  cur=\"${COMP_WORDS[COMP_CWORD]}\"\n"
                "  parser_key='root'\n"
                "  pending_option=''\n"
                "  pending_mode=''\n"
                "  pending_fixed_remaining=0\n\n"
+               "  positional_phase=0\n\n"
                "  __ap_completion_load_parser() {\n"
                "    case \"$1\" in\n") != 0) {
     ap_sb_free(&sb);
@@ -475,10 +477,13 @@ char *ap_bash_completion_build(const ap_parser *parser) {
           "      else\n"
           "        parser_key=\"$parser_key/$token\"\n"
           "      fi\n"
+          "      positional_phase=0\n"
           "      pending_option=''\n"
           "      pending_mode=''\n"
           "      pending_fixed_remaining=0\n"
           "      __ap_completion_load_parser \"$parser_key\" || return 0\n"
+          "    elif [[ \"$token\" != -* ]]; then\n"
+          "      positional_phase=1\n"
           "    fi\n"
           "    i=$((i + 1))\n"
           "  done\n\n") != 0 ||
@@ -547,7 +552,7 @@ char *ap_bash_completion_build(const ap_parser *parser) {
           "  fi\n\n") != 0 ||
       ap_sb_appendf(
           &sb,
-          "  if [[ \"$cur\" == -* ]]; then\n"
+          "  if [[ \"$cur\" == -* && $positional_phase -eq 0 ]]; then\n"
           "    filtered=()\n"
           "    while IFS= read -r token; do\n"
           "      [[ -n \"$token\" ]] && filtered+=(\"$token\")\n"
@@ -560,11 +565,13 @@ char *ap_bash_completion_build(const ap_parser *parser) {
           "  if (( ${#COMPREPLY[@]} > 0 )); then\n"
           "    return 0\n"
           "  fi\n\n"
-          "  candidates=()\n"
-          "  while IFS= read -r token; do\n"
-          "    [[ -n \"$token\" ]] && candidates+=(\"$token\")\n"
-          "  done < <(printf '%%s\\n' $parser_subcommands)\n"
-          "  COMPREPLY=( $(compgen -W \"${candidates[*]}\" -- \"$cur\") )\n"
+          "  if (( positional_phase == 0 )); then\n"
+          "    candidates=()\n"
+          "    while IFS= read -r token; do\n"
+          "      [[ -n \"$token\" ]] && candidates+=(\"$token\")\n"
+          "    done < <(printf '%%s\\n' $parser_subcommands)\n"
+          "    COMPREPLY=( $(compgen -W \"${candidates[*]}\" -- \"$cur\") )\n"
+          "  fi\n"
           "  return 0\n"
           "}\n\n"
           "complete -F _") != 0 ||

@@ -111,6 +111,7 @@ int main(int argc, char **argv) {
       "demo app that can generate bash/fish/zsh completions and a man page.");
   const char *mode_choices[] = {"fast", "slow"};
   const char *format_choices[] = {"json", "yaml", "toml"};
+  const char *profile_choices[] = {"local", "staging", "prod"};
   static const char *const exec_candidates[] = {"git", "grep", "ls", "sed",
                                                 NULL};
   static const char *const task_candidates[] = {"build", "bench", "bundle",
@@ -131,6 +132,8 @@ int main(int argc, char **argv) {
     ap_arg_options format = ap_arg_options_default();
     ap_arg_options task = ap_arg_options_default();
     ap_arg_options exec = ap_arg_options_default();
+    ap_arg_options profile = ap_arg_options_default();
+    ap_arg_options config_dir = ap_arg_options_default();
 
     bash.type = AP_TYPE_BOOL;
     bash.action = AP_ACTION_STORE_TRUE;
@@ -172,11 +175,21 @@ int main(int argc, char **argv) {
     exec.completion_callback = exec_completion_callback;
     exec.completion_user_data = (void *)exec_candidates;
 
+    profile.help = "deployment profile";
+    profile.choices.items = profile_choices;
+    profile.choices.count = 3;
+
+    config_dir.help = "config directory";
+    config_dir.completion_kind = AP_COMPLETION_KIND_DIRECTORY;
+
+
     if (ap_add_argument(parser, "--generate-bash-completion", bash, &err) != 0 ||
         ap_add_argument(parser, "--generate-fish-completion", fish, &err) != 0 ||
         ap_add_argument(parser, "--generate-zsh-completion", zsh, &err) != 0 ||
         ap_add_argument(parser, "--generate-manpage", manpage, &err) != 0 ||
         ap_add_argument(parser, "--mode", mode, &err) != 0 ||
+        ap_add_argument(parser, "--profile", profile, &err) != 0 ||
+        ap_add_argument(parser, "--config-dir", config_dir, &err) != 0 ||
         ap_add_argument(parser, "--exec", exec, &err) != 0 ||
         ap_add_argument(parser, "input", input, &err) != 0 ||
         ap_add_argument(parser, "format", format, &err) != 0 ||
@@ -222,18 +235,24 @@ int main(int argc, char **argv) {
     const char *format = NULL;
     const char *task = NULL;
     const char *exec = NULL;
+    const char *profile = NULL;
+    const char *config_dir = NULL;
 
     ap_ns_get_string(ns, "mode", &mode);
     ap_ns_get_string(ns, "input", &input);
     ap_ns_get_string(ns, "format", &format);
     ap_ns_get_string(ns, "task", &task);
     ap_ns_get_string(ns, "exec", &exec);
+    ap_ns_get_string(ns, "profile", &profile);
+    ap_ns_get_string(ns, "config_dir", &config_dir);
 
     printf("mode=%s\n", mode ? mode : "(null)");
     printf("input=%s\n", input ? input : "(null)");
     printf("format=%s\n", format ? format : "(null)");
     printf("task=%s\n", task ? task : "(null)");
     printf("exec=%s\n", exec ? exec : "(null)");
+    printf("profile=%s\n", profile ? profile : "(null)");
+    printf("config_dir=%s\n", config_dir ? config_dir : "(null)");
   }
 
   ap_namespace_free(ns);
