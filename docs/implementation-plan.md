@@ -260,7 +260,7 @@ Python `argparse` の主要機能を C ライブラリとして提供し、Linux
 
 ### Docs / Coverage Pages (`.github/workflows/pages.yml`)
 - trigger: push (`main`/`master`), workflow_dispatch
-- build: MkDocs site + coverage build/test + `gcovr --html-details`
+- build: Zensical site + coverage build/test + `gcovr --html-details`
 - publish: GitHub Pages (`/coverage/` で HTML レポートを公開)
 
 ## 8. Next Phase Plan (Recommended)

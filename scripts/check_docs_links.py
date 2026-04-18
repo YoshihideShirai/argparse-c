@@ -112,7 +112,7 @@ def main() -> int:
     if not args.skip_site:
         if not args.site_dir.exists():
             errors.append(
-                f"site directory does not exist: {args.site_dir} (run mkdocs build first)"
+                f"site directory does not exist: {args.site_dir} (run zensical build first)"
             )
         else:
             errors.extend(validate_site_links(args.site_dir))
