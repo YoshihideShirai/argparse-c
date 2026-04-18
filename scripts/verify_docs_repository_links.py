@@ -10,7 +10,7 @@ from pathlib import Path
 
 COMMANDS: tuple[tuple[str, ...], ...] = (
     (sys.executable, "scripts/sync_docs_repository.py"),
-    (sys.executable, "-m", "mkdocs", "build"),
+    (sys.executable, "scripts/build_docs_site.py"),
     (sys.executable, "scripts/check_docs_links.py", "--skip-source"),
 )
 
