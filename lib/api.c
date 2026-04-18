@@ -225,6 +225,41 @@ void ap_error_set(ap_error *err, ap_error_code code, const char *argument,
   va_end(ap);
 }
 
+static const char *ap_error_code_default_message(ap_error_code code) {
+  switch (code) {
+  case AP_ERR_NONE:
+    return "";
+  case AP_ERR_NO_MEMORY:
+    return "out of memory";
+  case AP_ERR_INVALID_DEFINITION:
+    return "invalid argument definition";
+  case AP_ERR_UNKNOWN_OPTION:
+    return "unknown option";
+  case AP_ERR_DUPLICATE_OPTION:
+    return "duplicate option";
+  case AP_ERR_MISSING_VALUE:
+    return "missing value";
+  case AP_ERR_INVALID_NARGS:
+    return "invalid number of values";
+  case AP_ERR_MISSING_REQUIRED:
+    return "missing required argument";
+  case AP_ERR_INVALID_CHOICE:
+    return "invalid choice";
+  case AP_ERR_INVALID_INT32:
+    return "invalid int32 value";
+  case AP_ERR_INVALID_INT64:
+    return "invalid int64 value";
+  case AP_ERR_INVALID_UINT64:
+    return "invalid uint64 value";
+  case AP_ERR_INVALID_DOUBLE:
+    return "invalid double value";
+  case AP_ERR_UNEXPECTED_POSITIONAL:
+    return "unexpected positional argument";
+  default:
+    return "unknown error";
+  }
+}
+
 const char *ap_error_argument_name(const ap_arg_def *def) {
   if (!def) {
     return "";
@@ -2185,8 +2220,12 @@ char *ap_format_error(const ap_parser *parser, const ap_error *err) {
   if (!parser) {
     return NULL;
   }
-  if (err && err->message[0] != '\0') {
-    msg = err->message;
+  if (err) {
+    if (err->message[0] != '\0') {
+      msg = err->message;
+    } else {
+      msg = ap_error_code_default_message(err->code);
+    }
   }
 
   usage = ap_usage_build(parser);

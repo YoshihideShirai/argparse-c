@@ -77,6 +77,15 @@ static int find_flag_index_n(const ap_parser *parser, const char *token,
   return abbrev_match >= 0 ? abbrev_match : -1;
 }
 
+static void set_flag_lookup_error(ap_error *err, const char *token, int code) {
+  if (code == -2) {
+    ap_error_set(err, AP_ERR_DUPLICATE_OPTION, token, "ambiguous option '%s'",
+                 token);
+    return;
+  }
+  ap_error_set(err, AP_ERR_UNKNOWN_OPTION, token, "unknown option '%s'", token);
+}
+
 static int parse_short_cluster(const ap_parser *parser, const char *token,
                                bool allow_unknown, ap_parsed_arg *parsed,
                                ap_error *err) {
@@ -102,14 +111,12 @@ static int parse_short_cluster(const ap_parser *parser, const char *token,
     short_flag[1] = token[i];
     def_index = find_flag_index(parser, short_flag);
     if (def_index == -2) {
-      ap_error_set(err, AP_ERR_DUPLICATE_OPTION, short_flag,
-                   "ambiguous option '%s'", short_flag);
+      set_flag_lookup_error(err, short_flag, def_index);
       return -1;
     }
     if (def_index < 0) {
       if (!allow_unknown) {
-        ap_error_set(err, AP_ERR_UNKNOWN_OPTION, short_flag,
-                     "unknown option '%s'", short_flag);
+        set_flag_lookup_error(err, short_flag, def_index);
       }
       return allow_unknown ? 1 : -1;
     }
@@ -504,8 +511,7 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
         def_index = find_flag_index(parser, token);
       }
       if (def_index == -2) {
-        ap_error_set(err, AP_ERR_DUPLICATE_OPTION, token,
-                     "ambiguous option '%s'", token);
+        set_flag_lookup_error(err, token, def_index);
         goto fail;
       }
       if (def_index < 0) {
@@ -533,8 +539,7 @@ int ap_parser_parse(const ap_parser *parser, int argc, char **argv,
           token_index++;
           continue;
         }
-        ap_error_set(err, AP_ERR_UNKNOWN_OPTION, token, "unknown option '%s'",
-                     token);
+        set_flag_lookup_error(err, token, def_index);
         goto fail;
       }
       if (parsed[def_index].seen && !action_allows_multiple_occurrences(

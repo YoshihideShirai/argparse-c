@@ -52,6 +52,7 @@ typedef enum {
 } ap_error_code;
 
 typedef struct {
+  /* Stable machine-readable error code. */
   ap_error_code code;
   char argument[64];
   char message[256];

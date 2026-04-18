@@ -2,6 +2,44 @@
   "$schema": "./api-spec.schema.json",
   "spec_version": "1.0.0",
   "source_header": "include/argparse-c.h",
+  "error_model": {
+    "error_type": "ap_error",
+    "code_enum_type": "ap_error_code",
+    "fields": [
+      {
+        "name": "code",
+        "type": "ap_error_code"
+      },
+      {
+        "name": "argument",
+        "type": "char[64]"
+      },
+      {
+        "name": "message",
+        "type": "char[256]"
+      }
+    ],
+    "public_codes": [
+      "AP_ERR_NONE",
+      "AP_ERR_NO_MEMORY",
+      "AP_ERR_INVALID_DEFINITION",
+      "AP_ERR_UNKNOWN_OPTION",
+      "AP_ERR_DUPLICATE_OPTION",
+      "AP_ERR_MISSING_VALUE",
+      "AP_ERR_INVALID_NARGS",
+      "AP_ERR_MISSING_REQUIRED",
+      "AP_ERR_INVALID_CHOICE",
+      "AP_ERR_INVALID_INT32",
+      "AP_ERR_INVALID_INT64",
+      "AP_ERR_INVALID_UINT64",
+      "AP_ERR_INVALID_DOUBLE",
+      "AP_ERR_UNEXPECTED_POSITIONAL"
+    ],
+    "backward_compatibility": {
+      "en": "Clients should key logic on `ap_error.code`; `message` remains human-readable and not a stable machine contract.",
+      "ja": "クライアントは `ap_error.code` を判定に使い、`message` は人間向け表示（機械判定の安定契約ではない）として扱ってください。"
+    }
+  },
   "function_count": 51,
   "functions": [
     {

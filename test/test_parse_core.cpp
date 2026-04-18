@@ -92,6 +92,28 @@ TEST(ChoicesValidation) {
   ap_parser_free(p);
 }
 
+TEST(ErrorCodeIsStableForSameInvalidChoiceInput) {
+  static const char *choices[] = {"fast", "slow"};
+  ap_error first = {};
+  ap_error second = {};
+  ap_namespace *ns = NULL;
+  ap_parser *p = ap_parser_new("prog", "desc");
+  ap_arg_options mode = ap_arg_options_default();
+  char *argv[] = {(char *)"prog", (char *)"--mode", (char *)"medium", NULL};
+
+  CHECK(p != NULL);
+  mode.choices.items = choices;
+  mode.choices.count = 2;
+  LONGS_EQUAL(0, ap_add_argument(p, "--mode", mode, &first));
+
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv, &ns, &first));
+  LONGS_EQUAL(-1, ap_parse_args(p, 3, argv, &ns, &second));
+  LONGS_EQUAL(AP_ERR_INVALID_CHOICE, first.code);
+  LONGS_EQUAL(first.code, second.code);
+
+  ap_parser_free(p);
+}
+
 TEST(NargsOneOrMore) {
   ap_error err = {};
   ap_namespace *ns = NULL;
