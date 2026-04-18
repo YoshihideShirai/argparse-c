@@ -19,16 +19,16 @@
 - **README / 日本語**: [README.ja.md](./README.ja.md)
 - **GitHub Pages / English**: <https://yoshihideshirai.github.io/argparse-c/en/>
 - **GitHub Pages / 日本語**: <https://yoshihideshirai.github.io/argparse-c/ja/>
-- **GitHub Pages / 简体中文**: <https://yoshihideshirai.github.io/argparse-c/zh-CN/> _(Partial support)_
-- **GitHub Pages / Español**: <https://yoshihideshirai.github.io/argparse-c/es/> _(Partial support)_
-- **GitHub Pages / Português (Brasil)**: <https://yoshihideshirai.github.io/argparse-c/pt-BR/> _(Partial support)_
+- **GitHub Pages / 简体中文**: <https://yoshihideshirai.github.io/argparse-c/zh-CN/> _(Staged support: Getting Started + Basic/Options/Subcommands/Completion + FAQ)_
+- **GitHub Pages / Español**: <https://yoshihideshirai.github.io/argparse-c/es/> _(Staged support: Getting Started + Basic/Options/Subcommands/Completion + FAQ)_
+- **GitHub Pages / Português (Brasil)**: <https://yoshihideshirai.github.io/argparse-c/pt-BR/> _(Staged support: Getting Started + Basic/Options/Subcommands/Completion + FAQ)_
 - **Getting Started / English**: <https://yoshihideshirai.github.io/argparse-c/en/getting-started/>
 - **Getting Started / 日本語**: <https://yoshihideshirai.github.io/argparse-c/ja/getting-started/>
 
 Legend:
 
 - **Full support**: English / 日本語 (README + GitHub Pages are maintained together).
-- **Partial support**: 简体中文 / Español / Português (Brasil) (GitHub Pages is available with staged rollout coverage).
+- **Staged support**: 简体中文 / Español / Português (Brasil) (Getting Started + Basic usage + Options and types + Subcommands + Completion callbacks + FAQ are published; additional pages are staged).
 
 If you want the installation steps, completion setup, package metadata, or API details, jump to GitHub Pages first. The repository README now stays focused on **what this library is**, **why it is useful**, and **which examples to open next**.
 
